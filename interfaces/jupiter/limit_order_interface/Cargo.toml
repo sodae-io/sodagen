@@ -1,0 +1,38 @@
+[package]
+name = "limit_order_interface"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies.borsh]
+features = ["derive"]
+version = "^1.5"
+
+[dependencies.num-derive]
+version = "0.4.2"
+
+[dependencies.num-traits]
+version = "^0.2"
+
+[dependencies.serde]
+features = ["derive"]
+version = "^1.0.152"
+
+[dependencies.solana-account-info]
+version = "^3.0"
+
+[dependencies.solana-cpi]
+version = "^3.0"
+
+[dependencies.solana-instruction]
+version = "^3.0"
+
+[dependencies.solana-program-error]
+features = ["borsh"]
+version = "^3.0"
+
+[dependencies.solana-pubkey]
+features = ["borsh", "serde"]
+version = "^3.0"
+
+[dependencies.thiserror]
+version = "^2.0"

@@ -1,0 +1,49 @@
+[package]
+name = "sodagen"
+description = "sodagen: Solana IDL → Rust client / CPI interface generator"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/sodae-io/sodagen"
+version = "0.1.0"
+edition = "2021"
+include = ["src/", "README.md"]
+categories = [
+    "command-line-utilities",
+    "cryptography::cryptocurrencies",
+    "development-tools",
+]
+keywords = [
+    "anchor",
+    "codegen",
+    "metaplex",
+    "shank",
+    "solana",
+    "idl"
+]
+
+[features]
+default = []
+bytes_to_u8 = []
+
+[lib]
+name = "sodagen"
+
+[[bin]]
+name = "sodagen"
+
+[dependencies]
+bs58 = { workspace = true }
+clap = { workspace = true, features = ["derive"] }
+env_logger = { workspace = true }
+heck = { workspace = true }
+itertools = { workspace = true }
+prettyplease = { workspace = true }
+log = { workspace = true }
+log-panics = { workspace = true, features = ["with-backtrace"]}
+proc-macro2 = { workspace = true }
+quote = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
+sha2 = { workspace = true }
+syn = { workspace = true, features = ["full"] }
+toml = { workspace = true }
+void = { workspace = true }

@@ -1,0 +1,10 @@
+[package]
+name = "unstake_client_consumer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+solana-cli-config = { workspace = true }
+solana-sdk = { workspace = true }
+unstake_interface = { workspace = true }

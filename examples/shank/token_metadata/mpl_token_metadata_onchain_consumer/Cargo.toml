@@ -1,0 +1,19 @@
+[package]
+name = "mpl_token_metadata_onchain_consumer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[features]
+no-entrypoint = []
+
+[dependencies]
+borsh = { workspace = true }
+mpl_token_metadata_interface = { workspace = true }
+solana-program = { workspace = true }
+
+[lib]
+crate-type = ["cdylib", "lib"]
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

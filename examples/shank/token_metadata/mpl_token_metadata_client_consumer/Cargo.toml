@@ -1,0 +1,13 @@
+[package]
+name = "mpl_token_metadata_client_consumer"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[dependencies]
+mpl_token_metadata_interface = { workspace = true }
+solana-cli-config = { workspace = true }
+solana-sdk = { workspace = true }
+
+[dev-dependencies]
+borsh = { workspace = true }

@@ -1,0 +1,1726 @@
+{
+  "address": "JoeGXemoPqPeGPEXA3Z3UbjoPoGqqfbg8PD58M7Rqj2",
+  "metadata": {
+    "name": "token_mill",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "create_config",
+      "discriminator": [
+        201,
+        207,
+        243,
+        114,
+        75,
+        111,
+        47,
+        189
+      ],
+      "accounts": [
+        {
+          "name": "token_mill_config",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "quote_token_mint",
+          "type": "pubkey"
+        },
+        {
+          "name": "protocol_fee_share",
+          "type": "u32"
+        },
+        {
+          "name": "protocol_fee_token_account",
+          "type": "pubkey"
+        },
+        {
+          "name": "kotm_fee_token_account",
+          "type": "pubkey"
+        },
+        {
+          "name": "fee_recipient_change_cooldown",
+          "type": "u32"
+        },
+        {
+          "name": "market_settings",
+          "type": {
+            "defined": {
+              "name": "MarketSettingsInput"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_market",
+      "discriminator": [
+        103,
+        226,
+        97,
+        235,
+        200,
+        188,
+        251,
+        254
+      ],
+      "accounts": [
+        {
+          "name": "token_mill_config"
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint_0"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_mint_0",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market_reserve_0",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint_0"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "token_0_metadata",
+          "writable": true
+        },
+        {
+          "name": "token_mint_1"
+        },
+        {
+          "name": "market_reserve_1",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  6,
+                  221,
+                  246,
+                  225,
+                  215,
+                  101,
+                  161,
+                  147,
+                  217,
+                  203,
+                  225,
+                  70,
+                  206,
+                  235,
+                  121,
+                  172,
+                  28,
+                  180,
+                  133,
+                  237,
+                  95,
+                  91,
+                  55,
+                  145,
+                  58,
+                  140,
+                  245,
+                  133,
+                  126,
+                  255,
+                  0,
+                  169
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "token_mint_1"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "creator",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "token_metadata_program",
+          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
+        },
+        {
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "name",
+          "type": "string"
+        },
+        {
+          "name": "symbol",
+          "type": "string"
+        },
+        {
+          "name": "uri",
+          "type": "string"
+        },
+        {
+          "name": "swap_authority",
+          "type": {
+            "option": "pubkey"
+          }
+        }
+      ]
+    },
+    {
+      "name": "force_remove_fee_reserve",
+      "discriminator": [
+        171,
+        249,
+        234,
+        88,
+        247,
+        69,
+        109,
+        249
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "relations": [
+            "market"
+          ]
+        },
+        {
+          "name": "market",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "config"
+          ]
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "remove_swap_authority",
+      "discriminator": [
+        128,
+        249,
+        213,
+        153,
+        65,
+        171,
+        76,
+        171
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "relations": [
+            "market"
+          ]
+        },
+        {
+          "name": "market",
+          "writable": true
+        },
+        {
+          "name": "new_fee_reserve",
+          "optional": true
+        },
+        {
+          "name": "creator",
+          "signer": true,
+          "relations": [
+            "market"
+          ]
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "swap",
+      "discriminator": [
+        248,
+        198,
+        158,
+        145,
+        225,
+        117,
+        135,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "relations": [
+            "market"
+          ]
+        },
+        {
+          "name": "market",
+          "writable": true
+        },
+        {
+          "name": "market_reserve_0",
+          "writable": true
+        },
+        {
+          "name": "user_token_account_0",
+          "writable": true
+        },
+        {
+          "name": "market_reserve_1",
+          "writable": true
+        },
+        {
+          "name": "user_token_account_1",
+          "writable": true
+        },
+        {
+          "name": "fee_reserve",
+          "writable": true
+        },
+        {
+          "name": "protocol_fee_reserve",
+          "writable": true
+        },
+        {
+          "name": "creator_fee_pool",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "swap_authority",
+          "signer": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "swap_parameters",
+          "type": {
+            "defined": {
+              "name": "SwapParameters"
+            }
+          }
+        }
+      ],
+      "returns": {
+        "defined": {
+          "name": "SwapResult"
+        }
+      }
+    },
+    {
+      "name": "swap_with_price_limit",
+      "discriminator": [
+        54,
+        23,
+        76,
+        40,
+        64,
+        202,
+        5,
+        69
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "relations": [
+            "market"
+          ]
+        },
+        {
+          "name": "market",
+          "writable": true
+        },
+        {
+          "name": "market_reserve_0",
+          "writable": true
+        },
+        {
+          "name": "user_token_account_0",
+          "writable": true
+        },
+        {
+          "name": "market_reserve_1",
+          "writable": true
+        },
+        {
+          "name": "user_token_account_1",
+          "writable": true
+        },
+        {
+          "name": "fee_reserve",
+          "writable": true
+        },
+        {
+          "name": "protocol_fee_reserve",
+          "writable": true
+        },
+        {
+          "name": "creator_fee_pool",
+          "writable": true
+        },
+        {
+          "name": "user",
+          "signer": true
+        },
+        {
+          "name": "swap_authority",
+          "signer": true,
+          "optional": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "zero_for_one",
+          "type": "bool"
+        },
+        {
+          "name": "delta_amount",
+          "type": "i64"
+        },
+        {
+          "name": "sqrt_price_limit_x96",
+          "type": "u128"
+        }
+      ],
+      "returns": {
+        "defined": {
+          "name": "SwapResult"
+        }
+      }
+    },
+    {
+      "name": "transfer_config_ownership",
+      "discriminator": [
+        53,
+        124,
+        67,
+        226,
+        108,
+        130,
+        19,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "token_mill_config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "token_mill_config"
+          ]
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_admin",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "update_config_settings",
+      "discriminator": [
+        222,
+        242,
+        103,
+        173,
+        124,
+        98,
+        180,
+        244
+      ],
+      "accounts": [
+        {
+          "name": "token_mill_config",
+          "writable": true
+        },
+        {
+          "name": "new_protocol_fee_reserve"
+        },
+        {
+          "name": "new_creator_fee_pool"
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "token_mill_config"
+          ]
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "new_protocol_fee_share",
+          "type": "u32"
+        },
+        {
+          "name": "new_fee_recipient_change_cooldown",
+          "type": "u32"
+        }
+      ]
+    },
+    {
+      "name": "update_fee_reserve",
+      "discriminator": [
+        129,
+        136,
+        189,
+        198,
+        155,
+        88,
+        145,
+        199
+      ],
+      "accounts": [
+        {
+          "name": "config",
+          "relations": [
+            "market"
+          ]
+        },
+        {
+          "name": "market",
+          "writable": true
+        },
+        {
+          "name": "new_fee_reserve",
+          "optional": true
+        },
+        {
+          "name": "creator",
+          "signer": true,
+          "relations": [
+            "market"
+          ]
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "update_market_defaults",
+      "discriminator": [
+        38,
+        26,
+        191,
+        18,
+        30,
+        234,
+        178,
+        41
+      ],
+      "accounts": [
+        {
+          "name": "token_mill_config",
+          "writable": true
+        },
+        {
+          "name": "admin",
+          "signer": true,
+          "relations": [
+            "token_mill_config"
+          ]
+        },
+        {
+          "name": "event_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  95,
+                  95,
+                  101,
+                  118,
+                  101,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "program"
+        }
+      ],
+      "args": [
+        {
+          "name": "market_settings",
+          "type": {
+            "defined": {
+              "name": "MarketSettingsInput"
+            }
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Market",
+      "discriminator": [
+        219,
+        190,
+        213,
+        55,
+        0,
+        227,
+        198,
+        154
+      ]
+    },
+    {
+      "name": "TokenMillConfig",
+      "discriminator": [
+        28,
+        200,
+        141,
+        206,
+        141,
+        183,
+        203,
+        16
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "ConfigCreation",
+      "discriminator": [
+        22,
+        226,
+        190,
+        234,
+        176,
+        24,
+        250,
+        11
+      ]
+    },
+    {
+      "name": "ConfigDefaultMarketSettingsUpdate",
+      "discriminator": [
+        86,
+        122,
+        72,
+        223,
+        93,
+        152,
+        224,
+        97
+      ]
+    },
+    {
+      "name": "ConfigFeeSettingsUpdate",
+      "discriminator": [
+        137,
+        142,
+        221,
+        54,
+        111,
+        184,
+        135,
+        2
+      ]
+    },
+    {
+      "name": "ConfigOwnershipTransfer",
+      "discriminator": [
+        244,
+        36,
+        50,
+        39,
+        145,
+        158,
+        100,
+        124
+      ]
+    },
+    {
+      "name": "FeeReserveUpdate",
+      "discriminator": [
+        114,
+        245,
+        136,
+        81,
+        246,
+        204,
+        133,
+        12
+      ]
+    },
+    {
+      "name": "MarketCreation",
+      "discriminator": [
+        77,
+        174,
+        149,
+        37,
+        77,
+        226,
+        133,
+        219
+      ]
+    },
+    {
+      "name": "MarketSwapAuthorityRemoved",
+      "discriminator": [
+        61,
+        11,
+        41,
+        211,
+        46,
+        134,
+        227,
+        249
+      ]
+    },
+    {
+      "name": "Swap",
+      "discriminator": [
+        81,
+        108,
+        227,
+        190,
+        205,
+        208,
+        10,
+        196
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "DivisionByZero"
+    },
+    {
+      "code": 6001,
+      "name": "AmountOverflow"
+    },
+    {
+      "code": 6002,
+      "name": "AmountInOverflow"
+    },
+    {
+      "code": 6003,
+      "name": "AmountOutOverflow"
+    },
+    {
+      "code": 6004,
+      "name": "LiquidityOverflow0"
+    },
+    {
+      "code": 6005,
+      "name": "LiquidityOverflow1"
+    },
+    {
+      "code": 6006,
+      "name": "PriceOverflow"
+    },
+    {
+      "code": 6007,
+      "name": "FeeAmountOverflow"
+    },
+    {
+      "code": 6008,
+      "name": "AdminSignatureRequired"
+    },
+    {
+      "code": 6009,
+      "name": "CreatorSignatureRequired"
+    },
+    {
+      "code": 6010,
+      "name": "AuthoritySignatureRequired"
+    },
+    {
+      "code": 6011,
+      "name": "FeeRecipientUpdateOnCd"
+    },
+    {
+      "code": 6012,
+      "name": "SwapAuthorityAlreadyRemoved"
+    },
+    {
+      "code": 6013,
+      "name": "InvalidFeeReserve"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidFee"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidQuoteTokenMint"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidSqrtPriceLimit"
+    },
+    {
+      "code": 6017,
+      "name": "InvalidSqrtPrices"
+    },
+    {
+      "code": 6018,
+      "name": "ZeroDeltaAmount"
+    },
+    {
+      "code": 6019,
+      "name": "SlippageExceeded"
+    },
+    {
+      "code": 6020,
+      "name": "CanOnlyOptInKOTM"
+    }
+  ],
+  "types": [
+    {
+      "name": "ConfigCreation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_fee_share",
+            "type": "u32"
+          },
+          {
+            "name": "protocol_fee_reserve",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator_fee_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient_change_cooldown",
+            "type": "u32"
+          },
+          {
+            "name": "market_settings",
+            "type": {
+              "defined": {
+                "name": "MarketSettingsInput"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigDefaultMarketSettingsUpdate",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_market_settings",
+            "type": {
+              "defined": {
+                "name": "MarketSettingsInput"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigFeeSettingsUpdate",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_protocol_fee_reserve",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_protocol_fee_share",
+            "type": "u32"
+          },
+          {
+            "name": "new_creator_fee_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_fee_recipient_change_cooldown",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "ConfigOwnershipTransfer",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_admin",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeReserveUpdate",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "new_fee_reserve",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "Market",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "swap_authority",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "token_mint_0",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint_1",
+            "type": "pubkey"
+          },
+          {
+            "name": "reserve_0",
+            "type": "pubkey"
+          },
+          {
+            "name": "reserve_1",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_reserve",
+            "type": {
+              "option": "pubkey"
+            }
+          },
+          {
+            "name": "fee_reserve_last_update",
+            "type": "i64"
+          },
+          {
+            "name": "settings",
+            "type": {
+              "defined": {
+                "name": "MarketSettings"
+              }
+            }
+          },
+          {
+            "name": "sqrt_price_x96",
+            "type": "u128"
+          },
+          {
+            "name": "bump",
+            "type": {
+              "array": [
+                "u8",
+                1
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketCreation",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_mint_0",
+            "type": "pubkey"
+          },
+          {
+            "name": "swap_authority",
+            "type": {
+              "option": "pubkey"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketSettings",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_supply",
+            "type": "u64"
+          },
+          {
+            "name": "sqrt_price_a_x96",
+            "type": "u128"
+          },
+          {
+            "name": "sqrt_price_b_x96",
+            "type": "u128"
+          },
+          {
+            "name": "liquidity_a",
+            "type": "u128"
+          },
+          {
+            "name": "liquidity_b",
+            "type": "u128"
+          },
+          {
+            "name": "fee",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketSettingsInput",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "max_supply",
+            "type": "u64"
+          },
+          {
+            "name": "supply_at_graduation",
+            "type": "u64"
+          },
+          {
+            "name": "sqrt_price_a_x96",
+            "type": "u128"
+          },
+          {
+            "name": "sqrt_price_b_x96",
+            "type": "u128"
+          },
+          {
+            "name": "fee",
+            "type": "u32"
+          }
+        ]
+      }
+    },
+    {
+      "name": "MarketSwapAuthorityRemoved",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "market",
+            "type": "pubkey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Swap",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "config",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "market",
+            "type": "pubkey"
+          },
+          {
+            "name": "zero_for_one",
+            "type": "bool"
+          },
+          {
+            "name": "swap_result",
+            "type": {
+              "defined": {
+                "name": "SwapResult"
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwapParameters",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "BuyExactIn",
+            "fields": [
+              "u64",
+              "u64"
+            ]
+          },
+          {
+            "name": "BuyExactOut",
+            "fields": [
+              "u64",
+              "u64"
+            ]
+          },
+          {
+            "name": "SellExactIn",
+            "fields": [
+              "u64",
+              "u64"
+            ]
+          },
+          {
+            "name": "SellExactOut",
+            "fields": [
+              "u64",
+              "u64"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwapResult",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount_in",
+            "type": "u64"
+          },
+          {
+            "name": "amount_out",
+            "type": "u64"
+          },
+          {
+            "name": "fee_amount_token_in",
+            "type": "u64"
+          },
+          {
+            "name": "fee_amount_token_1",
+            "type": "u64"
+          },
+          {
+            "name": "next_sqrt_price",
+            "type": "u128"
+          }
+        ]
+      }
+    },
+    {
+      "name": "TokenMillConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_token_mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "protocol_fee_share",
+            "docs": [
+              "Fees are split between the protocol and the creator"
+            ],
+            "type": "u32"
+          },
+          {
+            "name": "protocol_fee_reserve",
+            "type": "pubkey"
+          },
+          {
+            "name": "creator_fee_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_recipient_change_cooldown",
+            "type": "u32"
+          },
+          {
+            "name": "default_market_settings",
+            "type": {
+              "defined": {
+                "name": "MarketSettings"
+              }
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "MARKET_PDA_SEED",
+      "type": "string",
+      "value": "\"market\""
+    },
+    {
+      "name": "TOKEN_0_DECIMALS",
+      "type": "u8",
+      "value": "6"
+    }
+  ],
+  "name": "token_mill"
+}

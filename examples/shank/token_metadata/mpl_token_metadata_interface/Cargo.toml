@@ -1,0 +1,23 @@
+[package]
+name = "mpl_token_metadata_interface"
+version = "1.2.5"
+edition = "2021"
+
+[dependencies.borsh]
+workspace = true
+
+[dependencies.num-derive]
+workspace = true
+
+[dependencies.num-traits]
+workspace = true
+
+[dependencies.serde]
+optional = true
+workspace = true
+
+[dependencies.solana-program]
+workspace = true
+
+[dependencies.thiserror]
+workspace = true

@@ -1,0 +1,29 @@
+[package]
+name = "gamma_interface"
+version = "0.2.0"
+edition = "2021"
+
+[dependencies.borsh]
+features = ["derive"]
+version = "^1.5"
+
+[dependencies.serde]
+features = ["derive"]
+version = "^1.0.152"
+
+[dependencies.solana-account-info]
+version = "^3.0"
+
+[dependencies.solana-cpi]
+version = "^3.0"
+
+[dependencies.solana-instruction]
+version = "^3.0"
+
+[dependencies.solana-program-error]
+features = ["borsh"]
+version = "^3.0"
+
+[dependencies.solana-pubkey]
+features = ["borsh", "serde"]
+version = "^3.0"

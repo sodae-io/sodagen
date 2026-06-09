@@ -1,0 +1,1471 @@
+{
+  "address": "SCALEwAvEK5gtkdHiFzXfPgtk2YwJxPDzaV3aDmR7tA",
+  "metadata": {
+    "name": "scale_amm",
+    "version": "0.1.0",
+    "spec": "0.1.0"
+  },
+  "instructions": [
+    {
+      "name": "buy",
+      "discriminator": [
+        102,
+        6,
+        61,
+        18,
+        1,
+        218,
+        235,
+        234
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "mint_a"
+        },
+        {
+          "name": "mint_b"
+        },
+        {
+          "name": "user_ta_a",
+          "writable": true
+        },
+        {
+          "name": "user_ta_b",
+          "writable": true
+        },
+        {
+          "name": "vault_a",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_b",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "platform_fee_ta_a",
+          "writable": true
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "SwapParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create",
+      "discriminator": [
+        24,
+        30,
+        200,
+        40,
+        5,
+        28,
+        7,
+        119
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Pool owner."
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_wallet_authority",
+          "docs": [
+            "Token account authority for funding token B."
+          ],
+          "signer": true
+        },
+        {
+          "name": "mint_a"
+        },
+        {
+          "name": "mint_b"
+        },
+        {
+          "name": "token_wallet_b",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_a",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_b",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CreateParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "create_from_vmm",
+      "discriminator": [
+        1,
+        80,
+        10,
+        67,
+        24,
+        120,
+        235,
+        169
+      ],
+      "accounts": [
+        {
+          "name": "payer",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner",
+          "docs": [
+            "Pool owner."
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_wallet_authority",
+          "docs": [
+            "Token account authority for funding token A/B."
+          ],
+          "signer": true
+        },
+        {
+          "name": "mint_a"
+        },
+        {
+          "name": "mint_b"
+        },
+        {
+          "name": "token_wallet_a",
+          "writable": true
+        },
+        {
+          "name": "token_wallet_b",
+          "writable": true
+        },
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_a",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_b",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "CreateFromVmmParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "quote_buy",
+      "discriminator": [
+        83,
+        9,
+        231,
+        110,
+        146,
+        31,
+        40,
+        12
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "mint_a"
+        },
+        {
+          "name": "mint_b"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "SwapParams"
+            }
+          }
+        }
+      ],
+      "returns": {
+        "defined": {
+          "name": "SwapResult"
+        }
+      }
+    },
+    {
+      "name": "quote_sell",
+      "discriminator": [
+        5,
+        178,
+        49,
+        206,
+        140,
+        231,
+        131,
+        145
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "mint_a"
+        },
+        {
+          "name": "mint_b"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "SwapParams"
+            }
+          }
+        }
+      ],
+      "returns": {
+        "defined": {
+          "name": "SwapResult"
+        }
+      }
+    },
+    {
+      "name": "sell",
+      "discriminator": [
+        51,
+        230,
+        133,
+        164,
+        1,
+        127,
+        131,
+        173
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  112,
+                  111,
+                  111,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "owner"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "user",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "owner"
+        },
+        {
+          "name": "mint_a"
+        },
+        {
+          "name": "mint_b"
+        },
+        {
+          "name": "user_ta_a",
+          "writable": true
+        },
+        {
+          "name": "user_ta_b",
+          "writable": true
+        },
+        {
+          "name": "vault_a",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_a"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault_b",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "account",
+                "path": "mint_b"
+              }
+            ]
+          }
+        },
+        {
+          "name": "platform_fee_ta_a",
+          "writable": true
+        },
+        {
+          "name": "token_program_a"
+        },
+        {
+          "name": "token_program_b"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "params",
+          "type": {
+            "defined": {
+              "name": "SwapParams"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "set_fee_beneficiary",
+      "discriminator": [
+        74,
+        105,
+        83,
+        74,
+        154,
+        205,
+        249,
+        217
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "beneficiary",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_platform_base_token",
+      "discriminator": [
+        157,
+        110,
+        249,
+        237,
+        128,
+        5,
+        212,
+        233
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "program_data"
+        }
+      ],
+      "args": [
+        {
+          "name": "base_token",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "set_platform_fee",
+      "discriminator": [
+        19,
+        70,
+        111,
+        182,
+        156,
+        58,
+        208,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "fee_bps",
+          "type": "u16"
+        }
+      ]
+    },
+    {
+      "name": "transfer_authority",
+      "discriminator": [
+        48,
+        169,
+        76,
+        72,
+        229,
+        180,
+        55,
+        161
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "config",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "new_authority",
+          "type": "pubkey"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "PlatformConfig",
+      "discriminator": [
+        160,
+        78,
+        128,
+        0,
+        248,
+        83,
+        230,
+        160
+      ]
+    },
+    {
+      "name": "Pool",
+      "discriminator": [
+        241,
+        154,
+        109,
+        4,
+        17,
+        177,
+        109,
+        188
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "BuyEvent",
+      "discriminator": [
+        103,
+        244,
+        82,
+        31,
+        44,
+        245,
+        119,
+        119
+      ]
+    },
+    {
+      "name": "PoolCreated",
+      "discriminator": [
+        202,
+        44,
+        41,
+        88,
+        104,
+        220,
+        157,
+        82
+      ]
+    },
+    {
+      "name": "SellEvent",
+      "discriminator": [
+        62,
+        47,
+        55,
+        10,
+        165,
+        3,
+        220,
+        42
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PoolDisabled",
+      "msg": "Pool Disabled"
+    },
+    {
+      "code": 6001,
+      "name": "OwnerMustBeSystemAccount",
+      "msg": "Owner must be a system account (wallet), not a PDA"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidFeeDecay",
+      "msg": "Invalid Fee Decay"
+    },
+    {
+      "code": 6003,
+      "name": "InvalidInitialTokenReserves",
+      "msg": "Initial token reserves must be greater than 0"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidMint",
+      "msg": "Invalid Mint"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidTokenAccount",
+      "msg": "Invalid Token Account"
+    },
+    {
+      "code": 6006,
+      "name": "InsufficientFunds",
+      "msg": "Insufficient Funds"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidShift",
+      "msg": "Shift must be greater than 0"
+    },
+    {
+      "code": 6008,
+      "name": "InvalidFees",
+      "msg": "Fees must be between 0 and 10000 basis points"
+    },
+    {
+      "code": 6009,
+      "name": "MathOverflow",
+      "msg": "MathOverflow"
+    },
+    {
+      "code": 6010,
+      "name": "InsufficientOutput",
+      "msg": "Insufficient output"
+    },
+    {
+      "code": 6011,
+      "name": "InsufficientInput",
+      "msg": "Insufficient input"
+    },
+    {
+      "code": 6012,
+      "name": "IllegalClaimant",
+      "msg": "Illegal Claimant"
+    },
+    {
+      "code": 6013,
+      "name": "PoolEmpty",
+      "msg": "Pool Empty"
+    },
+    {
+      "code": 6014,
+      "name": "InvalidPlatformBaseToken",
+      "msg": "Pool base token is restricted by platform config"
+    },
+    {
+      "code": 6015,
+      "name": "InvalidPlatformFee",
+      "msg": "Invalid platform fee"
+    },
+    {
+      "code": 6016,
+      "name": "InvalidBeneficiary",
+      "msg": "Invalid fee beneficiary"
+    },
+    {
+      "code": 6017,
+      "name": "MissingBeneficiaryAccount",
+      "msg": "Missing beneficiary accounts"
+    },
+    {
+      "code": 6018,
+      "name": "UnauthorizedAuthority",
+      "msg": "Unauthorized program authority"
+    },
+    {
+      "code": 6019,
+      "name": "SnipingProtection",
+      "msg": "Swapper not allowed during protected window"
+    }
+  ],
+  "types": [
+    {
+      "name": "BuyEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_a",
+            "type": "u64"
+          },
+          {
+            "name": "amount_b",
+            "type": "u64"
+          },
+          {
+            "name": "new_reserves_a",
+            "type": "u128"
+          },
+          {
+            "name": "new_reserves_b",
+            "type": "u128"
+          },
+          {
+            "name": "fee_a",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateFromVmmParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "shift",
+            "type": "u128"
+          },
+          {
+            "name": "initial_token_a_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "initial_token_b_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "curve",
+            "type": {
+              "defined": {
+                "name": "CurveType"
+              }
+            }
+          },
+          {
+            "name": "fee_beneficiaries",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "FeeBeneficiary"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CreateParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "shift",
+            "type": "u128"
+          },
+          {
+            "name": "initial_token_b_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "curve",
+            "type": {
+              "defined": {
+                "name": "CurveType"
+              }
+            }
+          },
+          {
+            "name": "fee_beneficiaries",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "FeeBeneficiary"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "CurveType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "ConstantProduct"
+          },
+          {
+            "name": "Exponential"
+          }
+        ]
+      }
+    },
+    {
+      "name": "FeeBeneficiary",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "wallet",
+            "type": "pubkey"
+          },
+          {
+            "name": "share_bps",
+            "type": "u16"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PlatformConfig",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "pubkey"
+          },
+          {
+            "name": "fee_beneficiary",
+            "type": "pubkey"
+          },
+          {
+            "name": "base_token",
+            "type": "pubkey"
+          },
+          {
+            "name": "platform_fee_bps",
+            "type": "u16"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Pool",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "enabled",
+            "type": "bool"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint_a",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint_b",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_a_reserves",
+            "type": "u128"
+          },
+          {
+            "name": "token_b_reserves",
+            "type": "u128"
+          },
+          {
+            "name": "shift",
+            "type": "u128"
+          },
+          {
+            "name": "curve",
+            "type": {
+              "defined": {
+                "name": "CurveType"
+              }
+            }
+          },
+          {
+            "name": "fee_beneficiary_count",
+            "type": "u8"
+          },
+          {
+            "name": "fee_beneficiaries",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "FeeBeneficiary"
+                  }
+                },
+                5
+              ]
+            }
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "PoolCreated",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint_a",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint_b",
+            "type": "pubkey"
+          },
+          {
+            "name": "owner",
+            "type": "pubkey"
+          },
+          {
+            "name": "initial_token_reserves",
+            "type": "u64"
+          },
+          {
+            "name": "shift",
+            "type": "u128"
+          },
+          {
+            "name": "curve",
+            "type": {
+              "defined": {
+                "name": "CurveType"
+              }
+            }
+          },
+          {
+            "name": "fee_beneficiaries",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "FeeBeneficiary"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "SellEvent",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "user",
+            "type": "pubkey"
+          },
+          {
+            "name": "amount_a",
+            "type": "u64"
+          },
+          {
+            "name": "amount_b",
+            "type": "u64"
+          },
+          {
+            "name": "new_reserves_a",
+            "type": "u128"
+          },
+          {
+            "name": "new_reserves_b",
+            "type": "u128"
+          },
+          {
+            "name": "fee_a",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwapParams",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "limit",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "SwapResult",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "new_reserves_a",
+            "type": "u128"
+          },
+          {
+            "name": "new_reserves_b",
+            "type": "u128"
+          },
+          {
+            "name": "amount_a",
+            "type": "u64"
+          },
+          {
+            "name": "amount_b",
+            "type": "u64"
+          },
+          {
+            "name": "fee_a",
+            "type": "u64"
+          }
+        ]
+      }
+    }
+  ]
+}

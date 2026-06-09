@@ -1,0 +1,27 @@
+[package]
+name = "phoenix_v1_interface"
+version = "0.2.3"
+edition = "2021"
+
+[dependencies.borsh]
+workspace = true
+
+[dependencies.bytemuck]
+features = ["derive"]
+workspace = true
+
+[dependencies.num-derive]
+workspace = true
+
+[dependencies.num-traits]
+workspace = true
+
+[dependencies.serde]
+optional = true
+workspace = true
+
+[dependencies.solana-program]
+workspace = true
+
+[dependencies.thiserror]
+workspace = true
