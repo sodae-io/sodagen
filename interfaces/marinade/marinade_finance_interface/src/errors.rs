@@ -178,6 +178,18 @@ pub enum MarinadeFinanceError {
     StakeAccountRemainderTooLow = 6085,
     #[error("Capacity of the list must be not less than it's current size")]
     ShrinkingListWithDeletingContents = 6086,
+    #[error("Upgrading invariant violation")]
+    UpgradingInvariantViolation = 6087,
+    #[error("Delinquent upgrader is not done")]
+    DelinquentUpgraderIsNotDone = 6088,
+    #[error("Canonical stake account for this validator already exists")]
+    CanonicalStakeAccountAlreadyCreated = 6089,
+    #[error("Invalid canonical stake account address")]
+    InvalidCanonicalStakeAccountAddress = 6090,
+    #[error("Deposit stake account fee is too high")]
+    DepositStakeAccountFeeIsTooHigh = 6091,
+    #[error("Deposit SOL fee is too high")]
+    DepositSolFeeIsTooHigh = 6092,
 }
 impl From<MarinadeFinanceError> for ProgramError {
     fn from(e: MarinadeFinanceError) -> Self {

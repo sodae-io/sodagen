@@ -272,6 +272,8 @@ pub struct ConfigMarinadeParams {
     pub delayed_unstake_fee: Option<FeeCents>,
     pub withdraw_stake_account_fee: Option<FeeCents>,
     pub max_stake_moved_per_epoch: Option<Fee>,
+    pub deposit_sol_fee: Option<FeeCents>,
+    pub deposit_stake_account_fee: Option<FeeCents>,
 }
 impl ConfigMarinadeParams {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -297,6 +299,10 @@ impl ConfigMarinadeParams {
         let max_stake_moved_per_epoch: Option<Fee> = crate::borsh_de_or_default(
             &mut reader,
         )?;
+        let deposit_sol_fee: Option<FeeCents> = crate::borsh_de_or_default(&mut reader)?;
+        let deposit_stake_account_fee: Option<FeeCents> = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         *__buf = reader;
         Ok(Self {
             rewards_fee,
@@ -310,6 +316,8 @@ impl ConfigMarinadeParams {
             delayed_unstake_fee,
             withdraw_stake_account_fee,
             max_stake_moved_per_epoch,
+            deposit_sol_fee,
+            deposit_stake_account_fee,
         })
     }
 }
@@ -577,7 +585,8 @@ pub struct StakeRecord {
     pub stake_account: Pubkey,
     pub last_update_delegated_lamports: u64,
     pub last_update_epoch: u64,
-    pub is_emergency_unstaking: u8,
+    pub is_emergency_unstaking: bool,
+    pub last_update_status: StakeStatus,
 }
 impl StakeRecord {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -587,13 +596,15 @@ impl StakeRecord {
             &mut reader,
         )?;
         let last_update_epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let is_emergency_unstaking: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let is_emergency_unstaking: bool = crate::borsh_de_or_default(&mut reader)?;
+        let last_update_status: StakeStatus = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             stake_account,
             last_update_delegated_lamports,
             last_update_epoch,
             is_emergency_unstaking,
+            last_update_status,
         })
     }
 }
@@ -679,6 +690,7 @@ pub struct ValidatorRecord {
     pub score: u32,
     pub last_stake_delta_epoch: u64,
     pub duplication_flag_bump_seed: u8,
+    pub delinquent_upgrader_active_balance: u64,
 }
 impl ValidatorRecord {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -688,6 +700,9 @@ impl ValidatorRecord {
         let score: u32 = crate::borsh_de_or_default(&mut reader)?;
         let last_stake_delta_epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
         let duplication_flag_bump_seed: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let delinquent_upgrader_active_balance: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         *__buf = reader;
         Ok(Self {
             validator_account,
@@ -695,6 +710,7 @@ impl ValidatorRecord {
             score,
             last_stake_delta_epoch,
             duplication_flag_bump_seed,
+            delinquent_upgrader_active_balance,
         })
     }
 }
@@ -754,4 +770,38 @@ impl ValidatorSystem {
             auto_add_validator_enabled,
         })
     }
+}
+#[derive(
+    Clone,
+    Debug,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub enum DelinquentUpgraderState {
+    IteratingStakes {
+        visited_count: u32,
+        total_active_balance: u64,
+        total_delinquent_balance: u64,
+    },
+    IteratingValidators { visited_count: u32, delinquent_balance_left: u64 },
+    Done,
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub enum StakeStatus {
+    #[default]
+    Unknown,
+    Active,
+    Deactivating,
 }

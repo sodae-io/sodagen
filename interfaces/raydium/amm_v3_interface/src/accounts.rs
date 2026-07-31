@@ -89,6 +89,243 @@ impl AmmConfigAccount {
         Ok(data)
     }
 }
+pub const DYNAMIC_FEE_CONFIG_ACCOUNT_DISCM: [u8; 8] = [
+    244, 226, 88, 82, 14, 59, 246, 220,
+];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct DynamicFeeConfig {
+    pub index: u16,
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    pub dynamic_fee_control: u32,
+    pub max_volatility_accumulator: u32,
+    pub padding: [u64; 8],
+}
+impl DynamicFeeConfig {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let index: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let filter_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let decay_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let reduction_factor: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let dynamic_fee_control: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let max_volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            index,
+            filter_period,
+            decay_period,
+            reduction_factor,
+            dynamic_fee_control,
+            max_volatility_accumulator,
+            padding,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.filter_period, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.decay_period, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reduction_factor, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.dynamic_fee_control, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.max_volatility_accumulator, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct DynamicFeeConfigAccount(pub DynamicFeeConfig);
+impl DynamicFeeConfigAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != DYNAMIC_FEE_CONFIG_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(DynamicFeeConfig::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&DYNAMIC_FEE_CONFIG_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const LIMIT_ORDER_NONCE_ACCOUNT_DISCM: [u8; 8] = [
+    17, 153, 236, 57, 25, 199, 231, 248,
+];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct LimitOrderNonce {
+    pub user_wallet: Pubkey,
+    pub nonce_index: u8,
+    pub order_nonce: u64,
+    pub padding: [u64; 4],
+}
+impl LimitOrderNonce {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let user_wallet: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let nonce_index: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let order_nonce: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 4] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            user_wallet,
+            nonce_index,
+            order_nonce,
+            padding,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.user_wallet, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.nonce_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.order_nonce, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LimitOrderNonceAccount(pub LimitOrderNonce);
+impl LimitOrderNonceAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != LIMIT_ORDER_NONCE_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(LimitOrderNonce::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&LIMIT_ORDER_NONCE_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const LIMIT_ORDER_STATE_ACCOUNT_DISCM: [u8; 8] = [1, 238, 5, 142, 207, 62, 44, 228];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct LimitOrderState {
+    pub pool_id: Pubkey,
+    pub owner: Pubkey,
+    pub tick_index: i32,
+    pub zero_for_one: bool,
+    pub order_phase: u64,
+    pub total_amount: u64,
+    pub filled_amount: u64,
+    pub settle_base: u64,
+    pub settled_output: u64,
+    pub open_time: u64,
+    pub unfilled_ratio_x64: u128,
+    pub padding: [u64; 4],
+}
+impl LimitOrderState {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool_id: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let zero_for_one: bool = crate::borsh_de_or_default(&mut reader)?;
+        let order_phase: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let total_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let filled_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let settle_base: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let settled_output: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let open_time: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let unfilled_ratio_x64: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 4] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            pool_id,
+            owner,
+            tick_index,
+            zero_for_one,
+            order_phase,
+            total_amount,
+            filled_amount,
+            settle_base,
+            settled_output,
+            open_time,
+            unfilled_ratio_x64,
+            padding,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.pool_id, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.owner, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.zero_for_one, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.order_phase, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.total_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.filled_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.settle_base, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.settled_output, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.open_time, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.unfilled_ratio_x64, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LimitOrderStateAccount(pub LimitOrderState);
+impl LimitOrderStateAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != LIMIT_ORDER_STATE_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(LimitOrderState::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&LIMIT_ORDER_STATE_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const OBSERVATION_STATE_ACCOUNT_DISCM: [u8; 8] = [
     122, 174, 197, 53, 129, 9, 165, 132,
 ];
@@ -342,7 +579,6 @@ pub const POOL_STATE_ACCOUNT_DISCM: [u8; 8] = [247, 237, 227, 245, 215, 195, 222
 #[derive(
     Clone,
     Debug,
-    Default,
     BorshDeserialize,
     BorshSerialize,
     PartialEq,
@@ -370,23 +606,19 @@ pub struct PoolState {
     pub fee_growth_global_1_x64: u128,
     pub protocol_fees_token_0: u64,
     pub protocol_fees_token_1: u64,
-    pub swap_in_amount_token_0: u128,
-    pub swap_out_amount_token_1: u128,
-    pub swap_in_amount_token_1: u128,
-    pub swap_out_amount_token_0: u128,
+    pub padding5: [u128; 4],
     pub status: u8,
-    pub padding: [u8; 7],
+    pub fee_on: u8,
+    pub padding: [u8; 6],
     pub reward_infos: [RewardInfo; 3],
     pub tick_array_bitmap: [u64; 16],
-    pub total_fees_token_0: u64,
-    pub total_fees_claimed_token_0: u64,
-    pub total_fees_token_1: u64,
-    pub total_fees_claimed_token_1: u64,
+    pub padding6: [u64; 4],
     pub fund_fees_token_0: u64,
     pub fund_fees_token_1: u64,
     pub open_time: u64,
     pub recent_epoch: u64,
-    pub padding1: [u64; 24],
+    pub dynamic_fee_info: DynamicFeeInfo,
+    pub padding1: [u64; 14],
     pub padding2: [u64; 32],
 }
 impl PoolState {
@@ -412,23 +644,19 @@ impl PoolState {
         let fee_growth_global_1_x64: u128 = crate::borsh_de_or_default(&mut reader)?;
         let protocol_fees_token_0: u64 = crate::borsh_de_or_default(&mut reader)?;
         let protocol_fees_token_1: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let swap_in_amount_token_0: u128 = crate::borsh_de_or_default(&mut reader)?;
-        let swap_out_amount_token_1: u128 = crate::borsh_de_or_default(&mut reader)?;
-        let swap_in_amount_token_1: u128 = crate::borsh_de_or_default(&mut reader)?;
-        let swap_out_amount_token_0: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let padding5: [u128; 4] = crate::borsh_de_or_default(&mut reader)?;
         let status: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let padding: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let fee_on: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
         let reward_infos: [RewardInfo; 3] = crate::borsh_de_or_default(&mut reader)?;
         let tick_array_bitmap: [u64; 16] = crate::borsh_de_or_default(&mut reader)?;
-        let total_fees_token_0: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_fees_claimed_token_0: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_fees_token_1: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_fees_claimed_token_1: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding6: [u64; 4] = crate::borsh_de_or_default(&mut reader)?;
         let fund_fees_token_0: u64 = crate::borsh_de_or_default(&mut reader)?;
         let fund_fees_token_1: u64 = crate::borsh_de_or_default(&mut reader)?;
         let open_time: u64 = crate::borsh_de_or_default(&mut reader)?;
         let recent_epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let padding1: [u64; 24] = crate::borsh_de_or_default(&mut reader)?;
+        let dynamic_fee_info = <DynamicFeeInfo>::deserialize(&mut reader)?;
+        let padding1: [u64; 14] = crate::borsh_de_or_default(&mut reader)?;
         let padding2: [u64; 32] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
@@ -452,22 +680,18 @@ impl PoolState {
             fee_growth_global_1_x64,
             protocol_fees_token_0,
             protocol_fees_token_1,
-            swap_in_amount_token_0,
-            swap_out_amount_token_1,
-            swap_in_amount_token_1,
-            swap_out_amount_token_0,
+            padding5,
             status,
+            fee_on,
             padding,
             reward_infos,
             tick_array_bitmap,
-            total_fees_token_0,
-            total_fees_claimed_token_0,
-            total_fees_token_1,
-            total_fees_claimed_token_1,
+            padding6,
             fund_fees_token_0,
             fund_fees_token_1,
             open_time,
             recent_epoch,
+            dynamic_fee_info,
             padding1,
             padding2,
         })
@@ -493,22 +717,18 @@ impl PoolState {
         borsh::BorshSerialize::serialize(&self.fee_growth_global_1_x64, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_fees_token_0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_fees_token_1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.swap_in_amount_token_0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.swap_out_amount_token_1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.swap_in_amount_token_1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.swap_out_amount_token_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding5, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.status, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.fee_on, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.reward_infos, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.tick_array_bitmap, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.total_fees_token_0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.total_fees_claimed_token_0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.total_fees_token_1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.total_fees_claimed_token_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding6, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fund_fees_token_0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fund_fees_token_1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.open_time, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.recent_epoch, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.dynamic_fee_info, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding2, &mut writer)?;
         Ok(())

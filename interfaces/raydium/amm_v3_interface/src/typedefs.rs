@@ -12,6 +12,103 @@ use solana_pubkey::Pubkey;
     serde::Serialize,
     serde::Deserialize
 )]
+pub enum CollectFeeOn {
+    #[default]
+    FromInput,
+    Token0Only,
+    Token1Only,
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct CreateCustomizableParams {
+    pub sqrt_price_x64: u128,
+    pub collect_fee_on: CollectFeeOn,
+    pub enable_dynamic_fee: bool,
+}
+impl CreateCustomizableParams {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let sqrt_price_x64: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let collect_fee_on: CollectFeeOn = crate::borsh_de_or_default(&mut reader)?;
+        let enable_dynamic_fee: bool = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            sqrt_price_x64,
+            collect_fee_on,
+            enable_dynamic_fee,
+        })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct DynamicFeeInfo {
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    pub dynamic_fee_control: u32,
+    pub max_volatility_accumulator: u32,
+    pub tick_spacing_index_reference: i32,
+    pub volatility_reference: u32,
+    pub volatility_accumulator: u32,
+    pub last_update_timestamp: u64,
+    #[serde(with = "crate::big_array_serde")]
+    pub padding: [u8; 46],
+}
+impl DynamicFeeInfo {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let filter_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let decay_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let reduction_factor: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let dynamic_fee_control: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let max_volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let tick_spacing_index_reference: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let volatility_reference: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let last_update_timestamp: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding = <[u8; 46] as borsh::BorshDeserialize>::deserialize_reader(
+            &mut reader,
+        )?;
+        *__buf = reader;
+        Ok(Self {
+            filter_period,
+            decay_period,
+            reduction_factor,
+            dynamic_fee_control,
+            max_volatility_accumulator,
+            tick_spacing_index_reference,
+            volatility_reference,
+            volatility_accumulator,
+            last_update_timestamp,
+            padding,
+        })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub struct InitializeRewardParam {
     pub open_time: u64,
     pub end_time: u64,
@@ -102,7 +199,7 @@ pub struct RewardInfo {
     pub end_time: u64,
     pub last_update_time: u64,
     pub emissions_per_second_x64: u128,
-    pub reward_total_emissioned: u64,
+    pub reward_total_emitted: u64,
     pub reward_claimed: u64,
     pub token_mint: Pubkey,
     pub token_vault: Pubkey,
@@ -117,7 +214,7 @@ impl RewardInfo {
         let end_time: u64 = crate::borsh_de_or_default(&mut reader)?;
         let last_update_time: u64 = crate::borsh_de_or_default(&mut reader)?;
         let emissions_per_second_x64: u128 = crate::borsh_de_or_default(&mut reader)?;
-        let reward_total_emissioned: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let reward_total_emitted: u64 = crate::borsh_de_or_default(&mut reader)?;
         let reward_claimed: u64 = crate::borsh_de_or_default(&mut reader)?;
         let token_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let token_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
@@ -130,7 +227,7 @@ impl RewardInfo {
             end_time,
             last_update_time,
             emissions_per_second_x64,
-            reward_total_emissioned,
+            reward_total_emitted,
             reward_claimed,
             token_mint,
             token_vault,
@@ -156,7 +253,11 @@ pub struct TickState {
     pub fee_growth_outside_0_x64: u128,
     pub fee_growth_outside_1_x64: u128,
     pub reward_growths_outside_x64: [u128; 3],
-    pub padding: [u32; 13],
+    pub order_phase: u64,
+    pub orders_amount: u64,
+    pub part_filled_orders_remaining: u64,
+    pub unfilled_ratio_x64: u128,
+    pub padding: [u32; 3],
 }
 impl TickState {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -169,7 +270,11 @@ impl TickState {
         let reward_growths_outside_x64: [u128; 3] = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let padding: [u32; 13] = crate::borsh_de_or_default(&mut reader)?;
+        let order_phase: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let orders_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let part_filled_orders_remaining: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let unfilled_ratio_x64: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u32; 3] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             tick,
@@ -178,6 +283,10 @@ impl TickState {
             fee_growth_outside_0_x64,
             fee_growth_outside_1_x64,
             reward_growths_outside_x64,
+            order_phase,
+            orders_amount,
+            part_filled_orders_remaining,
+            unfilled_ratio_x64,
             padding,
         })
     }

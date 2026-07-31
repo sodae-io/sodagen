@@ -41,10 +41,10 @@ impl CommonFields {
     serde::Serialize,
     serde::Deserialize
 )]
-pub struct AdminApproveMultisigProposalArgs {
+pub struct AdminEnqueueMultisigProposalApprovalArgs {
     pub transaction_index: u64,
 }
-impl AdminApproveMultisigProposalArgs {
+impl AdminEnqueueMultisigProposalApprovalArgs {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let transaction_index: u64 = crate::borsh_de_or_default(&mut reader)?;

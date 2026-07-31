@@ -17,6 +17,7 @@ pub enum FusionammProgramIx {
     DecreaseLiquidity(DecreaseLiquidityIxArgs),
     DeletePositionBundle,
     DeleteTokenBadge,
+    IdlInclude,
     IncreaseLimitOrder(IncreaseLimitOrderIxArgs),
     IncreaseLiquidity(IncreaseLiquidityIxArgs),
     InitializeConfig(InitializeConfigIxArgs),
@@ -115,6 +116,9 @@ impl FusionammProgramIx {
         }
         if buf.starts_with(&DELETE_TOKEN_BADGE_IX_DISCM) {
             return Ok(Self::DeleteTokenBadge);
+        }
+        if buf.starts_with(&IDL_INCLUDE_IX_DISCM) {
+            return Ok(Self::IdlInclude);
         }
         if buf.starts_with(&INCREASE_LIMIT_ORDER_IX_DISCM) {
             let mut reader = &buf[INCREASE_LIMIT_ORDER_IX_DISCM.len()..];
@@ -398,6 +402,7 @@ impl FusionammProgramIx {
                 writer.write_all(&DELETE_POSITION_BUNDLE_IX_DISCM)
             }
             Self::DeleteTokenBadge => writer.write_all(&DELETE_TOKEN_BADGE_IX_DISCM),
+            Self::IdlInclude => writer.write_all(&IDL_INCLUDE_IX_DISCM),
             Self::IncreaseLimitOrder(args) => {
                 writer.write_all(&INCREASE_LIMIT_ORDER_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.amount, &mut writer)?;
@@ -3127,6 +3132,140 @@ pub fn delete_token_badge_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     delete_token_badge_verify_writable_privileges(accounts)?;
     delete_token_badge_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const IDL_INCLUDE_IX_ACCOUNTS_LEN: usize = 2;
+#[derive(Copy, Clone, Debug)]
+pub struct IdlIncludeAccounts<'me, 'info> {
+    pub tick_array: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct IdlIncludeKeys {
+    pub tick_array: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<IdlIncludeAccounts<'_, '_>> for IdlIncludeKeys {
+    fn from(accounts: IdlIncludeAccounts) -> Self {
+        Self {
+            tick_array: *accounts.tick_array.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<IdlIncludeKeys> for [AccountMeta; IDL_INCLUDE_IX_ACCOUNTS_LEN] {
+    fn from(keys: IdlIncludeKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.tick_array,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; IDL_INCLUDE_IX_ACCOUNTS_LEN]> for IdlIncludeKeys {
+    fn from(pubkeys: [Pubkey; IDL_INCLUDE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            tick_array: pubkeys[0],
+            system_program: pubkeys[1],
+        }
+    }
+}
+impl<'info> From<IdlIncludeAccounts<'_, 'info>>
+for [AccountInfo<'info>; IDL_INCLUDE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: IdlIncludeAccounts<'_, 'info>) -> Self {
+        [accounts.tick_array.clone(), accounts.system_program.clone()]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; IDL_INCLUDE_IX_ACCOUNTS_LEN]>
+for IdlIncludeAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; IDL_INCLUDE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            tick_array: &arr[0],
+            system_program: &arr[1],
+        }
+    }
+}
+pub const IDL_INCLUDE_IX_DISCM: [u8; 8usize] = [223, 253, 121, 121, 60, 193, 129, 31];
+#[derive(Clone, Debug, PartialEq)]
+pub struct IdlIncludeIxData;
+impl IdlIncludeIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != IDL_INCLUDE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&IDL_INCLUDE_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn idl_include_ix_with_program_id(
+    program_id: Pubkey,
+    keys: IdlIncludeKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; IDL_INCLUDE_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: IdlIncludeIxData.try_to_vec()?,
+    })
+}
+pub fn idl_include_ix(keys: IdlIncludeKeys) -> std::io::Result<Instruction> {
+    idl_include_ix_with_program_id(FUSIONAMM_PROGRAM_ID, keys)
+}
+pub fn idl_include_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: IdlIncludeAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: IdlIncludeKeys = accounts.into();
+    let ix = idl_include_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn idl_include_invoke(accounts: IdlIncludeAccounts<'_, '_>) -> ProgramResult {
+    idl_include_invoke_with_program_id(FUSIONAMM_PROGRAM_ID, accounts)
+}
+pub fn idl_include_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: IdlIncludeAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: IdlIncludeKeys = accounts.into();
+    let ix = idl_include_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn idl_include_invoke_signed(
+    accounts: IdlIncludeAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    idl_include_invoke_signed_with_program_id(FUSIONAMM_PROGRAM_ID, accounts, seeds)
+}
+pub fn idl_include_verify_account_keys(
+    accounts: IdlIncludeAccounts<'_, '_>,
+    keys: IdlIncludeKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.tick_array.key, keys.tick_array),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
     Ok(())
 }
 pub const INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 10;

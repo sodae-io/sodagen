@@ -124,6 +124,24 @@ pub enum PumpAmmError {
     WrongBuybackFeeRecipientsCount = 6057,
     #[error("BuybackFeeRecipientMissing")]
     BuybackFeeRecipientMissing = 6058,
+    #[error("Cashback trade is missing the required remaining accounts")]
+    MissingCashbackAccounts = 6059,
+    #[error("Cashback user_volume_accumulator account is invalid")]
+    InvalidCashbackAccumulator = 6060,
+    #[error("Cashback user_volume_accumulator ATA is missing or invalid")]
+    InvalidCashbackAccumulatorAta = 6061,
+    #[error("pool_v2 remaining account is missing or invalid")]
+    InvalidPoolV2 = 6062,
+    #[error(
+        "BOOST: sell output exceeds the real quote vault. effective = real + virtual is pricing-only; payout is capped at real_vault, so quote min(out, real_vault)"
+    )]
+    InsufficientRealQuoteReserves = 6063,
+    #[error("BOOST: deposit/withdraw don't apply to boost pools")]
+    BoostPoolLiquidityUnsupported = 6064,
+    #[error("BOOST: pool cannot be boosted (no virtual reserves)")]
+    PoolCannotBoost = 6065,
+    #[error("BOOST: boost is disabled")]
+    BoostDisabled = 6066,
 }
 impl From<PumpAmmError> for ProgramError {
     fn from(e: PumpAmmError) -> Self {

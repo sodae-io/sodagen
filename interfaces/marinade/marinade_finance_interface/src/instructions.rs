@@ -30,12 +30,13 @@ pub enum MarinadeFinanceProgramIx {
     EmergencyUnstake(EmergencyUnstakeIxArgs),
     PartialUnstake(PartialUnstakeIxArgs),
     MergeStakes(MergeStakesIxArgs),
-    Redelegate(RedelegateIxArgs),
+    CreateCanonicalStake(CreateCanonicalStakeIxArgs),
     Pause,
     Resume,
     WithdrawStakeAccount(WithdrawStakeAccountIxArgs),
     ReallocValidatorList(ReallocValidatorListIxArgs),
     ReallocStakeList(ReallocStakeListIxArgs),
+    FinalizeDelinquentUpgrade(FinalizeDelinquentUpgradeIxArgs),
 }
 impl MarinadeFinanceProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
@@ -173,9 +174,11 @@ impl MarinadeFinanceProgramIx {
         if buf.starts_with(&UPDATE_DEACTIVATED_IX_DISCM) {
             let mut reader = &buf[UPDATE_DEACTIVATED_IX_DISCM.len()..];
             let stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+            let validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(
                 Self::UpdateDeactivated(UpdateDeactivatedIxArgs {
                     stake_index,
+                    validator_index,
                 }),
             );
         }
@@ -227,16 +230,14 @@ impl MarinadeFinanceProgramIx {
                 }),
             );
         }
-        if buf.starts_with(&REDELEGATE_IX_DISCM) {
-            let mut reader = &buf[REDELEGATE_IX_DISCM.len()..];
-            let stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
-            let source_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
-            let dest_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        if buf.starts_with(&CREATE_CANONICAL_STAKE_IX_DISCM) {
+            let mut reader = &buf[CREATE_CANONICAL_STAKE_IX_DISCM.len()..];
+            let source_stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+            let validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(
-                Self::Redelegate(RedelegateIxArgs {
-                    stake_index,
-                    source_validator_index,
-                    dest_validator_index,
+                Self::CreateCanonicalStake(CreateCanonicalStakeIxArgs {
+                    source_stake_index,
+                    validator_index,
                 }),
             );
         }
@@ -274,6 +275,15 @@ impl MarinadeFinanceProgramIx {
             let mut reader = &buf[REALLOC_STAKE_LIST_IX_DISCM.len()..];
             let capacity: u32 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(Self::ReallocStakeList(ReallocStakeListIxArgs { capacity }));
+        }
+        if buf.starts_with(&FINALIZE_DELINQUENT_UPGRADE_IX_DISCM) {
+            let mut reader = &buf[FINALIZE_DELINQUENT_UPGRADE_IX_DISCM.len()..];
+            let max_validators: u32 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::FinalizeDelinquentUpgrade(FinalizeDelinquentUpgradeIxArgs {
+                    max_validators,
+                }),
+            );
         }
         Err(std::io::Error::from(std::io::ErrorKind::InvalidData))
     }
@@ -367,6 +377,7 @@ impl MarinadeFinanceProgramIx {
             Self::UpdateDeactivated(args) => {
                 writer.write_all(&UPDATE_DEACTIVATED_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.stake_index, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.validator_index, &mut writer)?;
                 Ok(())
             }
             Self::DeactivateStake(args) => {
@@ -401,17 +412,10 @@ impl MarinadeFinanceProgramIx {
                 borsh::BorshSerialize::serialize(&args.validator_index, &mut writer)?;
                 Ok(())
             }
-            Self::Redelegate(args) => {
-                writer.write_all(&REDELEGATE_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args.stake_index, &mut writer)?;
-                borsh::BorshSerialize::serialize(
-                    &args.source_validator_index,
-                    &mut writer,
-                )?;
-                borsh::BorshSerialize::serialize(
-                    &args.dest_validator_index,
-                    &mut writer,
-                )?;
+            Self::CreateCanonicalStake(args) => {
+                writer.write_all(&CREATE_CANONICAL_STAKE_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.source_stake_index, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.validator_index, &mut writer)?;
                 Ok(())
             }
             Self::Pause => writer.write_all(&PAUSE_IX_DISCM),
@@ -432,6 +436,11 @@ impl MarinadeFinanceProgramIx {
             Self::ReallocStakeList(args) => {
                 writer.write_all(&REALLOC_STAKE_LIST_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.capacity, &mut writer)?;
+                Ok(())
+            }
+            Self::FinalizeDelinquentUpgrade(args) => {
+                writer.write_all(&FINALIZE_DELINQUENT_UPGRADE_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.max_validators, &mut writer)?;
                 Ok(())
             }
         }
@@ -4710,7 +4719,7 @@ pub struct UpdateActiveAccounts<'me, 'info> {
     pub common_stake_history: &'me AccountInfo<'info>,
     pub common_stake_program: &'me AccountInfo<'info>,
     pub common_token_program: &'me AccountInfo<'info>,
-    pub validator_list: &'me AccountInfo<'info>,
+    pub common_validator_list: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UpdateActiveKeys {
@@ -4726,7 +4735,7 @@ pub struct UpdateActiveKeys {
     pub common_stake_history: Pubkey,
     pub common_stake_program: Pubkey,
     pub common_token_program: Pubkey,
-    pub validator_list: Pubkey,
+    pub common_validator_list: Pubkey,
 }
 impl From<UpdateActiveAccounts<'_, '_>> for UpdateActiveKeys {
     fn from(accounts: UpdateActiveAccounts) -> Self {
@@ -4745,7 +4754,7 @@ impl From<UpdateActiveAccounts<'_, '_>> for UpdateActiveKeys {
             common_stake_history: *accounts.common_stake_history.key,
             common_stake_program: *accounts.common_stake_program.key,
             common_token_program: *accounts.common_token_program.key,
-            validator_list: *accounts.validator_list.key,
+            common_validator_list: *accounts.common_validator_list.key,
         }
     }
 }
@@ -4813,7 +4822,7 @@ impl From<UpdateActiveKeys> for [AccountMeta; UPDATE_ACTIVE_IX_ACCOUNTS_LEN] {
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.validator_list,
+                pubkey: keys.common_validator_list,
                 is_signer: false,
                 is_writable: true,
             },
@@ -4835,7 +4844,7 @@ impl From<[Pubkey; UPDATE_ACTIVE_IX_ACCOUNTS_LEN]> for UpdateActiveKeys {
             common_stake_history: pubkeys[9],
             common_stake_program: pubkeys[10],
             common_token_program: pubkeys[11],
-            validator_list: pubkeys[12],
+            common_validator_list: pubkeys[12],
         }
     }
 }
@@ -4855,7 +4864,7 @@ for [AccountInfo<'info>; UPDATE_ACTIVE_IX_ACCOUNTS_LEN] {
             accounts.common_stake_history.clone(),
             accounts.common_stake_program.clone(),
             accounts.common_token_program.clone(),
-            accounts.validator_list.clone(),
+            accounts.common_validator_list.clone(),
         ]
     }
 }
@@ -4875,7 +4884,7 @@ for UpdateActiveAccounts<'me, 'info> {
             common_stake_history: &arr[9],
             common_stake_program: &arr[10],
             common_token_program: &arr[11],
-            validator_list: &arr[12],
+            common_validator_list: &arr[12],
         }
     }
 }
@@ -4997,7 +5006,7 @@ pub fn update_active_verify_account_keys(
         (*accounts.common_stake_history.key, keys.common_stake_history),
         (*accounts.common_stake_program.key, keys.common_stake_program),
         (*accounts.common_token_program.key, keys.common_token_program),
-        (*accounts.validator_list.key, keys.validator_list),
+        (*accounts.common_validator_list.key, keys.common_validator_list),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -5015,7 +5024,7 @@ pub fn update_active_verify_writable_privileges<'me, 'info>(
         accounts.common_reserve_pda,
         accounts.common_msol_mint,
         accounts.common_treasury_msol_account,
-        accounts.validator_list,
+        accounts.common_validator_list,
     ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
@@ -5029,7 +5038,7 @@ pub fn update_active_verify_account_privileges<'me, 'info>(
     update_active_verify_writable_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_DEACTIVATED_IX_ACCOUNTS_LEN: usize = 14;
+pub const UPDATE_DEACTIVATED_IX_ACCOUNTS_LEN: usize = 15;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateDeactivatedAccounts<'me, 'info> {
     pub common_state: &'me AccountInfo<'info>,
@@ -5044,6 +5053,7 @@ pub struct UpdateDeactivatedAccounts<'me, 'info> {
     pub common_stake_history: &'me AccountInfo<'info>,
     pub common_stake_program: &'me AccountInfo<'info>,
     pub common_token_program: &'me AccountInfo<'info>,
+    pub common_validator_list: &'me AccountInfo<'info>,
     pub operational_sol_account: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
 }
@@ -5061,6 +5071,7 @@ pub struct UpdateDeactivatedKeys {
     pub common_stake_history: Pubkey,
     pub common_stake_program: Pubkey,
     pub common_token_program: Pubkey,
+    pub common_validator_list: Pubkey,
     pub operational_sol_account: Pubkey,
     pub system_program: Pubkey,
 }
@@ -5081,6 +5092,7 @@ impl From<UpdateDeactivatedAccounts<'_, '_>> for UpdateDeactivatedKeys {
             common_stake_history: *accounts.common_stake_history.key,
             common_stake_program: *accounts.common_stake_program.key,
             common_token_program: *accounts.common_token_program.key,
+            common_validator_list: *accounts.common_validator_list.key,
             operational_sol_account: *accounts.operational_sol_account.key,
             system_program: *accounts.system_program.key,
         }
@@ -5150,6 +5162,11 @@ impl From<UpdateDeactivatedKeys> for [AccountMeta; UPDATE_DEACTIVATED_IX_ACCOUNT
                 is_writable: false,
             },
             AccountMeta {
+                pubkey: keys.common_validator_list,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
                 pubkey: keys.operational_sol_account,
                 is_signer: false,
                 is_writable: true,
@@ -5177,8 +5194,9 @@ impl From<[Pubkey; UPDATE_DEACTIVATED_IX_ACCOUNTS_LEN]> for UpdateDeactivatedKey
             common_stake_history: pubkeys[9],
             common_stake_program: pubkeys[10],
             common_token_program: pubkeys[11],
-            operational_sol_account: pubkeys[12],
-            system_program: pubkeys[13],
+            common_validator_list: pubkeys[12],
+            operational_sol_account: pubkeys[13],
+            system_program: pubkeys[14],
         }
     }
 }
@@ -5198,6 +5216,7 @@ for [AccountInfo<'info>; UPDATE_DEACTIVATED_IX_ACCOUNTS_LEN] {
             accounts.common_stake_history.clone(),
             accounts.common_stake_program.clone(),
             accounts.common_token_program.clone(),
+            accounts.common_validator_list.clone(),
             accounts.operational_sol_account.clone(),
             accounts.system_program.clone(),
         ]
@@ -5219,8 +5238,9 @@ for UpdateDeactivatedAccounts<'me, 'info> {
             common_stake_history: &arr[9],
             common_stake_program: &arr[10],
             common_token_program: &arr[11],
-            operational_sol_account: &arr[12],
-            system_program: &arr[13],
+            common_validator_list: &arr[12],
+            operational_sol_account: &arr[13],
+            system_program: &arr[14],
         }
     }
 }
@@ -5230,6 +5250,7 @@ pub const UPDATE_DEACTIVATED_IX_DISCM: [u8; 8usize] = [
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct UpdateDeactivatedIxArgs {
     pub stake_index: u32,
+    pub validator_index: u32,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpdateDeactivatedIxData(pub UpdateDeactivatedIxArgs);
@@ -5247,15 +5268,18 @@ impl UpdateDeactivatedIxData {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
         let stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
         Ok(
             Self(UpdateDeactivatedIxArgs {
                 stake_index,
+                validator_index,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&UPDATE_DEACTIVATED_IX_DISCM)?;
         borsh::BorshSerialize::serialize(&self.0.stake_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.validator_index, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -5344,6 +5368,7 @@ pub fn update_deactivated_verify_account_keys(
         (*accounts.common_stake_history.key, keys.common_stake_history),
         (*accounts.common_stake_program.key, keys.common_stake_program),
         (*accounts.common_token_program.key, keys.common_token_program),
+        (*accounts.common_validator_list.key, keys.common_validator_list),
         (*accounts.operational_sol_account.key, keys.operational_sol_account),
         (*accounts.system_program.key, keys.system_program),
     ] {
@@ -5363,6 +5388,7 @@ pub fn update_deactivated_verify_writable_privileges<'me, 'info>(
         accounts.common_reserve_pda,
         accounts.common_msol_mint,
         accounts.common_treasury_msol_account,
+        accounts.common_validator_list,
         accounts.operational_sol_account,
     ] {
         if !should_be_writable.is_writable {
@@ -6681,74 +6707,61 @@ pub fn merge_stakes_verify_account_privileges<'me, 'info>(
     merge_stakes_verify_writable_privileges(accounts)?;
     Ok(())
 }
-pub const REDELEGATE_IX_ACCOUNTS_LEN: usize = 15;
+pub const CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN: usize = 12;
 #[derive(Copy, Clone, Debug)]
-pub struct RedelegateAccounts<'me, 'info> {
+pub struct CreateCanonicalStakeAccounts<'me, 'info> {
     pub state: &'me AccountInfo<'info>,
-    pub validator_list: &'me AccountInfo<'info>,
     pub stake_list: &'me AccountInfo<'info>,
-    pub stake_account: &'me AccountInfo<'info>,
+    pub validator_list: &'me AccountInfo<'info>,
+    pub canonical_stake: &'me AccountInfo<'info>,
+    pub source_stake: &'me AccountInfo<'info>,
     pub stake_deposit_authority: &'me AccountInfo<'info>,
-    pub reserve_pda: &'me AccountInfo<'info>,
-    pub split_stake_account: &'me AccountInfo<'info>,
-    pub split_stake_rent_payer: &'me AccountInfo<'info>,
-    pub dest_validator_account: &'me AccountInfo<'info>,
-    pub redelegate_stake_account: &'me AccountInfo<'info>,
+    pub stake_withdraw_authority: &'me AccountInfo<'info>,
+    pub operational_sol_account: &'me AccountInfo<'info>,
     pub clock: &'me AccountInfo<'info>,
     pub stake_history: &'me AccountInfo<'info>,
-    pub stake_config: &'me AccountInfo<'info>,
-    pub system_program: &'me AccountInfo<'info>,
     pub stake_program: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct RedelegateKeys {
+pub struct CreateCanonicalStakeKeys {
     pub state: Pubkey,
-    pub validator_list: Pubkey,
     pub stake_list: Pubkey,
-    pub stake_account: Pubkey,
+    pub validator_list: Pubkey,
+    pub canonical_stake: Pubkey,
+    pub source_stake: Pubkey,
     pub stake_deposit_authority: Pubkey,
-    pub reserve_pda: Pubkey,
-    pub split_stake_account: Pubkey,
-    pub split_stake_rent_payer: Pubkey,
-    pub dest_validator_account: Pubkey,
-    pub redelegate_stake_account: Pubkey,
+    pub stake_withdraw_authority: Pubkey,
+    pub operational_sol_account: Pubkey,
     pub clock: Pubkey,
     pub stake_history: Pubkey,
-    pub stake_config: Pubkey,
-    pub system_program: Pubkey,
     pub stake_program: Pubkey,
+    pub system_program: Pubkey,
 }
-impl From<RedelegateAccounts<'_, '_>> for RedelegateKeys {
-    fn from(accounts: RedelegateAccounts) -> Self {
+impl From<CreateCanonicalStakeAccounts<'_, '_>> for CreateCanonicalStakeKeys {
+    fn from(accounts: CreateCanonicalStakeAccounts) -> Self {
         Self {
             state: *accounts.state.key,
-            validator_list: *accounts.validator_list.key,
             stake_list: *accounts.stake_list.key,
-            stake_account: *accounts.stake_account.key,
+            validator_list: *accounts.validator_list.key,
+            canonical_stake: *accounts.canonical_stake.key,
+            source_stake: *accounts.source_stake.key,
             stake_deposit_authority: *accounts.stake_deposit_authority.key,
-            reserve_pda: *accounts.reserve_pda.key,
-            split_stake_account: *accounts.split_stake_account.key,
-            split_stake_rent_payer: *accounts.split_stake_rent_payer.key,
-            dest_validator_account: *accounts.dest_validator_account.key,
-            redelegate_stake_account: *accounts.redelegate_stake_account.key,
+            stake_withdraw_authority: *accounts.stake_withdraw_authority.key,
+            operational_sol_account: *accounts.operational_sol_account.key,
             clock: *accounts.clock.key,
             stake_history: *accounts.stake_history.key,
-            stake_config: *accounts.stake_config.key,
-            system_program: *accounts.system_program.key,
             stake_program: *accounts.stake_program.key,
+            system_program: *accounts.system_program.key,
         }
     }
 }
-impl From<RedelegateKeys> for [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] {
-    fn from(keys: RedelegateKeys) -> Self {
+impl From<CreateCanonicalStakeKeys>
+for [AccountMeta; CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreateCanonicalStakeKeys) -> Self {
         [
             AccountMeta {
                 pubkey: keys.state,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.validator_list,
                 is_signer: false,
                 is_writable: true,
             },
@@ -6758,7 +6771,17 @@ impl From<RedelegateKeys> for [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.stake_account,
+                pubkey: keys.validator_list,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.canonical_stake,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.source_stake,
                 is_signer: false,
                 is_writable: true,
             },
@@ -6768,28 +6791,13 @@ impl From<RedelegateKeys> for [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] {
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.reserve_pda,
+                pubkey: keys.stake_withdraw_authority,
                 is_signer: false,
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.split_stake_account,
-                is_signer: true,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.split_stake_rent_payer,
-                is_signer: true,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.dest_validator_account,
+                pubkey: keys.operational_sol_account,
                 is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.redelegate_stake_account,
-                is_signer: true,
                 is_writable: true,
             },
             AccountMeta {
@@ -6803,7 +6811,7 @@ impl From<RedelegateKeys> for [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] {
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.stake_config,
+                pubkey: keys.stake_program,
                 is_signer: false,
                 is_writable: false,
             },
@@ -6812,117 +6820,104 @@ impl From<RedelegateKeys> for [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: keys.stake_program,
-                is_signer: false,
-                is_writable: false,
-            },
         ]
     }
 }
-impl From<[Pubkey; REDELEGATE_IX_ACCOUNTS_LEN]> for RedelegateKeys {
-    fn from(pubkeys: [Pubkey; REDELEGATE_IX_ACCOUNTS_LEN]) -> Self {
+impl From<[Pubkey; CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN]>
+for CreateCanonicalStakeKeys {
+    fn from(pubkeys: [Pubkey; CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN]) -> Self {
         Self {
             state: pubkeys[0],
-            validator_list: pubkeys[1],
-            stake_list: pubkeys[2],
-            stake_account: pubkeys[3],
-            stake_deposit_authority: pubkeys[4],
-            reserve_pda: pubkeys[5],
-            split_stake_account: pubkeys[6],
-            split_stake_rent_payer: pubkeys[7],
-            dest_validator_account: pubkeys[8],
-            redelegate_stake_account: pubkeys[9],
-            clock: pubkeys[10],
-            stake_history: pubkeys[11],
-            stake_config: pubkeys[12],
-            system_program: pubkeys[13],
-            stake_program: pubkeys[14],
+            stake_list: pubkeys[1],
+            validator_list: pubkeys[2],
+            canonical_stake: pubkeys[3],
+            source_stake: pubkeys[4],
+            stake_deposit_authority: pubkeys[5],
+            stake_withdraw_authority: pubkeys[6],
+            operational_sol_account: pubkeys[7],
+            clock: pubkeys[8],
+            stake_history: pubkeys[9],
+            stake_program: pubkeys[10],
+            system_program: pubkeys[11],
         }
     }
 }
-impl<'info> From<RedelegateAccounts<'_, 'info>>
-for [AccountInfo<'info>; REDELEGATE_IX_ACCOUNTS_LEN] {
-    fn from(accounts: RedelegateAccounts<'_, 'info>) -> Self {
+impl<'info> From<CreateCanonicalStakeAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreateCanonicalStakeAccounts<'_, 'info>) -> Self {
         [
             accounts.state.clone(),
-            accounts.validator_list.clone(),
             accounts.stake_list.clone(),
-            accounts.stake_account.clone(),
+            accounts.validator_list.clone(),
+            accounts.canonical_stake.clone(),
+            accounts.source_stake.clone(),
             accounts.stake_deposit_authority.clone(),
-            accounts.reserve_pda.clone(),
-            accounts.split_stake_account.clone(),
-            accounts.split_stake_rent_payer.clone(),
-            accounts.dest_validator_account.clone(),
-            accounts.redelegate_stake_account.clone(),
+            accounts.stake_withdraw_authority.clone(),
+            accounts.operational_sol_account.clone(),
             accounts.clock.clone(),
             accounts.stake_history.clone(),
-            accounts.stake_config.clone(),
-            accounts.system_program.clone(),
             accounts.stake_program.clone(),
+            accounts.system_program.clone(),
         ]
     }
 }
-impl<'me, 'info> From<&'me [AccountInfo<'info>; REDELEGATE_IX_ACCOUNTS_LEN]>
-for RedelegateAccounts<'me, 'info> {
-    fn from(arr: &'me [AccountInfo<'info>; REDELEGATE_IX_ACCOUNTS_LEN]) -> Self {
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN]>
+for CreateCanonicalStakeAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN],
+    ) -> Self {
         Self {
             state: &arr[0],
-            validator_list: &arr[1],
-            stake_list: &arr[2],
-            stake_account: &arr[3],
-            stake_deposit_authority: &arr[4],
-            reserve_pda: &arr[5],
-            split_stake_account: &arr[6],
-            split_stake_rent_payer: &arr[7],
-            dest_validator_account: &arr[8],
-            redelegate_stake_account: &arr[9],
-            clock: &arr[10],
-            stake_history: &arr[11],
-            stake_config: &arr[12],
-            system_program: &arr[13],
-            stake_program: &arr[14],
+            stake_list: &arr[1],
+            validator_list: &arr[2],
+            canonical_stake: &arr[3],
+            source_stake: &arr[4],
+            stake_deposit_authority: &arr[5],
+            stake_withdraw_authority: &arr[6],
+            operational_sol_account: &arr[7],
+            clock: &arr[8],
+            stake_history: &arr[9],
+            stake_program: &arr[10],
+            system_program: &arr[11],
         }
     }
 }
-pub const REDELEGATE_IX_DISCM: [u8; 8usize] = [212, 82, 51, 160, 228, 80, 116, 35];
+pub const CREATE_CANONICAL_STAKE_IX_DISCM: [u8; 8usize] = [
+    109, 2, 136, 224, 147, 51, 182, 232,
+];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct RedelegateIxArgs {
-    pub stake_index: u32,
-    pub source_validator_index: u32,
-    pub dest_validator_index: u32,
+pub struct CreateCanonicalStakeIxArgs {
+    pub source_stake_index: u32,
+    pub validator_index: u32,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct RedelegateIxData(pub RedelegateIxArgs);
-impl From<RedelegateIxArgs> for RedelegateIxData {
-    fn from(args: RedelegateIxArgs) -> Self {
+pub struct CreateCanonicalStakeIxData(pub CreateCanonicalStakeIxArgs);
+impl From<CreateCanonicalStakeIxArgs> for CreateCanonicalStakeIxData {
+    fn from(args: CreateCanonicalStakeIxArgs) -> Self {
         Self(args)
     }
 }
-impl RedelegateIxData {
+impl CreateCanonicalStakeIxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8usize];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != REDELEGATE_IX_DISCM {
+        if maybe_discm != CREATE_CANONICAL_STAKE_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let source_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let dest_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let source_stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
         Ok(
-            Self(RedelegateIxArgs {
-                stake_index,
-                source_validator_index,
-                dest_validator_index,
+            Self(CreateCanonicalStakeIxArgs {
+                source_stake_index,
+                validator_index,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&REDELEGATE_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0.stake_index, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.source_validator_index, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.dest_validator_index, &mut writer)?;
+        writer.write_all(&CREATE_CANONICAL_STAKE_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.source_stake_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.validator_index, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -6931,82 +6926,83 @@ impl RedelegateIxData {
         Ok(data)
     }
 }
-pub fn redelegate_ix_with_program_id(
+pub fn create_canonical_stake_ix_with_program_id(
     program_id: Pubkey,
-    keys: RedelegateKeys,
-    args: RedelegateIxArgs,
+    keys: CreateCanonicalStakeKeys,
+    args: CreateCanonicalStakeIxArgs,
 ) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] = keys.into();
-    let data: RedelegateIxData = args.into();
+    let metas: [AccountMeta; CREATE_CANONICAL_STAKE_IX_ACCOUNTS_LEN] = keys.into();
+    let data: CreateCanonicalStakeIxData = args.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
         data: data.try_to_vec()?,
     })
 }
-pub fn redelegate_ix(
-    keys: RedelegateKeys,
-    args: RedelegateIxArgs,
+pub fn create_canonical_stake_ix(
+    keys: CreateCanonicalStakeKeys,
+    args: CreateCanonicalStakeIxArgs,
 ) -> std::io::Result<Instruction> {
-    redelegate_ix_with_program_id(MARINADE_FINANCE_PROGRAM_ID, keys, args)
+    create_canonical_stake_ix_with_program_id(MARINADE_FINANCE_PROGRAM_ID, keys, args)
 }
-pub fn redelegate_invoke_with_program_id(
+pub fn create_canonical_stake_invoke_with_program_id(
     program_id: Pubkey,
-    accounts: RedelegateAccounts<'_, '_>,
-    args: RedelegateIxArgs,
+    accounts: CreateCanonicalStakeAccounts<'_, '_>,
+    args: CreateCanonicalStakeIxArgs,
 ) -> ProgramResult {
-    let keys: RedelegateKeys = accounts.into();
-    let ix = redelegate_ix_with_program_id(program_id, keys, args)?;
+    let keys: CreateCanonicalStakeKeys = accounts.into();
+    let ix = create_canonical_stake_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn redelegate_invoke(
-    accounts: RedelegateAccounts<'_, '_>,
-    args: RedelegateIxArgs,
+pub fn create_canonical_stake_invoke(
+    accounts: CreateCanonicalStakeAccounts<'_, '_>,
+    args: CreateCanonicalStakeIxArgs,
 ) -> ProgramResult {
-    redelegate_invoke_with_program_id(MARINADE_FINANCE_PROGRAM_ID, accounts, args)
+    create_canonical_stake_invoke_with_program_id(
+        MARINADE_FINANCE_PROGRAM_ID,
+        accounts,
+        args,
+    )
 }
-pub fn redelegate_invoke_signed_with_program_id(
+pub fn create_canonical_stake_invoke_signed_with_program_id(
     program_id: Pubkey,
-    accounts: RedelegateAccounts<'_, '_>,
-    args: RedelegateIxArgs,
+    accounts: CreateCanonicalStakeAccounts<'_, '_>,
+    args: CreateCanonicalStakeIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let keys: RedelegateKeys = accounts.into();
-    let ix = redelegate_ix_with_program_id(program_id, keys, args)?;
+    let keys: CreateCanonicalStakeKeys = accounts.into();
+    let ix = create_canonical_stake_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
-pub fn redelegate_invoke_signed(
-    accounts: RedelegateAccounts<'_, '_>,
-    args: RedelegateIxArgs,
+pub fn create_canonical_stake_invoke_signed(
+    accounts: CreateCanonicalStakeAccounts<'_, '_>,
+    args: CreateCanonicalStakeIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    redelegate_invoke_signed_with_program_id(
+    create_canonical_stake_invoke_signed_with_program_id(
         MARINADE_FINANCE_PROGRAM_ID,
         accounts,
         args,
         seeds,
     )
 }
-pub fn redelegate_verify_account_keys(
-    accounts: RedelegateAccounts<'_, '_>,
-    keys: RedelegateKeys,
+pub fn create_canonical_stake_verify_account_keys(
+    accounts: CreateCanonicalStakeAccounts<'_, '_>,
+    keys: CreateCanonicalStakeKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
         (*accounts.state.key, keys.state),
-        (*accounts.validator_list.key, keys.validator_list),
         (*accounts.stake_list.key, keys.stake_list),
-        (*accounts.stake_account.key, keys.stake_account),
+        (*accounts.validator_list.key, keys.validator_list),
+        (*accounts.canonical_stake.key, keys.canonical_stake),
+        (*accounts.source_stake.key, keys.source_stake),
         (*accounts.stake_deposit_authority.key, keys.stake_deposit_authority),
-        (*accounts.reserve_pda.key, keys.reserve_pda),
-        (*accounts.split_stake_account.key, keys.split_stake_account),
-        (*accounts.split_stake_rent_payer.key, keys.split_stake_rent_payer),
-        (*accounts.dest_validator_account.key, keys.dest_validator_account),
-        (*accounts.redelegate_stake_account.key, keys.redelegate_stake_account),
+        (*accounts.stake_withdraw_authority.key, keys.stake_withdraw_authority),
+        (*accounts.operational_sol_account.key, keys.operational_sol_account),
         (*accounts.clock.key, keys.clock),
         (*accounts.stake_history.key, keys.stake_history),
-        (*accounts.stake_config.key, keys.stake_config),
-        (*accounts.system_program.key, keys.system_program),
         (*accounts.stake_program.key, keys.stake_program),
+        (*accounts.system_program.key, keys.system_program),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -7014,17 +7010,16 @@ pub fn redelegate_verify_account_keys(
     }
     Ok(())
 }
-pub fn redelegate_verify_writable_privileges<'me, 'info>(
-    accounts: RedelegateAccounts<'me, 'info>,
+pub fn create_canonical_stake_verify_writable_privileges<'me, 'info>(
+    accounts: CreateCanonicalStakeAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     for should_be_writable in [
         accounts.state,
-        accounts.validator_list,
         accounts.stake_list,
-        accounts.stake_account,
-        accounts.split_stake_account,
-        accounts.split_stake_rent_payer,
-        accounts.redelegate_stake_account,
+        accounts.validator_list,
+        accounts.canonical_stake,
+        accounts.source_stake,
+        accounts.operational_sol_account,
     ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
@@ -7032,25 +7027,10 @@ pub fn redelegate_verify_writable_privileges<'me, 'info>(
     }
     Ok(())
 }
-pub fn redelegate_verify_signer_privileges<'me, 'info>(
-    accounts: RedelegateAccounts<'me, 'info>,
+pub fn create_canonical_stake_verify_account_privileges<'me, 'info>(
+    accounts: CreateCanonicalStakeAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [
-        accounts.split_stake_account,
-        accounts.split_stake_rent_payer,
-        accounts.redelegate_stake_account,
-    ] {
-        if !should_be_signer.is_signer {
-            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
-        }
-    }
-    Ok(())
-}
-pub fn redelegate_verify_account_privileges<'me, 'info>(
-    accounts: RedelegateAccounts<'me, 'info>,
-) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    redelegate_verify_writable_privileges(accounts)?;
-    redelegate_verify_signer_privileges(accounts)?;
+    create_canonical_stake_verify_writable_privileges(accounts)?;
     Ok(())
 }
 pub const PAUSE_IX_ACCOUNTS_LEN: usize = 2;
@@ -8258,5 +8238,204 @@ pub fn realloc_stake_list_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     realloc_stake_list_verify_writable_privileges(accounts)?;
     realloc_stake_list_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN: usize = 2;
+#[derive(Copy, Clone, Debug)]
+pub struct FinalizeDelinquentUpgradeAccounts<'me, 'info> {
+    pub state: &'me AccountInfo<'info>,
+    pub validator_list: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct FinalizeDelinquentUpgradeKeys {
+    pub state: Pubkey,
+    pub validator_list: Pubkey,
+}
+impl From<FinalizeDelinquentUpgradeAccounts<'_, '_>> for FinalizeDelinquentUpgradeKeys {
+    fn from(accounts: FinalizeDelinquentUpgradeAccounts) -> Self {
+        Self {
+            state: *accounts.state.key,
+            validator_list: *accounts.validator_list.key,
+        }
+    }
+}
+impl From<FinalizeDelinquentUpgradeKeys>
+for [AccountMeta; FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN] {
+    fn from(keys: FinalizeDelinquentUpgradeKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.validator_list,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN]>
+for FinalizeDelinquentUpgradeKeys {
+    fn from(pubkeys: [Pubkey; FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            state: pubkeys[0],
+            validator_list: pubkeys[1],
+        }
+    }
+}
+impl<'info> From<FinalizeDelinquentUpgradeAccounts<'_, 'info>>
+for [AccountInfo<'info>; FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: FinalizeDelinquentUpgradeAccounts<'_, 'info>) -> Self {
+        [accounts.state.clone(), accounts.validator_list.clone()]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN]>
+for FinalizeDelinquentUpgradeAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            state: &arr[0],
+            validator_list: &arr[1],
+        }
+    }
+}
+pub const FINALIZE_DELINQUENT_UPGRADE_IX_DISCM: [u8; 8usize] = [
+    173, 8, 90, 193, 222, 52, 169, 144,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct FinalizeDelinquentUpgradeIxArgs {
+    pub max_validators: u32,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct FinalizeDelinquentUpgradeIxData(pub FinalizeDelinquentUpgradeIxArgs);
+impl From<FinalizeDelinquentUpgradeIxArgs> for FinalizeDelinquentUpgradeIxData {
+    fn from(args: FinalizeDelinquentUpgradeIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl FinalizeDelinquentUpgradeIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != FINALIZE_DELINQUENT_UPGRADE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let max_validators: u32 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(FinalizeDelinquentUpgradeIxArgs {
+                max_validators,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&FINALIZE_DELINQUENT_UPGRADE_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.max_validators, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn finalize_delinquent_upgrade_ix_with_program_id(
+    program_id: Pubkey,
+    keys: FinalizeDelinquentUpgradeKeys,
+    args: FinalizeDelinquentUpgradeIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; FINALIZE_DELINQUENT_UPGRADE_IX_ACCOUNTS_LEN] = keys.into();
+    let data: FinalizeDelinquentUpgradeIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn finalize_delinquent_upgrade_ix(
+    keys: FinalizeDelinquentUpgradeKeys,
+    args: FinalizeDelinquentUpgradeIxArgs,
+) -> std::io::Result<Instruction> {
+    finalize_delinquent_upgrade_ix_with_program_id(
+        MARINADE_FINANCE_PROGRAM_ID,
+        keys,
+        args,
+    )
+}
+pub fn finalize_delinquent_upgrade_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: FinalizeDelinquentUpgradeAccounts<'_, '_>,
+    args: FinalizeDelinquentUpgradeIxArgs,
+) -> ProgramResult {
+    let keys: FinalizeDelinquentUpgradeKeys = accounts.into();
+    let ix = finalize_delinquent_upgrade_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn finalize_delinquent_upgrade_invoke(
+    accounts: FinalizeDelinquentUpgradeAccounts<'_, '_>,
+    args: FinalizeDelinquentUpgradeIxArgs,
+) -> ProgramResult {
+    finalize_delinquent_upgrade_invoke_with_program_id(
+        MARINADE_FINANCE_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn finalize_delinquent_upgrade_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: FinalizeDelinquentUpgradeAccounts<'_, '_>,
+    args: FinalizeDelinquentUpgradeIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: FinalizeDelinquentUpgradeKeys = accounts.into();
+    let ix = finalize_delinquent_upgrade_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn finalize_delinquent_upgrade_invoke_signed(
+    accounts: FinalizeDelinquentUpgradeAccounts<'_, '_>,
+    args: FinalizeDelinquentUpgradeIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    finalize_delinquent_upgrade_invoke_signed_with_program_id(
+        MARINADE_FINANCE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn finalize_delinquent_upgrade_verify_account_keys(
+    accounts: FinalizeDelinquentUpgradeAccounts<'_, '_>,
+    keys: FinalizeDelinquentUpgradeKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.state.key, keys.state),
+        (*accounts.validator_list.key, keys.validator_list),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn finalize_delinquent_upgrade_verify_writable_privileges<'me, 'info>(
+    accounts: FinalizeDelinquentUpgradeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.state, accounts.validator_list] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn finalize_delinquent_upgrade_verify_account_privileges<'me, 'info>(
+    accounts: FinalizeDelinquentUpgradeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    finalize_delinquent_upgrade_verify_writable_privileges(accounts)?;
     Ok(())
 }

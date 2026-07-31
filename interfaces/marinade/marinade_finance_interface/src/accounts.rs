@@ -69,7 +69,6 @@ pub const STATE_ACCOUNT_DISCM: [u8; 8] = [216, 146, 107, 94, 104, 75, 182, 177];
 #[derive(
     Clone,
     Debug,
-    Default,
     BorshDeserialize,
     BorshSerialize,
     PartialEq,
@@ -106,6 +105,9 @@ pub struct State {
     pub last_stake_move_epoch: u64,
     pub stake_moved: u64,
     pub max_stake_moved_per_epoch: Fee,
+    pub delinquent_upgrader: DelinquentUpgraderState,
+    pub deposit_sol_fee: FeeCents,
+    pub deposit_stake_account_fee: FeeCents,
 }
 impl State {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -169,6 +171,19 @@ impl State {
         } else {
             <Fee>::deserialize(&mut reader)?
         };
+        let delinquent_upgrader = <DelinquentUpgraderState as borsh::BorshDeserialize>::deserialize_reader(
+            &mut reader,
+        )?;
+        let deposit_sol_fee = if reader.is_empty() {
+            Default::default()
+        } else {
+            <FeeCents>::deserialize(&mut reader)?
+        };
+        let deposit_stake_account_fee = if reader.is_empty() {
+            Default::default()
+        } else {
+            <FeeCents>::deserialize(&mut reader)?
+        };
         *__buf = reader;
         Ok(Self {
             msol_mint,
@@ -200,6 +215,9 @@ impl State {
             last_stake_move_epoch,
             stake_moved,
             max_stake_moved_per_epoch,
+            delinquent_upgrader,
+            deposit_sol_fee,
+            deposit_stake_account_fee,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -238,6 +256,9 @@ impl State {
         borsh::BorshSerialize::serialize(&self.last_stake_move_epoch, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.stake_moved, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.max_stake_moved_per_epoch, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.delinquent_upgrader, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.deposit_sol_fee, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.deposit_stake_account_fee, &mut writer)?;
         Ok(())
     }
 }

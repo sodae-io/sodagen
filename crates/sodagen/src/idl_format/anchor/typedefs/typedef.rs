@@ -158,6 +158,11 @@ impl<'de> Deserialize<'de> for TypedefStruct {
     {
         #[derive(Deserialize)]
         struct RawTypedefStruct {
+            // Anchor omits `fields` entirely for empty structs — unit events
+            // such as `PauseEvent` serialize as bare {"kind": "struct"}.
+            // Without the default, V1 detection fails and the IDL falls
+            // through to the old-Anchor parser, which then panics.
+            #[serde(default)]
             fields: Vec<serde_json::Value>,
         }
 

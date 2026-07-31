@@ -287,6 +287,80 @@ impl CreatePersonalPositionEventEvent {
         Ok(data)
     }
 }
+pub const DECREASE_LIMIT_ORDER_EVENT_EVENT_DISCM: [u8; 8] = [
+    70, 48, 40, 221, 219, 237, 212, 163,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DecreaseLimitOrderEvent {
+    pub pool_id: Pubkey,
+    pub limit_order: Pubkey,
+    pub zero_for_one: bool,
+    pub tick_index: i32,
+    pub total_amount: u64,
+    pub filled_amount: u64,
+    pub settled_output_amount: u64,
+    pub decreased_amount: u64,
+}
+impl DecreaseLimitOrderEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool_id: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let limit_order: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let zero_for_one: bool = crate::borsh_de_or_default(&mut reader)?;
+        let tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let total_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let filled_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let settled_output_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let decreased_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            pool_id,
+            limit_order,
+            zero_for_one,
+            tick_index,
+            total_amount,
+            filled_amount,
+            settled_output_amount,
+            decreased_amount,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.pool_id, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.limit_order, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.zero_for_one, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.total_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.filled_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.settled_output_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.decreased_amount, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct DecreaseLimitOrderEventEvent(pub DecreaseLimitOrderEvent);
+impl DecreaseLimitOrderEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != DECREASE_LIMIT_ORDER_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = DecreaseLimitOrderEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&DECREASE_LIMIT_ORDER_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const DECREASE_LIQUIDITY_EVENT_EVENT_DISCM: [u8; 8] = [
     58, 222, 86, 58, 68, 50, 85, 56,
 ];
@@ -357,6 +431,76 @@ impl DecreaseLiquidityEventEvent {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&DECREASE_LIQUIDITY_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const INCREASE_LIMIT_ORDER_EVENT_EVENT_DISCM: [u8; 8] = [
+    11, 120, 13, 204, 199, 87, 19, 200,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct IncreaseLimitOrderEvent {
+    pub pool_id: Pubkey,
+    pub limit_order: Pubkey,
+    pub zero_for_one: bool,
+    pub tick_index: i32,
+    pub total_amount: u64,
+    pub increased_amount: u64,
+    pub transfer_fee: u64,
+}
+impl IncreaseLimitOrderEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool_id: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let limit_order: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let zero_for_one: bool = crate::borsh_de_or_default(&mut reader)?;
+        let tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let total_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let increased_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let transfer_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            pool_id,
+            limit_order,
+            zero_for_one,
+            tick_index,
+            total_amount,
+            increased_amount,
+            transfer_fee,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.pool_id, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.limit_order, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.zero_for_one, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.total_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.increased_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.transfer_fee, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct IncreaseLimitOrderEventEvent(pub IncreaseLimitOrderEvent);
+impl IncreaseLimitOrderEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != INCREASE_LIMIT_ORDER_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = IncreaseLimitOrderEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&INCREASE_LIMIT_ORDER_EVENT_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -575,6 +719,72 @@ impl LiquidityChangeEventEvent {
         Ok(data)
     }
 }
+pub const OPEN_LIMIT_ORDER_EVENT_EVENT_DISCM: [u8; 8] = [
+    106, 24, 71, 85, 57, 169, 158, 216,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OpenLimitOrderEvent {
+    pub pool_id: Pubkey,
+    pub limit_order: Pubkey,
+    pub zero_for_one: bool,
+    pub tick_index: i32,
+    pub total_amount: u64,
+    pub transfer_fee: u64,
+}
+impl OpenLimitOrderEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool_id: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let limit_order: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let zero_for_one: bool = crate::borsh_de_or_default(&mut reader)?;
+        let tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let total_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let transfer_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            pool_id,
+            limit_order,
+            zero_for_one,
+            tick_index,
+            total_amount,
+            transfer_fee,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.pool_id, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.limit_order, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.zero_for_one, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.total_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.transfer_fee, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpenLimitOrderEventEvent(pub OpenLimitOrderEvent);
+impl OpenLimitOrderEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != OPEN_LIMIT_ORDER_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = OpenLimitOrderEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&OPEN_LIMIT_ORDER_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const POOL_CREATED_EVENT_EVENT_DISCM: [u8; 8] = [25, 94, 75, 47, 112, 99, 53, 63];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PoolCreatedEvent {
@@ -647,6 +857,76 @@ impl PoolCreatedEventEvent {
         Ok(data)
     }
 }
+pub const SETTLE_LIMIT_ORDER_EVENT_EVENT_DISCM: [u8; 8] = [
+    88, 119, 77, 164, 125, 124, 10, 194,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SettleLimitOrderEvent {
+    pub pool_id: Pubkey,
+    pub limit_order: Pubkey,
+    pub zero_for_one: bool,
+    pub tick_index: i32,
+    pub total_amount: u64,
+    pub filled_amount: u64,
+    pub settled_amount_out: u64,
+}
+impl SettleLimitOrderEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool_id: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let limit_order: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let zero_for_one: bool = crate::borsh_de_or_default(&mut reader)?;
+        let tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let total_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let filled_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let settled_amount_out: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            pool_id,
+            limit_order,
+            zero_for_one,
+            tick_index,
+            total_amount,
+            filled_amount,
+            settled_amount_out,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.pool_id, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.limit_order, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.zero_for_one, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.total_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.filled_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.settled_amount_out, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct SettleLimitOrderEventEvent(pub SettleLimitOrderEvent);
+impl SettleLimitOrderEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SETTLE_LIMIT_ORDER_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = SettleLimitOrderEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SETTLE_LIMIT_ORDER_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const SWAP_EVENT_EVENT_DISCM: [u8; 8] = [64, 198, 205, 232, 38, 8, 113, 226];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SwapEvent {
@@ -662,6 +942,8 @@ pub struct SwapEvent {
     pub sqrt_price_x64: u128,
     pub liquidity: u128,
     pub tick: i32,
+    pub trade_fee_0: u64,
+    pub trade_fee_1: u64,
 }
 impl SwapEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -678,6 +960,8 @@ impl SwapEvent {
         let sqrt_price_x64: u128 = crate::borsh_de_or_default(&mut reader)?;
         let liquidity: u128 = crate::borsh_de_or_default(&mut reader)?;
         let tick: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let trade_fee_0: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let trade_fee_1: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pool_state,
@@ -692,6 +976,8 @@ impl SwapEvent {
             sqrt_price_x64,
             liquidity,
             tick,
+            trade_fee_0,
+            trade_fee_1,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -707,6 +993,8 @@ impl SwapEvent {
         borsh::BorshSerialize::serialize(&self.sqrt_price_x64, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.liquidity, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.tick, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.trade_fee_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.trade_fee_1, &mut writer)?;
         Ok(())
     }
 }

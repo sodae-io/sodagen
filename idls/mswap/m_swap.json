@@ -1,0 +1,1214 @@
+{
+  "address": "MSwapi3WhNKMUGm9YrxGhypgUEt7wYQH3ZgG32XoWzH",
+  "metadata": {
+    "name": "m_swap",
+    "version": "0.2.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
+  "instructions": [
+    {
+      "name": "initialize_global",
+      "discriminator": [
+        47,
+        225,
+        15,
+        112,
+        86,
+        51,
+        190,
+        231
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "swap_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "remove_whitelisted_extension",
+      "discriminator": [
+        248,
+        52,
+        115,
+        71,
+        67,
+        42,
+        71,
+        252
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "swap_global"
+          ]
+        },
+        {
+          "name": "swap_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "ext_program",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "remove_whitelisted_unwrapper",
+      "discriminator": [
+        166,
+        23,
+        120,
+        95,
+        66,
+        168,
+        192,
+        163
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "swap_global"
+          ]
+        },
+        {
+          "name": "swap_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "swap",
+      "discriminator": [
+        248,
+        198,
+        158,
+        145,
+        225,
+        117,
+        135,
+        200
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "wrap_authority",
+          "signer": true,
+          "optional": true
+        },
+        {
+          "name": "unwrap_authority",
+          "signer": true,
+          "optional": true
+        },
+        {
+          "name": "swap_global",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "from_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "from_ext_program"
+            }
+          }
+        },
+        {
+          "name": "to_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "to_ext_program"
+            }
+          }
+        },
+        {
+          "name": "from_mint",
+          "docs": [
+            "Validated by unwrap on the extension program"
+          ],
+          "writable": true
+        },
+        {
+          "name": "to_mint",
+          "docs": [
+            "Validated by wrap on the extension program"
+          ],
+          "writable": true
+        },
+        {
+          "name": "m_mint"
+        },
+        {
+          "name": "from_token_account",
+          "writable": true
+        },
+        {
+          "name": "to_token_account",
+          "writable": true
+        },
+        {
+          "name": "swap_m_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "swap_global"
+              },
+              {
+                "kind": "account",
+                "path": "m_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "m_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "from_m_vault_auth",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "from_ext_program"
+            }
+          }
+        },
+        {
+          "name": "to_m_vault_auth",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "to_ext_program"
+            }
+          }
+        },
+        {
+          "name": "from_mint_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "from_ext_program"
+            }
+          }
+        },
+        {
+          "name": "to_mint_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "to_ext_program"
+            }
+          }
+        },
+        {
+          "name": "from_m_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "from_m_vault_auth"
+              },
+              {
+                "kind": "account",
+                "path": "m_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "m_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "to_m_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "to_m_vault_auth"
+              },
+              {
+                "kind": "account",
+                "path": "m_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "m_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "from_token_program"
+        },
+        {
+          "name": "to_token_program"
+        },
+        {
+          "name": "m_token_program"
+        },
+        {
+          "name": "from_ext_program"
+        },
+        {
+          "name": "to_ext_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        },
+        {
+          "name": "remaining_accounts_split_idx",
+          "type": "u8"
+        }
+      ]
+    },
+    {
+      "name": "unwrap",
+      "discriminator": [
+        126,
+        175,
+        198,
+        14,
+        212,
+        69,
+        50,
+        44
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "unwrap_authority",
+          "signer": true,
+          "optional": true
+        },
+        {
+          "name": "swap_global",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "from_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "from_ext_program"
+            }
+          }
+        },
+        {
+          "name": "from_mint",
+          "docs": [
+            "Validated by unwrap on the extension program"
+          ],
+          "writable": true
+        },
+        {
+          "name": "m_mint"
+        },
+        {
+          "name": "m_token_account",
+          "writable": true
+        },
+        {
+          "name": "from_token_account",
+          "writable": true
+        },
+        {
+          "name": "from_m_vault_auth",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "from_ext_program"
+            }
+          }
+        },
+        {
+          "name": "from_mint_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "from_ext_program"
+            }
+          }
+        },
+        {
+          "name": "from_m_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "from_m_vault_auth"
+              },
+              {
+                "kind": "account",
+                "path": "m_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "m_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "from_token_program"
+        },
+        {
+          "name": "m_token_program"
+        },
+        {
+          "name": "from_ext_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    },
+    {
+      "name": "whitelist_extension",
+      "discriminator": [
+        186,
+        175,
+        23,
+        231,
+        77,
+        201,
+        205,
+        165
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "swap_global"
+          ]
+        },
+        {
+          "name": "swap_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "ext_program"
+        },
+        {
+          "name": "ext_mint",
+          "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "whitelist_unwrapper",
+      "discriminator": [
+        219,
+        87,
+        23,
+        47,
+        189,
+        191,
+        123,
+        235
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "swap_global"
+          ]
+        },
+        {
+          "name": "swap_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "authority",
+          "type": "pubkey"
+        }
+      ]
+    },
+    {
+      "name": "wrap",
+      "discriminator": [
+        178,
+        40,
+        10,
+        189,
+        228,
+        129,
+        186,
+        140
+      ],
+      "accounts": [
+        {
+          "name": "signer",
+          "signer": true
+        },
+        {
+          "name": "wrap_authority",
+          "signer": true,
+          "optional": true
+        },
+        {
+          "name": "swap_global",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "to_global",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  103,
+                  108,
+                  111,
+                  98,
+                  97,
+                  108
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "to_ext_program"
+            }
+          }
+        },
+        {
+          "name": "to_mint",
+          "docs": [
+            "Validated by wrap on the extension program"
+          ],
+          "writable": true
+        },
+        {
+          "name": "m_mint"
+        },
+        {
+          "name": "m_token_account",
+          "writable": true
+        },
+        {
+          "name": "to_token_account",
+          "writable": true
+        },
+        {
+          "name": "to_m_vault_auth",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  95,
+                  118,
+                  97,
+                  117,
+                  108,
+                  116
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "to_ext_program"
+            }
+          }
+        },
+        {
+          "name": "to_mint_authority",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  105,
+                  110,
+                  116,
+                  95,
+                  97,
+                  117,
+                  116,
+                  104,
+                  111,
+                  114,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ],
+            "program": {
+              "kind": "account",
+              "path": "to_ext_program"
+            }
+          }
+        },
+        {
+          "name": "to_m_vault",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "to_m_vault_auth"
+              },
+              {
+                "kind": "account",
+                "path": "m_token_program"
+              },
+              {
+                "kind": "account",
+                "path": "m_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "to_token_program"
+        },
+        {
+          "name": "m_token_program"
+        },
+        {
+          "name": "to_ext_program"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "SwapGlobal",
+      "discriminator": [
+        15,
+        184,
+        147,
+        129,
+        183,
+        219,
+        223,
+        163
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "InvalidExtension",
+      "msg": "Extension is not whitelisted"
+    },
+    {
+      "code": 6001,
+      "name": "AlreadyWhitelisted",
+      "msg": "Extension is already whitelisted"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidIndex",
+      "msg": "Index invalid for length of the array"
+    },
+    {
+      "code": 6003,
+      "name": "UnauthorizedUnwrapper",
+      "msg": "Signer is not whitelisted"
+    },
+    {
+      "code": 6004,
+      "name": "NotAuthorized",
+      "msg": "Signer is not authorized to perform this action"
+    },
+    {
+      "code": 6005,
+      "name": "InvalidAmount",
+      "msg": "Invalid amount"
+    }
+  ],
+  "types": [
+    {
+      "name": "SwapGlobal",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "admin",
+            "type": "pubkey"
+          },
+          {
+            "name": "whitelisted_unwrappers",
+            "type": {
+              "vec": "pubkey"
+            }
+          },
+          {
+            "name": "whitelisted_extensions",
+            "type": {
+              "vec": {
+                "defined": {
+                  "name": "WhitelistedExtension"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "WhitelistedExtension",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "program_id",
+            "type": "pubkey"
+          },
+          {
+            "name": "mint",
+            "type": "pubkey"
+          },
+          {
+            "name": "token_program",
+            "type": "pubkey"
+          }
+        ]
+      }
+    }
+  ],
+  "constants": [
+    {
+      "name": "GLOBAL_SEED",
+      "type": "bytes",
+      "value": "[103, 108, 111, 98, 97, 108]"
+    }
+  ],
+  "name": "m_swap"
+}

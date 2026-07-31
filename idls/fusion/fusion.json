@@ -2,7 +2,7 @@
   "address": "fUSioN9YKKSa3CUC2YUc4tPkHJ5Y6XW1yz8y6F7qWz9",
   "metadata": {
     "name": "fusionamm",
-    "version": "1.0.16",
+    "version": "1.1.4",
     "spec": "0.1.0"
   },
   "instructions": [
@@ -584,6 +584,28 @@
         {
           "name": "receiver",
           "writable": true
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "idl_include",
+      "discriminator": [
+        223,
+        253,
+        121,
+        121,
+        60,
+        193,
+        129,
+        31
+      ],
+      "accounts": [
+        {
+          "name": "tick_array"
+        },
+        {
+          "name": "system_program"
         }
       ],
       "args": []
@@ -2154,14 +2176,14 @@
     {
       "name": "TickArray",
       "discriminator": [
-        69,
+        85,
+        1,
+        199,
+        2,
+        188,
         97,
-        189,
-        190,
-        110,
-        7,
-        66,
-        187
+        101,
+        139
       ]
     },
     {
@@ -2508,6 +2530,11 @@
       "code": 6065,
       "name": "PositionNotLockable",
       "msg": "Position is not lockable"
+    },
+    {
+      "code": 6066,
+      "name": "RentCalculationError",
+      "msg": "Rent calculation error"
     }
   ],
   "types": [
@@ -2765,6 +2792,27 @@
       }
     },
     {
+      "name": "MaybeTick",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Uninitialized"
+          },
+          {
+            "name": "Initialized",
+            "fields": [
+              {
+                "defined": {
+                  "name": "TickData"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
       "name": "Position",
       "type": {
         "kind": "struct",
@@ -2936,19 +2984,39 @@
       }
     },
     {
-      "name": "Tick",
-      "serialization": "bytemuckunsafe",
-      "repr": {
-        "kind": "c",
-        "packed": true
-      },
+      "name": "TickArray",
       "type": {
         "kind": "struct",
         "fields": [
           {
-            "name": "initialized",
-            "type": "bool"
+            "name": "start_tick_index",
+            "type": "i32"
           },
+          {
+            "name": "fusion_pool",
+            "type": "pubkey"
+          },
+          {
+            "name": "ticks",
+            "type": {
+              "array": [
+                {
+                  "defined": {
+                    "name": "MaybeTick"
+                  }
+                },
+                88
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "TickData",
+      "type": {
+        "kind": "struct",
+        "fields": [
           {
             "name": "liquidity_net",
             "type": "i128"
@@ -2988,40 +3056,6 @@
           {
             "name": "fulfilled_b_to_a_orders_input",
             "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "TickArray",
-      "serialization": "bytemuckunsafe",
-      "repr": {
-        "kind": "c",
-        "packed": true
-      },
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "start_tick_index",
-            "type": "i32"
-          },
-          {
-            "name": "ticks",
-            "type": {
-              "array": [
-                {
-                  "defined": {
-                    "name": "Tick"
-                  }
-                },
-                88
-              ]
-            }
-          },
-          {
-            "name": "fusion_pool",
-            "type": "pubkey"
           }
         ]
       }

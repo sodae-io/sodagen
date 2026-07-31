@@ -168,6 +168,8 @@ pub struct ConfigMarinadeEvent {
     pub delayed_unstake_fee_change: Option<FeeCentsValueChange>,
     pub withdraw_stake_account_fee_change: Option<FeeCentsValueChange>,
     pub max_stake_moved_per_epoch_change: Option<FeeValueChange>,
+    pub deposit_sol_fee_change: Option<FeeCentsValueChange>,
+    pub deposit_stake_account_fee_change: Option<FeeCentsValueChange>,
 }
 impl ConfigMarinadeEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -206,6 +208,12 @@ impl ConfigMarinadeEvent {
         let max_stake_moved_per_epoch_change: Option<FeeValueChange> = crate::borsh_de_or_default(
             &mut reader,
         )?;
+        let deposit_sol_fee_change: Option<FeeCentsValueChange> = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let deposit_stake_account_fee_change: Option<FeeCentsValueChange> = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         *__buf = reader;
         Ok(Self {
             state,
@@ -220,6 +228,8 @@ impl ConfigMarinadeEvent {
             delayed_unstake_fee_change,
             withdraw_stake_account_fee_change,
             max_stake_moved_per_epoch_change,
+            deposit_sol_fee_change,
+            deposit_stake_account_fee_change,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -245,6 +255,11 @@ impl ConfigMarinadeEvent {
         )?;
         borsh::BorshSerialize::serialize(
             &self.max_stake_moved_per_epoch_change,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.deposit_sol_fee_change, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.deposit_stake_account_fee_change,
             &mut writer,
         )?;
         Ok(())
@@ -755,6 +770,97 @@ impl MergeStakesEventEvent {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&MERGE_STAKES_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const CREATE_CANONICAL_STAKE_EVENT_EVENT_DISCM: [u8; 8] = [
+    113, 120, 191, 226, 195, 181, 14, 106,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CreateCanonicalStakeEvent {
+    pub state: Pubkey,
+    pub epoch: u64,
+    pub canonical_stake_account: Pubkey,
+    pub source_stake_index: u32,
+    pub source_stake_account: Pubkey,
+    pub last_update_source_stake_delegation: u64,
+    pub validator_index: u32,
+    pub validator_vote: Pubkey,
+    pub validator_active_balance: u64,
+    pub total_active_balance: u64,
+    pub operational_sol_balance: u64,
+}
+impl CreateCanonicalStakeEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let state: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let canonical_stake_account: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let source_stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let source_stake_account: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let last_update_source_stake_delegation: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let validator_vote: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let validator_active_balance: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let total_active_balance: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let operational_sol_balance: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            state,
+            epoch,
+            canonical_stake_account,
+            source_stake_index,
+            source_stake_account,
+            last_update_source_stake_delegation,
+            validator_index,
+            validator_vote,
+            validator_active_balance,
+            total_active_balance,
+            operational_sol_balance,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.state, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.epoch, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.canonical_stake_account, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.source_stake_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.source_stake_account, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.last_update_source_stake_delegation,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.validator_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.validator_vote, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.validator_active_balance, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.total_active_balance, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.operational_sol_balance, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreateCanonicalStakeEventEvent(pub CreateCanonicalStakeEvent);
+impl CreateCanonicalStakeEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_CANONICAL_STAKE_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = CreateCanonicalStakeEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_CANONICAL_STAKE_EVENT_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -1872,6 +1978,7 @@ pub struct DepositStakeAccountEvent {
     pub msol_minted: u64,
     pub total_virtual_staked_lamports: u64,
     pub msol_supply: u64,
+    pub sol_fees: u64,
 }
 impl DepositStakeAccountEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1891,6 +1998,7 @@ impl DepositStakeAccountEvent {
             &mut reader,
         )?;
         let msol_supply: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let sol_fees: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             state,
@@ -1906,6 +2014,7 @@ impl DepositStakeAccountEvent {
             msol_minted,
             total_virtual_staked_lamports,
             msol_supply,
+            sol_fees,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1925,6 +2034,7 @@ impl DepositStakeAccountEvent {
             &mut writer,
         )?;
         borsh::BorshSerialize::serialize(&self.msol_supply, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.sol_fees, &mut writer)?;
         Ok(())
     }
 }
@@ -1969,6 +2079,7 @@ pub struct DepositEvent {
     pub msol_minted: u64,
     pub total_virtual_staked_lamports: u64,
     pub msol_supply: u64,
+    pub sol_fees: u64,
 }
 impl DepositEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1988,6 +2099,7 @@ impl DepositEvent {
             &mut reader,
         )?;
         let msol_supply: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let sol_fees: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             state,
@@ -2003,6 +2115,7 @@ impl DepositEvent {
             msol_minted,
             total_virtual_staked_lamports,
             msol_supply,
+            sol_fees,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -2022,6 +2135,7 @@ impl DepositEvent {
             &mut writer,
         )?;
         borsh::BorshSerialize::serialize(&self.msol_supply, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.sol_fees, &mut writer)?;
         Ok(())
     }
 }
