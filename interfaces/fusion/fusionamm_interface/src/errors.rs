@@ -136,6 +136,8 @@ pub enum FusionammError {
     PositionLocked = 6064,
     #[error("Position is not lockable")]
     PositionNotLockable = 6065,
+    #[error("Rent calculation error")]
+    RentCalculationError = 6066,
 }
 impl From<FusionammError> for ProgramError {
     fn from(e: FusionammError) -> Self {

@@ -10,6 +10,7 @@ use crate::*;
 pub enum PumpAmmProgramIx {
     AdminSetCoinCreator(AdminSetCoinCreatorIxArgs),
     AdminUpdateTokenIncentives(AdminUpdateTokenIncentivesIxArgs),
+    BoostBuyAndBurn(BoostBuyAndBurnIxArgs),
     Buy(BuyIxArgs),
     BuyExactQuoteIn(BuyExactQuoteInIxArgs),
     ClaimCashback,
@@ -21,15 +22,19 @@ pub enum PumpAmmProgramIx {
     Deposit(DepositIxArgs),
     Disable(DisableIxArgs),
     ExtendAccount,
+    InitBoost,
     InitUserVolumeAccumulator,
     MigratePoolCoinCreator,
     Sell(SellIxArgs),
+    SetBoostAuthority,
     SetCoinCreator,
     SetReservedFeeRecipients(SetReservedFeeRecipientsIxArgs),
     SyncUserVolumeAccumulator,
+    ToggleBoost(ToggleBoostIxArgs),
     ToggleCashbackEnabled(ToggleCashbackEnabledIxArgs),
     ToggleMayhemMode(ToggleMayhemModeIxArgs),
     TransferCreatorFeesToPump,
+    TransferCreatorFeesToPumpV2,
     UpdateAdmin,
     UpdateBuybackConfig(UpdateBuybackConfigIxArgs),
     UpdateFeeConfig(UpdateFeeConfigIxArgs),
@@ -60,6 +65,17 @@ impl PumpAmmProgramIx {
                     seconds_in_a_day,
                     day_number,
                     token_supply_per_day,
+                }),
+            );
+        }
+        if buf.starts_with(&BOOST_BUY_AND_BURN_IX_DISCM) {
+            let mut reader = &buf[BOOST_BUY_AND_BURN_IX_DISCM.len()..];
+            let quote_amount_in: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let min_base_amount_burned: u64 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::BoostBuyAndBurn(BoostBuyAndBurnIxArgs {
+                    quote_amount_in,
+                    min_base_amount_burned,
                 }),
             );
         }
@@ -190,6 +206,9 @@ impl PumpAmmProgramIx {
         if buf.starts_with(&EXTEND_ACCOUNT_IX_DISCM) {
             return Ok(Self::ExtendAccount);
         }
+        if buf.starts_with(&INIT_BOOST_IX_DISCM) {
+            return Ok(Self::InitBoost);
+        }
         if buf.starts_with(&INIT_USER_VOLUME_ACCUMULATOR_IX_DISCM) {
             return Ok(Self::InitUserVolumeAccumulator);
         }
@@ -207,6 +226,9 @@ impl PumpAmmProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&SET_BOOST_AUTHORITY_IX_DISCM) {
+            return Ok(Self::SetBoostAuthority);
+        }
         if buf.starts_with(&SET_COIN_CREATOR_IX_DISCM) {
             return Ok(Self::SetCoinCreator);
         }
@@ -221,6 +243,11 @@ impl PumpAmmProgramIx {
         }
         if buf.starts_with(&SYNC_USER_VOLUME_ACCUMULATOR_IX_DISCM) {
             return Ok(Self::SyncUserVolumeAccumulator);
+        }
+        if buf.starts_with(&TOGGLE_BOOST_IX_DISCM) {
+            let mut reader = &buf[TOGGLE_BOOST_IX_DISCM.len()..];
+            let enabled: bool = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(Self::ToggleBoost(ToggleBoostIxArgs { enabled }));
         }
         if buf.starts_with(&TOGGLE_CASHBACK_ENABLED_IX_DISCM) {
             let mut reader = &buf[TOGGLE_CASHBACK_ENABLED_IX_DISCM.len()..];
@@ -238,6 +265,9 @@ impl PumpAmmProgramIx {
         }
         if buf.starts_with(&TRANSFER_CREATOR_FEES_TO_PUMP_IX_DISCM) {
             return Ok(Self::TransferCreatorFeesToPump);
+        }
+        if buf.starts_with(&TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_DISCM) {
+            return Ok(Self::TransferCreatorFeesToPumpV2);
         }
         if buf.starts_with(&UPDATE_ADMIN_IX_DISCM) {
             return Ok(Self::UpdateAdmin);
@@ -308,6 +338,15 @@ impl PumpAmmProgramIx {
                 borsh::BorshSerialize::serialize(&args.day_number, &mut writer)?;
                 borsh::BorshSerialize::serialize(
                     &args.token_supply_per_day,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
+            Self::BoostBuyAndBurn(args) => {
+                writer.write_all(&BOOST_BUY_AND_BURN_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.quote_amount_in, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.min_base_amount_burned,
                     &mut writer,
                 )?;
                 Ok(())
@@ -402,6 +441,7 @@ impl PumpAmmProgramIx {
                 Ok(())
             }
             Self::ExtendAccount => writer.write_all(&EXTEND_ACCOUNT_IX_DISCM),
+            Self::InitBoost => writer.write_all(&INIT_BOOST_IX_DISCM),
             Self::InitUserVolumeAccumulator => {
                 writer.write_all(&INIT_USER_VOLUME_ACCUMULATOR_IX_DISCM)
             }
@@ -417,6 +457,7 @@ impl PumpAmmProgramIx {
                 )?;
                 Ok(())
             }
+            Self::SetBoostAuthority => writer.write_all(&SET_BOOST_AUTHORITY_IX_DISCM),
             Self::SetCoinCreator => writer.write_all(&SET_COIN_CREATOR_IX_DISCM),
             Self::SetReservedFeeRecipients(args) => {
                 writer.write_all(&SET_RESERVED_FEE_RECIPIENTS_IX_DISCM)?;
@@ -425,6 +466,11 @@ impl PumpAmmProgramIx {
             }
             Self::SyncUserVolumeAccumulator => {
                 writer.write_all(&SYNC_USER_VOLUME_ACCUMULATOR_IX_DISCM)
+            }
+            Self::ToggleBoost(args) => {
+                writer.write_all(&TOGGLE_BOOST_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.enabled, &mut writer)?;
+                Ok(())
             }
             Self::ToggleCashbackEnabled(args) => {
                 writer.write_all(&TOGGLE_CASHBACK_ENABLED_IX_DISCM)?;
@@ -438,6 +484,9 @@ impl PumpAmmProgramIx {
             }
             Self::TransferCreatorFeesToPump => {
                 writer.write_all(&TRANSFER_CREATOR_FEES_TO_PUMP_IX_DISCM)
+            }
+            Self::TransferCreatorFeesToPumpV2 => {
+                writer.write_all(&TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_DISCM)
             }
             Self::UpdateAdmin => writer.write_all(&UPDATE_ADMIN_IX_DISCM),
             Self::UpdateBuybackConfig(args) => {
@@ -1078,6 +1127,344 @@ pub fn admin_update_token_incentives_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     admin_update_token_incentives_verify_writable_privileges(accounts)?;
     admin_update_token_incentives_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN: usize = 13;
+#[derive(Copy, Clone, Debug)]
+pub struct BoostBuyAndBurnAccounts<'me, 'info> {
+    pub pool: &'me AccountInfo<'info>,
+    pub authority: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub pool_base_token_account: &'me AccountInfo<'info>,
+    pub pool_quote_token_account: &'me AccountInfo<'info>,
+    pub boost_vault_authority: &'me AccountInfo<'info>,
+    pub boost_vault: &'me AccountInfo<'info>,
+    pub base_token_program: &'me AccountInfo<'info>,
+    pub quote_token_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct BoostBuyAndBurnKeys {
+    pub pool: Pubkey,
+    pub authority: Pubkey,
+    pub global_config: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub pool_base_token_account: Pubkey,
+    pub pool_quote_token_account: Pubkey,
+    pub boost_vault_authority: Pubkey,
+    pub boost_vault: Pubkey,
+    pub base_token_program: Pubkey,
+    pub quote_token_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<BoostBuyAndBurnAccounts<'_, '_>> for BoostBuyAndBurnKeys {
+    fn from(accounts: BoostBuyAndBurnAccounts) -> Self {
+        Self {
+            pool: *accounts.pool.key,
+            authority: *accounts.authority.key,
+            global_config: *accounts.global_config.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            pool_base_token_account: *accounts.pool_base_token_account.key,
+            pool_quote_token_account: *accounts.pool_quote_token_account.key,
+            boost_vault_authority: *accounts.boost_vault_authority.key,
+            boost_vault: *accounts.boost_vault.key,
+            base_token_program: *accounts.base_token_program.key,
+            quote_token_program: *accounts.quote_token_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<BoostBuyAndBurnKeys> for [AccountMeta; BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN] {
+    fn from(keys: BoostBuyAndBurnKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.authority,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_base_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.pool_quote_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.boost_vault_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.boost_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.quote_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN]> for BoostBuyAndBurnKeys {
+    fn from(pubkeys: [Pubkey; BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool: pubkeys[0],
+            authority: pubkeys[1],
+            global_config: pubkeys[2],
+            base_mint: pubkeys[3],
+            quote_mint: pubkeys[4],
+            pool_base_token_account: pubkeys[5],
+            pool_quote_token_account: pubkeys[6],
+            boost_vault_authority: pubkeys[7],
+            boost_vault: pubkeys[8],
+            base_token_program: pubkeys[9],
+            quote_token_program: pubkeys[10],
+            event_authority: pubkeys[11],
+            program: pubkeys[12],
+        }
+    }
+}
+impl<'info> From<BoostBuyAndBurnAccounts<'_, 'info>>
+for [AccountInfo<'info>; BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN] {
+    fn from(accounts: BoostBuyAndBurnAccounts<'_, 'info>) -> Self {
+        [
+            accounts.pool.clone(),
+            accounts.authority.clone(),
+            accounts.global_config.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.pool_base_token_account.clone(),
+            accounts.pool_quote_token_account.clone(),
+            accounts.boost_vault_authority.clone(),
+            accounts.boost_vault.clone(),
+            accounts.base_token_program.clone(),
+            accounts.quote_token_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN]>
+for BoostBuyAndBurnAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool: &arr[0],
+            authority: &arr[1],
+            global_config: &arr[2],
+            base_mint: &arr[3],
+            quote_mint: &arr[4],
+            pool_base_token_account: &arr[5],
+            pool_quote_token_account: &arr[6],
+            boost_vault_authority: &arr[7],
+            boost_vault: &arr[8],
+            base_token_program: &arr[9],
+            quote_token_program: &arr[10],
+            event_authority: &arr[11],
+            program: &arr[12],
+        }
+    }
+}
+pub const BOOST_BUY_AND_BURN_IX_DISCM: [u8; 8usize] = [105, 68, 6, 175, 0, 7, 35, 162];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct BoostBuyAndBurnIxArgs {
+    pub quote_amount_in: u64,
+    pub min_base_amount_burned: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoostBuyAndBurnIxData(pub BoostBuyAndBurnIxArgs);
+impl From<BoostBuyAndBurnIxArgs> for BoostBuyAndBurnIxData {
+    fn from(args: BoostBuyAndBurnIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl BoostBuyAndBurnIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != BOOST_BUY_AND_BURN_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let quote_amount_in: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let min_base_amount_burned: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(BoostBuyAndBurnIxArgs {
+                quote_amount_in,
+                min_base_amount_burned,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&BOOST_BUY_AND_BURN_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.quote_amount_in, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.min_base_amount_burned, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn boost_buy_and_burn_ix_with_program_id(
+    program_id: Pubkey,
+    keys: BoostBuyAndBurnKeys,
+    args: BoostBuyAndBurnIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; BOOST_BUY_AND_BURN_IX_ACCOUNTS_LEN] = keys.into();
+    let data: BoostBuyAndBurnIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn boost_buy_and_burn_ix(
+    keys: BoostBuyAndBurnKeys,
+    args: BoostBuyAndBurnIxArgs,
+) -> std::io::Result<Instruction> {
+    boost_buy_and_burn_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys, args)
+}
+pub fn boost_buy_and_burn_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: BoostBuyAndBurnAccounts<'_, '_>,
+    args: BoostBuyAndBurnIxArgs,
+) -> ProgramResult {
+    let keys: BoostBuyAndBurnKeys = accounts.into();
+    let ix = boost_buy_and_burn_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn boost_buy_and_burn_invoke(
+    accounts: BoostBuyAndBurnAccounts<'_, '_>,
+    args: BoostBuyAndBurnIxArgs,
+) -> ProgramResult {
+    boost_buy_and_burn_invoke_with_program_id(PUMP_AMM_PROGRAM_ID, accounts, args)
+}
+pub fn boost_buy_and_burn_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: BoostBuyAndBurnAccounts<'_, '_>,
+    args: BoostBuyAndBurnIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: BoostBuyAndBurnKeys = accounts.into();
+    let ix = boost_buy_and_burn_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn boost_buy_and_burn_invoke_signed(
+    accounts: BoostBuyAndBurnAccounts<'_, '_>,
+    args: BoostBuyAndBurnIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    boost_buy_and_burn_invoke_signed_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn boost_buy_and_burn_verify_account_keys(
+    accounts: BoostBuyAndBurnAccounts<'_, '_>,
+    keys: BoostBuyAndBurnKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pool.key, keys.pool),
+        (*accounts.authority.key, keys.authority),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.pool_base_token_account.key, keys.pool_base_token_account),
+        (*accounts.pool_quote_token_account.key, keys.pool_quote_token_account),
+        (*accounts.boost_vault_authority.key, keys.boost_vault_authority),
+        (*accounts.boost_vault.key, keys.boost_vault),
+        (*accounts.base_token_program.key, keys.base_token_program),
+        (*accounts.quote_token_program.key, keys.quote_token_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn boost_buy_and_burn_verify_writable_privileges<'me, 'info>(
+    accounts: BoostBuyAndBurnAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.authority,
+        accounts.base_mint,
+        accounts.pool_base_token_account,
+        accounts.pool_quote_token_account,
+        accounts.boost_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn boost_buy_and_burn_verify_signer_privileges<'me, 'info>(
+    accounts: BoostBuyAndBurnAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.authority] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn boost_buy_and_burn_verify_account_privileges<'me, 'info>(
+    accounts: BoostBuyAndBurnAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    boost_buy_and_burn_verify_writable_privileges(accounts)?;
+    boost_buy_and_burn_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const BUY_IX_ACCOUNTS_LEN: usize = 23;
@@ -4498,6 +4885,319 @@ pub fn extend_account_verify_account_privileges<'me, 'info>(
     extend_account_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const INIT_BOOST_IX_ACCOUNTS_LEN: usize = 14;
+#[derive(Copy, Clone, Debug)]
+pub struct InitBoostAccounts<'me, 'info> {
+    pub pool: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub creator: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub pool_base_token_account: &'me AccountInfo<'info>,
+    pub pool_quote_token_account: &'me AccountInfo<'info>,
+    pub boost_vault_authority: &'me AccountInfo<'info>,
+    pub boost_vault: &'me AccountInfo<'info>,
+    pub quote_token_program: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub associated_token_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct InitBoostKeys {
+    pub pool: Pubkey,
+    pub global_config: Pubkey,
+    pub creator: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub pool_base_token_account: Pubkey,
+    pub pool_quote_token_account: Pubkey,
+    pub boost_vault_authority: Pubkey,
+    pub boost_vault: Pubkey,
+    pub quote_token_program: Pubkey,
+    pub system_program: Pubkey,
+    pub associated_token_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<InitBoostAccounts<'_, '_>> for InitBoostKeys {
+    fn from(accounts: InitBoostAccounts) -> Self {
+        Self {
+            pool: *accounts.pool.key,
+            global_config: *accounts.global_config.key,
+            creator: *accounts.creator.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            pool_base_token_account: *accounts.pool_base_token_account.key,
+            pool_quote_token_account: *accounts.pool_quote_token_account.key,
+            boost_vault_authority: *accounts.boost_vault_authority.key,
+            boost_vault: *accounts.boost_vault.key,
+            quote_token_program: *accounts.quote_token_program.key,
+            system_program: *accounts.system_program.key,
+            associated_token_program: *accounts.associated_token_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<InitBoostKeys> for [AccountMeta; INIT_BOOST_IX_ACCOUNTS_LEN] {
+    fn from(keys: InitBoostKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.creator,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_base_token_account,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_quote_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.boost_vault_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.boost_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.associated_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; INIT_BOOST_IX_ACCOUNTS_LEN]> for InitBoostKeys {
+    fn from(pubkeys: [Pubkey; INIT_BOOST_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool: pubkeys[0],
+            global_config: pubkeys[1],
+            creator: pubkeys[2],
+            base_mint: pubkeys[3],
+            quote_mint: pubkeys[4],
+            pool_base_token_account: pubkeys[5],
+            pool_quote_token_account: pubkeys[6],
+            boost_vault_authority: pubkeys[7],
+            boost_vault: pubkeys[8],
+            quote_token_program: pubkeys[9],
+            system_program: pubkeys[10],
+            associated_token_program: pubkeys[11],
+            event_authority: pubkeys[12],
+            program: pubkeys[13],
+        }
+    }
+}
+impl<'info> From<InitBoostAccounts<'_, 'info>>
+for [AccountInfo<'info>; INIT_BOOST_IX_ACCOUNTS_LEN] {
+    fn from(accounts: InitBoostAccounts<'_, 'info>) -> Self {
+        [
+            accounts.pool.clone(),
+            accounts.global_config.clone(),
+            accounts.creator.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.pool_base_token_account.clone(),
+            accounts.pool_quote_token_account.clone(),
+            accounts.boost_vault_authority.clone(),
+            accounts.boost_vault.clone(),
+            accounts.quote_token_program.clone(),
+            accounts.system_program.clone(),
+            accounts.associated_token_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; INIT_BOOST_IX_ACCOUNTS_LEN]>
+for InitBoostAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; INIT_BOOST_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool: &arr[0],
+            global_config: &arr[1],
+            creator: &arr[2],
+            base_mint: &arr[3],
+            quote_mint: &arr[4],
+            pool_base_token_account: &arr[5],
+            pool_quote_token_account: &arr[6],
+            boost_vault_authority: &arr[7],
+            boost_vault: &arr[8],
+            quote_token_program: &arr[9],
+            system_program: &arr[10],
+            associated_token_program: &arr[11],
+            event_authority: &arr[12],
+            program: &arr[13],
+        }
+    }
+}
+pub const INIT_BOOST_IX_DISCM: [u8; 8usize] = [140, 233, 33, 94, 132, 90, 194, 143];
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitBoostIxData;
+impl InitBoostIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != INIT_BOOST_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&INIT_BOOST_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn init_boost_ix_with_program_id(
+    program_id: Pubkey,
+    keys: InitBoostKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; INIT_BOOST_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: InitBoostIxData.try_to_vec()?,
+    })
+}
+pub fn init_boost_ix(keys: InitBoostKeys) -> std::io::Result<Instruction> {
+    init_boost_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys)
+}
+pub fn init_boost_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: InitBoostAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: InitBoostKeys = accounts.into();
+    let ix = init_boost_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn init_boost_invoke(accounts: InitBoostAccounts<'_, '_>) -> ProgramResult {
+    init_boost_invoke_with_program_id(PUMP_AMM_PROGRAM_ID, accounts)
+}
+pub fn init_boost_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: InitBoostAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: InitBoostKeys = accounts.into();
+    let ix = init_boost_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn init_boost_invoke_signed(
+    accounts: InitBoostAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    init_boost_invoke_signed_with_program_id(PUMP_AMM_PROGRAM_ID, accounts, seeds)
+}
+pub fn init_boost_verify_account_keys(
+    accounts: InitBoostAccounts<'_, '_>,
+    keys: InitBoostKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pool.key, keys.pool),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.creator.key, keys.creator),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.pool_base_token_account.key, keys.pool_base_token_account),
+        (*accounts.pool_quote_token_account.key, keys.pool_quote_token_account),
+        (*accounts.boost_vault_authority.key, keys.boost_vault_authority),
+        (*accounts.boost_vault.key, keys.boost_vault),
+        (*accounts.quote_token_program.key, keys.quote_token_program),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.associated_token_program.key, keys.associated_token_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn init_boost_verify_writable_privileges<'me, 'info>(
+    accounts: InitBoostAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.pool,
+        accounts.creator,
+        accounts.pool_quote_token_account,
+        accounts.boost_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn init_boost_verify_signer_privileges<'me, 'info>(
+    accounts: InitBoostAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.creator] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn init_boost_verify_account_privileges<'me, 'info>(
+    accounts: InitBoostAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    init_boost_verify_writable_privileges(accounts)?;
+    init_boost_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const INIT_USER_VOLUME_ACCUMULATOR_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
 pub struct InitUserVolumeAccumulatorAccounts<'me, 'info> {
@@ -5352,6 +6052,218 @@ pub fn sell_verify_account_privileges<'me, 'info>(
     sell_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN: usize = 5;
+#[derive(Copy, Clone, Debug)]
+pub struct SetBoostAuthorityAccounts<'me, 'info> {
+    pub admin: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub boost_authority: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct SetBoostAuthorityKeys {
+    pub admin: Pubkey,
+    pub global_config: Pubkey,
+    pub boost_authority: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<SetBoostAuthorityAccounts<'_, '_>> for SetBoostAuthorityKeys {
+    fn from(accounts: SetBoostAuthorityAccounts) -> Self {
+        Self {
+            admin: *accounts.admin.key,
+            global_config: *accounts.global_config.key,
+            boost_authority: *accounts.boost_authority.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<SetBoostAuthorityKeys> for [AccountMeta; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN] {
+    fn from(keys: SetBoostAuthorityKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.admin,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.boost_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN]> for SetBoostAuthorityKeys {
+    fn from(pubkeys: [Pubkey; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            admin: pubkeys[0],
+            global_config: pubkeys[1],
+            boost_authority: pubkeys[2],
+            event_authority: pubkeys[3],
+            program: pubkeys[4],
+        }
+    }
+}
+impl<'info> From<SetBoostAuthorityAccounts<'_, 'info>>
+for [AccountInfo<'info>; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN] {
+    fn from(accounts: SetBoostAuthorityAccounts<'_, 'info>) -> Self {
+        [
+            accounts.admin.clone(),
+            accounts.global_config.clone(),
+            accounts.boost_authority.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN]>
+for SetBoostAuthorityAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            admin: &arr[0],
+            global_config: &arr[1],
+            boost_authority: &arr[2],
+            event_authority: &arr[3],
+            program: &arr[4],
+        }
+    }
+}
+pub const SET_BOOST_AUTHORITY_IX_DISCM: [u8; 8usize] = [
+    227, 149, 76, 42, 130, 39, 234, 205,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetBoostAuthorityIxData;
+impl SetBoostAuthorityIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SET_BOOST_AUTHORITY_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SET_BOOST_AUTHORITY_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn set_boost_authority_ix_with_program_id(
+    program_id: Pubkey,
+    keys: SetBoostAuthorityKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: SetBoostAuthorityIxData.try_to_vec()?,
+    })
+}
+pub fn set_boost_authority_ix(
+    keys: SetBoostAuthorityKeys,
+) -> std::io::Result<Instruction> {
+    set_boost_authority_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys)
+}
+pub fn set_boost_authority_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: SetBoostAuthorityAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: SetBoostAuthorityKeys = accounts.into();
+    let ix = set_boost_authority_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn set_boost_authority_invoke(
+    accounts: SetBoostAuthorityAccounts<'_, '_>,
+) -> ProgramResult {
+    set_boost_authority_invoke_with_program_id(PUMP_AMM_PROGRAM_ID, accounts)
+}
+pub fn set_boost_authority_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: SetBoostAuthorityAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: SetBoostAuthorityKeys = accounts.into();
+    let ix = set_boost_authority_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn set_boost_authority_invoke_signed(
+    accounts: SetBoostAuthorityAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    set_boost_authority_invoke_signed_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn set_boost_authority_verify_account_keys(
+    accounts: SetBoostAuthorityAccounts<'_, '_>,
+    keys: SetBoostAuthorityKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.admin.key, keys.admin),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.boost_authority.key, keys.boost_authority),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn set_boost_authority_verify_writable_privileges<'me, 'info>(
+    accounts: SetBoostAuthorityAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.global_config] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn set_boost_authority_verify_signer_privileges<'me, 'info>(
+    accounts: SetBoostAuthorityAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn set_boost_authority_verify_account_privileges<'me, 'info>(
+    accounts: SetBoostAuthorityAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    set_boost_authority_verify_writable_privileges(accounts)?;
+    set_boost_authority_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const SET_COIN_CREATOR_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
 pub struct SetCoinCreatorAccounts<'me, 'info> {
@@ -5982,6 +6894,195 @@ pub fn sync_user_volume_accumulator_verify_account_privileges<'me, 'info>(
     accounts: SyncUserVolumeAccumulatorAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     sync_user_volume_accumulator_verify_writable_privileges(accounts)?;
+    Ok(())
+}
+pub const TOGGLE_BOOST_IX_ACCOUNTS_LEN: usize = 2;
+#[derive(Copy, Clone, Debug)]
+pub struct ToggleBoostAccounts<'me, 'info> {
+    pub admin: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ToggleBoostKeys {
+    pub admin: Pubkey,
+    pub global_config: Pubkey,
+}
+impl From<ToggleBoostAccounts<'_, '_>> for ToggleBoostKeys {
+    fn from(accounts: ToggleBoostAccounts) -> Self {
+        Self {
+            admin: *accounts.admin.key,
+            global_config: *accounts.global_config.key,
+        }
+    }
+}
+impl From<ToggleBoostKeys> for [AccountMeta; TOGGLE_BOOST_IX_ACCOUNTS_LEN] {
+    fn from(keys: ToggleBoostKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.admin,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; TOGGLE_BOOST_IX_ACCOUNTS_LEN]> for ToggleBoostKeys {
+    fn from(pubkeys: [Pubkey; TOGGLE_BOOST_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            admin: pubkeys[0],
+            global_config: pubkeys[1],
+        }
+    }
+}
+impl<'info> From<ToggleBoostAccounts<'_, 'info>>
+for [AccountInfo<'info>; TOGGLE_BOOST_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ToggleBoostAccounts<'_, 'info>) -> Self {
+        [accounts.admin.clone(), accounts.global_config.clone()]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; TOGGLE_BOOST_IX_ACCOUNTS_LEN]>
+for ToggleBoostAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; TOGGLE_BOOST_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            admin: &arr[0],
+            global_config: &arr[1],
+        }
+    }
+}
+pub const TOGGLE_BOOST_IX_DISCM: [u8; 8usize] = [117, 161, 160, 74, 223, 137, 118, 99];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ToggleBoostIxArgs {
+    pub enabled: bool,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct ToggleBoostIxData(pub ToggleBoostIxArgs);
+impl From<ToggleBoostIxArgs> for ToggleBoostIxData {
+    fn from(args: ToggleBoostIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl ToggleBoostIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != TOGGLE_BOOST_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let enabled: bool = crate::borsh_de_or_default(&mut reader)?;
+        Ok(Self(ToggleBoostIxArgs { enabled }))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&TOGGLE_BOOST_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.enabled, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn toggle_boost_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ToggleBoostKeys,
+    args: ToggleBoostIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; TOGGLE_BOOST_IX_ACCOUNTS_LEN] = keys.into();
+    let data: ToggleBoostIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn toggle_boost_ix(
+    keys: ToggleBoostKeys,
+    args: ToggleBoostIxArgs,
+) -> std::io::Result<Instruction> {
+    toggle_boost_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys, args)
+}
+pub fn toggle_boost_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ToggleBoostAccounts<'_, '_>,
+    args: ToggleBoostIxArgs,
+) -> ProgramResult {
+    let keys: ToggleBoostKeys = accounts.into();
+    let ix = toggle_boost_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn toggle_boost_invoke(
+    accounts: ToggleBoostAccounts<'_, '_>,
+    args: ToggleBoostIxArgs,
+) -> ProgramResult {
+    toggle_boost_invoke_with_program_id(PUMP_AMM_PROGRAM_ID, accounts, args)
+}
+pub fn toggle_boost_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ToggleBoostAccounts<'_, '_>,
+    args: ToggleBoostIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ToggleBoostKeys = accounts.into();
+    let ix = toggle_boost_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn toggle_boost_invoke_signed(
+    accounts: ToggleBoostAccounts<'_, '_>,
+    args: ToggleBoostIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    toggle_boost_invoke_signed_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn toggle_boost_verify_account_keys(
+    accounts: ToggleBoostAccounts<'_, '_>,
+    keys: ToggleBoostKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.admin.key, keys.admin),
+        (*accounts.global_config.key, keys.global_config),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn toggle_boost_verify_writable_privileges<'me, 'info>(
+    accounts: ToggleBoostAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.global_config] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn toggle_boost_verify_signer_privileges<'me, 'info>(
+    accounts: ToggleBoostAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn toggle_boost_verify_account_privileges<'me, 'info>(
+    accounts: ToggleBoostAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    toggle_boost_verify_writable_privileges(accounts)?;
+    toggle_boost_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const TOGGLE_CASHBACK_ENABLED_IX_ACCOUNTS_LEN: usize = 4;
@@ -6697,6 +7798,320 @@ pub fn transfer_creator_fees_to_pump_verify_account_privileges<'me, 'info>(
     accounts: TransferCreatorFeesToPumpAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     transfer_creator_fees_to_pump_verify_writable_privileges(accounts)?;
+    Ok(())
+}
+pub const TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN: usize = 12;
+#[derive(Copy, Clone, Debug)]
+pub struct TransferCreatorFeesToPumpV2Accounts<'me, 'info> {
+    pub payer: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub associated_token_program: &'me AccountInfo<'info>,
+    pub coin_creator: &'me AccountInfo<'info>,
+    pub coin_creator_vault_authority: &'me AccountInfo<'info>,
+    pub coin_creator_vault_ata: &'me AccountInfo<'info>,
+    pub pump_creator_vault: &'me AccountInfo<'info>,
+    pub pump_creator_vault_ata: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct TransferCreatorFeesToPumpV2Keys {
+    pub payer: Pubkey,
+    pub quote_mint: Pubkey,
+    pub token_program: Pubkey,
+    pub system_program: Pubkey,
+    pub associated_token_program: Pubkey,
+    pub coin_creator: Pubkey,
+    pub coin_creator_vault_authority: Pubkey,
+    pub coin_creator_vault_ata: Pubkey,
+    pub pump_creator_vault: Pubkey,
+    pub pump_creator_vault_ata: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<TransferCreatorFeesToPumpV2Accounts<'_, '_>>
+for TransferCreatorFeesToPumpV2Keys {
+    fn from(accounts: TransferCreatorFeesToPumpV2Accounts) -> Self {
+        Self {
+            payer: *accounts.payer.key,
+            quote_mint: *accounts.quote_mint.key,
+            token_program: *accounts.token_program.key,
+            system_program: *accounts.system_program.key,
+            associated_token_program: *accounts.associated_token_program.key,
+            coin_creator: *accounts.coin_creator.key,
+            coin_creator_vault_authority: *accounts.coin_creator_vault_authority.key,
+            coin_creator_vault_ata: *accounts.coin_creator_vault_ata.key,
+            pump_creator_vault: *accounts.pump_creator_vault.key,
+            pump_creator_vault_ata: *accounts.pump_creator_vault_ata.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<TransferCreatorFeesToPumpV2Keys>
+for [AccountMeta; TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN] {
+    fn from(keys: TransferCreatorFeesToPumpV2Keys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.associated_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.coin_creator,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.coin_creator_vault_authority,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.coin_creator_vault_ata,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.pump_creator_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.pump_creator_vault_ata,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN]>
+for TransferCreatorFeesToPumpV2Keys {
+    fn from(
+        pubkeys: [Pubkey; TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            payer: pubkeys[0],
+            quote_mint: pubkeys[1],
+            token_program: pubkeys[2],
+            system_program: pubkeys[3],
+            associated_token_program: pubkeys[4],
+            coin_creator: pubkeys[5],
+            coin_creator_vault_authority: pubkeys[6],
+            coin_creator_vault_ata: pubkeys[7],
+            pump_creator_vault: pubkeys[8],
+            pump_creator_vault_ata: pubkeys[9],
+            event_authority: pubkeys[10],
+            program: pubkeys[11],
+        }
+    }
+}
+impl<'info> From<TransferCreatorFeesToPumpV2Accounts<'_, 'info>>
+for [AccountInfo<'info>; TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN] {
+    fn from(accounts: TransferCreatorFeesToPumpV2Accounts<'_, 'info>) -> Self {
+        [
+            accounts.payer.clone(),
+            accounts.quote_mint.clone(),
+            accounts.token_program.clone(),
+            accounts.system_program.clone(),
+            accounts.associated_token_program.clone(),
+            accounts.coin_creator.clone(),
+            accounts.coin_creator_vault_authority.clone(),
+            accounts.coin_creator_vault_ata.clone(),
+            accounts.pump_creator_vault.clone(),
+            accounts.pump_creator_vault_ata.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN]>
+for TransferCreatorFeesToPumpV2Accounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            payer: &arr[0],
+            quote_mint: &arr[1],
+            token_program: &arr[2],
+            system_program: &arr[3],
+            associated_token_program: &arr[4],
+            coin_creator: &arr[5],
+            coin_creator_vault_authority: &arr[6],
+            coin_creator_vault_ata: &arr[7],
+            pump_creator_vault: &arr[8],
+            pump_creator_vault_ata: &arr[9],
+            event_authority: &arr[10],
+            program: &arr[11],
+        }
+    }
+}
+pub const TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_DISCM: [u8; 8usize] = [
+    1, 33, 78, 185, 33, 67, 44, 92,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransferCreatorFeesToPumpV2IxData;
+impl TransferCreatorFeesToPumpV2IxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn transfer_creator_fees_to_pump_v2_ix_with_program_id(
+    program_id: Pubkey,
+    keys: TransferCreatorFeesToPumpV2Keys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; TRANSFER_CREATOR_FEES_TO_PUMP_V2_IX_ACCOUNTS_LEN] = keys
+        .into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: TransferCreatorFeesToPumpV2IxData.try_to_vec()?,
+    })
+}
+pub fn transfer_creator_fees_to_pump_v2_ix(
+    keys: TransferCreatorFeesToPumpV2Keys,
+) -> std::io::Result<Instruction> {
+    transfer_creator_fees_to_pump_v2_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys)
+}
+pub fn transfer_creator_fees_to_pump_v2_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: TransferCreatorFeesToPumpV2Accounts<'_, '_>,
+) -> ProgramResult {
+    let keys: TransferCreatorFeesToPumpV2Keys = accounts.into();
+    let ix = transfer_creator_fees_to_pump_v2_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn transfer_creator_fees_to_pump_v2_invoke(
+    accounts: TransferCreatorFeesToPumpV2Accounts<'_, '_>,
+) -> ProgramResult {
+    transfer_creator_fees_to_pump_v2_invoke_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+    )
+}
+pub fn transfer_creator_fees_to_pump_v2_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: TransferCreatorFeesToPumpV2Accounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: TransferCreatorFeesToPumpV2Keys = accounts.into();
+    let ix = transfer_creator_fees_to_pump_v2_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn transfer_creator_fees_to_pump_v2_invoke_signed(
+    accounts: TransferCreatorFeesToPumpV2Accounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    transfer_creator_fees_to_pump_v2_invoke_signed_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn transfer_creator_fees_to_pump_v2_verify_account_keys(
+    accounts: TransferCreatorFeesToPumpV2Accounts<'_, '_>,
+    keys: TransferCreatorFeesToPumpV2Keys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.payer.key, keys.payer),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.associated_token_program.key, keys.associated_token_program),
+        (*accounts.coin_creator.key, keys.coin_creator),
+        (*accounts.coin_creator_vault_authority.key, keys.coin_creator_vault_authority),
+        (*accounts.coin_creator_vault_ata.key, keys.coin_creator_vault_ata),
+        (*accounts.pump_creator_vault.key, keys.pump_creator_vault),
+        (*accounts.pump_creator_vault_ata.key, keys.pump_creator_vault_ata),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_creator_fees_to_pump_v2_verify_writable_privileges<'me, 'info>(
+    accounts: TransferCreatorFeesToPumpV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.payer,
+        accounts.coin_creator_vault_authority,
+        accounts.coin_creator_vault_ata,
+        accounts.pump_creator_vault,
+        accounts.pump_creator_vault_ata,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_creator_fees_to_pump_v2_verify_signer_privileges<'me, 'info>(
+    accounts: TransferCreatorFeesToPumpV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_creator_fees_to_pump_v2_verify_account_privileges<'me, 'info>(
+    accounts: TransferCreatorFeesToPumpV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    transfer_creator_fees_to_pump_v2_verify_writable_privileges(accounts)?;
+    transfer_creator_fees_to_pump_v2_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const UPDATE_ADMIN_IX_ACCOUNTS_LEN: usize = 5;

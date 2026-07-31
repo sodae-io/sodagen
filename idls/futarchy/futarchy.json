@@ -1325,7 +1325,50 @@
       "args": []
     },
     {
-      "name": "adminApproveMultisigProposal",
+      "name": "adminEnqueueMultisigProposalApproval",
+      "accounts": [
+        {
+          "name": "dao",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "admin",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "squadsMultisig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "squadsMultisigProposal",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "enqueuedApproval",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "AdminEnqueueMultisigProposalApprovalArgs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "executeMultisigProposalApproval",
       "accounts": [
         {
           "name": "dao",
@@ -1333,7 +1376,7 @@
           "isSigner": false
         },
         {
-          "name": "admin",
+          "name": "rentReceiver",
           "isMut": true,
           "isSigner": true
         },
@@ -1348,19 +1391,17 @@
           "isSigner": false
         },
         {
+          "name": "enqueuedApproval",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
           "name": "squadsMultisigProgram",
           "isMut": false,
           "isSigner": false
         }
       ],
-      "args": [
-        {
-          "name": "args",
-          "type": {
-            "defined": "AdminApproveMultisigProposalArgs"
-          }
-        }
-      ]
+      "args": []
     },
     {
       "name": "adminExecuteMultisigProposal",
@@ -1880,6 +1921,26 @@
       }
     },
     {
+      "name": "EnqueuedMultisigProposalApproval",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "dao",
+            "type": "publicKey"
+          },
+          {
+            "name": "transactionIndex",
+            "type": "u64"
+          },
+          {
+            "name": "pdaBump",
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
       "name": "Proposal",
       "type": {
         "kind": "struct",
@@ -2000,7 +2061,7 @@
       }
     },
     {
-      "name": "AdminApproveMultisigProposalArgs",
+      "name": "AdminEnqueueMultisigProposalApprovalArgs",
       "type": {
         "kind": "struct",
         "fields": [

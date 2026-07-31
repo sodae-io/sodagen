@@ -1,322 +1,31 @@
 {
-  "accounts": [
-    {
-      "discriminator": [
-        230,
-        62,
-        124,
-        43,
-        102,
-        101,
-        88,
-        63
-      ],
-      "name": "NumeraireConfig"
-    },
-    {
-      "discriminator": [
-        239,
-        91,
-        93,
-        162,
-        171,
-        14,
-        42,
-        66
-      ],
-      "name": "StablePool"
-    },
-    {
-      "discriminator": [
-        112,
-        153,
-        135,
-        223,
-        53,
-        247,
-        129,
-        101
-      ],
-      "name": "VirtualStablePair"
-    }
-  ],
   "address": "NUMERUNsFCP3kuNmWZuXtm1AaQCPj9uw6Guv2Ekoi5P",
-  "constants": [
-    {
-      "name": "AUTHORITY_SEED",
-      "type": "bytes",
-      "value": "[97, 117, 116, 104, 111, 114, 105, 116, 121]"
-    },
-    {
-      "name": "CONFIG_SEED",
-      "type": "bytes",
-      "value": "[99, 111, 110, 102, 105, 103]"
-    },
-    {
-      "name": "LIQUIDITY_SEED",
-      "type": "bytes",
-      "value": "[108, 105, 113, 117, 105, 100, 105, 116, 121]"
-    },
-    {
-      "name": "LP_TOKEN_PROGRAM",
-      "type": "pubkey",
-      "value": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
-    },
-    {
-      "name": "MAX_STABLES_PER_POOL",
-      "type": "u8",
-      "value": "10"
-    },
-    {
-      "name": "NORMALIZED_VALUE_DECIMALS",
-      "type": "u8",
-      "value": "6"
-    }
-  ],
-  "errors": [
-    {
-      "code": 6000,
-      "msg": "Attempt to call an owner only function not by the owner",
-      "name": "OnlyOwner"
-    },
-    {
-      "code": 6001,
-      "msg": "Token account data is not as expected",
-      "name": "InvalidTokenAccountData"
-    },
-    {
-      "code": 6002,
-      "msg": "Account data is not as expected",
-      "name": "InvalidAccountData"
-    },
-    {
-      "code": 6003,
-      "msg": "Token pair decimals mismatch",
-      "name": "DecimalsMismatch"
-    },
-    {
-      "code": 6004,
-      "msg": "Token should not have this extension",
-      "name": "InvalidTokenExtension"
-    },
-    {
-      "code": 6005,
-      "msg": "Wrong account(s) passed as input",
-      "name": "IncorrectAccounts"
-    },
-    {
-      "code": 6006,
-      "msg": "Wrong authority passed as input",
-      "name": "IncorrectAuthority"
-    },
-    {
-      "code": 6007,
-      "msg": "Delegate not allowed",
-      "name": "InvalidDelegate"
-    },
-    {
-      "code": 6008,
-      "msg": "This feature is currently unsupported or unenabled",
-      "name": "UnsupportedFeature"
-    },
-    {
-      "code": 6009,
-      "msg": "This function is currently paused",
-      "name": "FunctionPaused"
-    },
-    {
-      "code": 6010,
-      "msg": "Fee must be less than 100 basis points",
-      "name": "InvalidFee"
-    },
-    {
-      "code": 6011,
-      "msg": "Token mints must be ordered by pubkey",
-      "name": "InvalidPoolCreate"
-    },
-    {
-      "code": 6012,
-      "msg": "Curve params must be positive",
-      "name": "InvalidCurveParams"
-    },
-    {
-      "code": 6013,
-      "msg": "Pool has too little liquidity for action",
-      "name": "InsufficientLiquidity"
-    },
-    {
-      "code": 6014,
-      "msg": "Liquidity add does not make pool balanced (or curve params are asymmetric)",
-      "name": "LiquidityAddUnbalanced"
-    },
-    {
-      "code": 6015,
-      "msg": "Input is more than trader balance",
-      "name": "InsufficientBalance"
-    },
-    {
-      "code": 6016,
-      "msg": "Input is below the minimum expected",
-      "name": "InputTooSmall"
-    },
-    {
-      "code": 6017,
-      "msg": "Input is more than available liquidity",
-      "name": "InputTooBig"
-    },
-    {
-      "code": 6018,
-      "msg": "Output is below the minimum expected",
-      "name": "OutputTooSmall"
-    },
-    {
-      "code": 6019,
-      "msg": "Invariant computation overflowed",
-      "name": "InvariantOverflow"
-    },
-    {
-      "code": 6020,
-      "msg": "Invariant does not hold",
-      "name": "InvariantViolated"
-    },
-    {
-      "code": 6021,
-      "msg": "Depositing too little liquidity",
-      "name": "LiquidityAddTooSmall"
-    },
-    {
-      "code": 6022,
-      "msg": "Only Token Program 2022 and/or Token Program are supported",
-      "name": "UnsupportedTokenProgram"
-    },
-    {
-      "code": 6023,
-      "msg": "Some pool weights are zero or nonzero and shouldn't be",
-      "name": "InvalidPoolWeights"
-    },
-    {
-      "code": 6024,
-      "msg": "A swap math operation overflowed",
-      "name": "SwapOverflowError"
-    },
-    {
-      "code": 6025,
-      "msg": "An add/remove liquidity math operation overflowed",
-      "name": "LiquidityMathOverflow"
-    },
-    {
-      "code": 6026,
-      "msg": "Some add/remove balance deltas are nonzero and shouldn't be",
-      "name": "InvalidBalanceDeltas"
-    },
-    {
-      "code": 6027,
-      "msg": "The provided pool params were not well formed",
-      "name": "InvalidPoolParams"
-    },
-    {
-      "code": 6028,
-      "msg": "The hints provided do not bound the swap amounts",
-      "name": "InvalidHints"
-    },
-    {
-      "code": 6029,
-      "msg": "Unexpected fee result",
-      "name": "FeeError"
-    },
-    {
-      "code": 6030,
-      "msg": "A vault math operation overflowed",
-      "name": "VaultOverflowError"
-    },
-    {
-      "code": 6031,
-      "msg": "Output is above the maximum expected",
-      "name": "OutputTooBig"
-    },
-    {
-      "code": 6032,
-      "msg": "This cannot happen",
-      "name": "Unreachable"
-    },
-    {
-      "code": 6033,
-      "msg": "This action is not allowed",
-      "name": "InvalidAction"
-    }
-  ],
-  "events": [
-    {
-      "discriminator": [
-        31,
-        94,
-        125,
-        90,
-        227,
-        52,
-        61,
-        186
-      ],
-      "name": "AddLiquidity"
-    },
-    {
-      "discriminator": [
-        133,
-        244,
-        92,
-        134,
-        193,
-        24,
-        187,
-        158
-      ],
-      "name": "Quote"
-    },
-    {
-      "discriminator": [
-        116,
-        244,
-        97,
-        232,
-        103,
-        31,
-        152,
-        58
-      ],
-      "name": "RemoveLiquidity"
-    },
-    {
-      "discriminator": [
-        147,
-        136,
-        213,
-        11,
-        150,
-        23,
-        141,
-        152
-      ],
-      "name": "SwapExactIn"
-    },
-    {
-      "discriminator": [
-        71,
-        66,
-        127,
-        123,
-        231,
-        29,
-        227,
-        92
-      ],
-      "name": "SwapExactOut"
-    }
-  ],
+  "metadata": {
+    "name": "numeraire",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "Created with Anchor"
+  },
   "instructions": [
     {
+      "name": "add_liquidity",
+      "docs": [
+        "Pool Owner/Whitelist only functions"
+      ],
+      "discriminator": [
+        181,
+        157,
+        89,
+        67,
+        143,
+        182,
+        52,
+        72
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -324,11 +33,11 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "lp_mint",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -350,12 +59,26 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer_lp_account",
+          "writable": true,
           "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "lp_mint"
+              }
+            ],
             "program": {
               "kind": "const",
               "value": [
@@ -392,23 +115,8 @@
                 248,
                 89
               ]
-            },
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "payer"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "lp_mint"
-              }
-            ]
-          },
-          "writable": true
+            }
+          }
         },
         {
           "name": "numeraire_config",
@@ -433,15 +141,15 @@
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": [
@@ -454,26 +162,24 @@
           }
         }
       ],
-      "discriminator": [
-        181,
-        157,
-        89,
-        67,
-        143,
-        182,
-        52,
-        72
-      ],
-      "docs": [
-        "Pool Owner/Whitelist only functions"
-      ],
-      "name": "add_liquidity",
       "returns": "u64"
     },
     {
+      "name": "compound",
+      "discriminator": [
+        165,
+        208,
+        251,
+        78,
+        242,
+        160,
+        141,
+        47
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -481,11 +187,11 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "lp_mint",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -507,12 +213,26 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer_lp_account",
+          "writable": true,
           "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "lp_mint"
+              }
+            ],
             "program": {
               "kind": "const",
               "value": [
@@ -549,23 +269,8 @@
                 248,
                 89
               ]
-            },
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "payer"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "lp_mint"
-              }
-            ]
-          },
-          "writable": true
+            }
+          }
         },
         {
           "name": "numeraire_config",
@@ -590,34 +295,35 @@
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
-      "args": [],
-      "discriminator": [
-        165,
-        208,
-        251,
-        78,
-        242,
-        160,
-        141,
-        47
-      ],
-      "name": "compound"
+      "args": []
     },
     {
+      "name": "create_pool",
+      "discriminator": [
+        233,
+        146,
+        209,
+        142,
+        207,
+        104,
+        64,
+        188
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -625,11 +331,11 @@
                 "path": "data.pool_seed"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "lp_mint",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -651,12 +357,26 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "creator_lp_account",
+          "writable": true,
           "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "lp_mint"
+              }
+            ],
             "program": {
               "kind": "const",
               "value": [
@@ -693,23 +413,8 @@
                 248,
                 89
               ]
-            },
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "payer"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "lp_mint"
-              }
-            ]
-          },
-          "writable": true
+            }
+          }
         },
         {
           "name": "numeraire_config",
@@ -731,27 +436,27 @@
         },
         {
           "name": "payer",
-          "signer": true,
-          "writable": true
+          "writable": true,
+          "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_program_2022"
+          "name": "token_program_2022",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         },
         {
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "address": "11111111111111111111111111111111",
-          "name": "system_program"
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -763,26 +468,27 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        233,
-        146,
-        209,
-        142,
-        207,
-        104,
-        64,
-        188
-      ],
-      "name": "create_pool"
+      ]
     },
     {
+      "name": "init_virtual_stable_pair",
+      "discriminator": [
+        228,
+        18,
+        163,
+        161,
+        101,
+        204,
+        106,
+        172
+      ],
       "accounts": [
         {
           "name": "x_mint"
         },
         {
           "name": "pair",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -794,8 +500,7 @@
                 "path": "data.pair_seed"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "pair_authority",
@@ -824,6 +529,7 @@
         },
         {
           "name": "x_vault",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -845,49 +551,12 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "x_adder",
+          "writable": true,
           "pda": {
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            },
             "seeds": [
               {
                 "kind": "account",
@@ -901,9 +570,45 @@
                 "kind": "account",
                 "path": "x_mint"
               }
-            ]
-          },
-          "writable": true
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
         },
         {
           "name": "numeraire_config",
@@ -925,22 +630,22 @@
         },
         {
           "name": "payer",
-          "signer": true,
-          "writable": true
+          "writable": true,
+          "signer": true
         },
         {
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
-          ],
-          "name": "token_program"
+          ]
         },
         {
-          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL",
-          "name": "associated_token_program"
+          "name": "associated_token_program",
+          "address": "ATokenGPvbdGVxr1b2hvZbsiqW5xWH25efTNsLJA8knL"
         },
         {
-          "address": "11111111111111111111111111111111",
-          "name": "system_program"
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -952,151 +657,10 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        228,
-        18,
-        163,
-        161,
-        101,
-        204,
-        106,
-        172
-      ],
-      "name": "init_virtual_stable_pair"
+      ]
     },
     {
-      "accounts": [
-        {
-          "name": "pool",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "pool"
-              }
-            ]
-          },
-          "writable": true
-        },
-        {
-          "name": "lp_mint",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "pool"
-              },
-              {
-                "kind": "const",
-                "value": [
-                  108,
-                  105,
-                  113,
-                  117,
-                  105,
-                  100,
-                  105,
-                  116,
-                  121
-                ]
-              }
-            ]
-          },
-          "writable": true
-        },
-        {
-          "name": "payer_lp_account",
-          "pda": {
-            "program": {
-              "kind": "const",
-              "value": [
-                140,
-                151,
-                37,
-                143,
-                78,
-                36,
-                137,
-                241,
-                187,
-                61,
-                16,
-                41,
-                20,
-                142,
-                13,
-                131,
-                11,
-                90,
-                19,
-                153,
-                218,
-                255,
-                16,
-                132,
-                4,
-                142,
-                123,
-                216,
-                219,
-                233,
-                248,
-                89
-              ]
-            },
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "payer"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "lp_mint"
-              }
-            ]
-          },
-          "writable": true
-        },
-        {
-          "name": "numeraire_config",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "name": "payer",
-          "signer": true
-        },
-        {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          "docs": [
-            "Solana ecosystem accounts"
-          ],
-          "name": "token_program"
-        },
-        {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
-        }
-      ],
-      "args": [],
+      "name": "remove_all_liquidity",
       "discriminator": [
         10,
         51,
@@ -1107,12 +671,10 @@
         24,
         85
       ],
-      "name": "remove_all_liquidity"
-    },
-    {
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1120,11 +682,11 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "lp_mint",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1146,12 +708,26 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer_lp_account",
+          "writable": true,
           "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "lp_mint"
+              }
+            ],
             "program": {
               "kind": "const",
               "value": [
@@ -1188,23 +764,8 @@
                 248,
                 89
               ]
-            },
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "payer"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "lp_mint"
-              }
-            ]
-          },
-          "writable": true
+            }
+          }
         },
         {
           "name": "numeraire_config",
@@ -1229,15 +790,159 @@
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "remove_liquidity",
+      "discriminator": [
+        80,
+        85,
+        209,
+        72,
+        24,
+        206,
+        177,
+        108
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "lp_mint",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              },
+              {
+                "kind": "const",
+                "value": [
+                  108,
+                  105,
+                  113,
+                  117,
+                  105,
+                  100,
+                  105,
+                  116,
+                  121
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer_lp_account",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "lp_mint"
+              }
+            ],
+            "program": {
+              "kind": "const",
+              "value": [
+                140,
+                151,
+                37,
+                143,
+                78,
+                36,
+                137,
+                241,
+                187,
+                61,
+                16,
+                41,
+                20,
+                142,
+                13,
+                131,
+                11,
+                90,
+                19,
+                153,
+                218,
+                255,
+                16,
+                132,
+                4,
+                142,
+                123,
+                216,
+                219,
+                233,
+                248,
+                89
+              ]
+            }
+          }
+        },
+        {
+          "name": "numeraire_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Solana ecosystem accounts"
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": [
@@ -1250,23 +955,24 @@
           }
         }
       ],
-      "discriminator": [
-        80,
-        85,
-        209,
-        72,
-        24,
-        206,
-        177,
-        108
-      ],
-      "name": "remove_liquidity",
       "returns": "u64"
     },
     {
+      "name": "set_fee",
+      "discriminator": [
+        18,
+        154,
+        24,
+        18,
+        237,
+        214,
+        19,
+        80
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1274,8 +980,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer",
@@ -1291,23 +996,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        18,
-        154,
-        24,
-        18,
-        237,
-        214,
-        19,
-        80
-      ],
-      "name": "set_fee"
+      ]
     },
     {
+      "name": "set_inv_t_max",
+      "discriminator": [
+        218,
+        209,
+        244,
+        237,
+        211,
+        236,
+        98,
+        58
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1315,8 +1021,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer",
@@ -1332,23 +1037,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        218,
-        209,
-        244,
-        237,
-        211,
-        236,
-        98,
-        58
-      ],
-      "name": "set_inv_t_max"
+      ]
     },
     {
+      "name": "set_lp_token_metadata",
+      "discriminator": [
+        71,
+        73,
+        56,
+        155,
+        202,
+        142,
+        100,
+        150
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1356,11 +1062,11 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "lp_mint",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1382,16 +1088,12 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "metadata_account",
+          "writable": true,
           "pda": {
-            "program": {
-              "kind": "account",
-              "path": "token_metadata_program"
-            },
             "seeds": [
               {
                 "kind": "const",
@@ -1414,32 +1116,35 @@
                 "kind": "account",
                 "path": "lp_mint"
               }
-            ]
-          },
-          "writable": true
+            ],
+            "program": {
+              "kind": "account",
+              "path": "token_metadata_program"
+            }
+          }
         },
         {
           "name": "payer",
           "signer": true
         },
         {
-          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s",
+          "name": "token_metadata_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_metadata_program"
+          "address": "metaqbxxUerdq28cj1RbAWkYQm3ybzjb6a8bt518x1s"
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          "name": "token_program"
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "11111111111111111111111111111111",
-          "name": "system_program"
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
         },
         {
-          "address": "Sysvar1nstructions1111111111111111111111111",
-          "name": "instructions"
+          "name": "instructions",
+          "address": "Sysvar1nstructions1111111111111111111111111"
         }
       ],
       "args": [
@@ -1451,23 +1156,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        71,
-        73,
-        56,
-        155,
-        202,
-        142,
-        100,
-        150
-      ],
-      "name": "set_lp_token_metadata"
+      ]
     },
     {
+      "name": "set_numeraire_owner",
+      "discriminator": [
+        6,
+        199,
+        177,
+        104,
+        86,
+        61,
+        93,
+        253
+      ],
       "accounts": [
         {
           "name": "numeraire_config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1482,8 +1188,7 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "pair_mint",
@@ -1491,15 +1196,15 @@
         },
         {
           "name": "payer",
-          "signer": true,
-          "writable": true
+          "writable": true,
+          "signer": true
         },
         {
-          "address": "11111111111111111111111111111111",
+          "name": "system_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "system_program"
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1511,23 +1216,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        6,
-        199,
-        177,
-        104,
-        86,
-        61,
-        93,
-        253
-      ],
-      "name": "set_numeraire_owner"
+      ]
     },
     {
+      "name": "set_numeraire_status",
+      "discriminator": [
+        10,
+        17,
+        5,
+        71,
+        204,
+        171,
+        126,
+        173
+      ],
       "accounts": [
         {
           "name": "numeraire_config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1542,8 +1248,7 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "pair_mint",
@@ -1551,15 +1256,15 @@
         },
         {
           "name": "payer",
-          "signer": true,
-          "writable": true
+          "writable": true,
+          "signer": true
         },
         {
-          "address": "11111111111111111111111111111111",
+          "name": "system_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "system_program"
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1571,23 +1276,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        10,
-        17,
-        5,
-        71,
-        204,
-        171,
-        126,
-        173
-      ],
-      "name": "set_numeraire_status"
+      ]
     },
     {
+      "name": "set_numeraire_whitelisted_pool_creator",
+      "discriminator": [
+        147,
+        51,
+        31,
+        255,
+        111,
+        2,
+        189,
+        173
+      ],
       "accounts": [
         {
           "name": "numeraire_config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1602,8 +1308,7 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "pair_mint",
@@ -1611,15 +1316,15 @@
         },
         {
           "name": "payer",
-          "signer": true,
-          "writable": true
+          "writable": true,
+          "signer": true
         },
         {
-          "address": "11111111111111111111111111111111",
+          "name": "system_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "system_program"
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1631,23 +1336,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        147,
-        51,
-        31,
-        255,
-        111,
-        2,
-        189,
-        173
-      ],
-      "name": "set_numeraire_whitelisted_pool_creator"
+      ]
     },
     {
+      "name": "set_owner",
+      "discriminator": [
+        72,
+        202,
+        120,
+        52,
+        77,
+        128,
+        96,
+        197
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1655,8 +1361,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer",
@@ -1672,23 +1377,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        72,
-        202,
-        120,
-        52,
-        77,
-        128,
-        96,
-        197
-      ],
-      "name": "set_owner"
+      ]
     },
     {
+      "name": "set_rate",
+      "discriminator": [
+        99,
+        58,
+        170,
+        238,
+        160,
+        120,
+        74,
+        11
+      ],
       "accounts": [
         {
           "name": "numeraire_config",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1703,8 +1409,7 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "pair_mint",
@@ -1712,15 +1417,15 @@
         },
         {
           "name": "payer",
-          "signer": true,
-          "writable": true
+          "writable": true,
+          "signer": true
         },
         {
-          "address": "11111111111111111111111111111111",
+          "name": "system_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "system_program"
+          "address": "11111111111111111111111111111111"
         }
       ],
       "args": [
@@ -1732,23 +1437,27 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        99,
-        58,
-        170,
-        238,
-        160,
-        120,
-        74,
-        11
-      ],
-      "name": "set_rate"
+      ]
     },
     {
+      "name": "set_status",
+      "docs": [
+        "Pool Owner only functions"
+      ],
+      "discriminator": [
+        181,
+        184,
+        224,
+        203,
+        193,
+        29,
+        177,
+        224
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1756,8 +1465,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer",
@@ -1773,26 +1481,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        181,
-        184,
-        224,
-        203,
-        193,
-        29,
-        177,
-        224
-      ],
-      "docs": [
-        "Pool Owner only functions"
-      ],
-      "name": "set_status"
+      ]
     },
     {
+      "name": "set_whitelisted_adder",
+      "discriminator": [
+        74,
+        38,
+        140,
+        129,
+        228,
+        73,
+        236,
+        105
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1800,8 +1506,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer",
@@ -1817,23 +1522,24 @@
             }
           }
         }
-      ],
-      "discriminator": [
-        74,
-        38,
-        140,
-        129,
-        228,
-        73,
-        236,
-        105
-      ],
-      "name": "set_whitelisted_adder"
+      ]
     },
     {
+      "name": "skim",
+      "discriminator": [
+        238,
+        120,
+        221,
+        138,
+        82,
+        60,
+        100,
+        218
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1841,11 +1547,11 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "lp_mint",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1867,12 +1573,26 @@
                 ]
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "payer_lp_account",
+          "writable": true,
           "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "payer"
+              },
+              {
+                "kind": "account",
+                "path": "token_program"
+              },
+              {
+                "kind": "account",
+                "path": "lp_mint"
+              }
+            ],
             "program": {
               "kind": "const",
               "value": [
@@ -1909,23 +1629,8 @@
                 248,
                 89
               ]
-            },
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "payer"
-              },
-              {
-                "kind": "account",
-                "path": "token_program"
-              },
-              {
-                "kind": "account",
-                "path": "lp_mint"
-              }
-            ]
-          },
-          "writable": true
+            }
+          }
         },
         {
           "name": "numeraire_config",
@@ -1950,34 +1655,35 @@
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
-      "args": [],
-      "discriminator": [
-        238,
-        120,
-        221,
-        138,
-        82,
-        60,
-        100,
-        218
-      ],
-      "name": "skim"
+      "args": []
     },
     {
+      "name": "swap_exact_in",
+      "discriminator": [
+        104,
+        104,
+        131,
+        86,
+        161,
+        189,
+        180,
+        216
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -1985,8 +1691,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "in_mint",
@@ -2006,13 +1711,13 @@
         },
         {
           "name": "in_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "out_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "numeraire_config",
@@ -2033,22 +1738,22 @@
           }
         },
         {
+          "name": "payer",
           "docs": [
             "The trader account (executing the swap, paying for all rents)"
           ],
-          "name": "payer",
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": [
@@ -2061,106 +1766,10 @@
           }
         }
       ],
-      "discriminator": [
-        104,
-        104,
-        131,
-        86,
-        161,
-        189,
-        180,
-        216
-      ],
-      "name": "swap_exact_in",
       "returns": "u64"
     },
     {
-      "accounts": [
-        {
-          "name": "pool",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "account",
-                "path": "pool"
-              }
-            ]
-          },
-          "writable": true
-        },
-        {
-          "name": "in_mint",
-          "writable": true
-        },
-        {
-          "name": "out_mint",
-          "writable": true
-        },
-        {
-          "name": "in_trader",
-          "writable": true
-        },
-        {
-          "name": "out_trader",
-          "writable": true
-        },
-        {
-          "name": "in_vault",
-          "optional": true,
-          "writable": true
-        },
-        {
-          "name": "out_vault",
-          "optional": true,
-          "writable": true
-        },
-        {
-          "name": "numeraire_config",
-          "pda": {
-            "seeds": [
-              {
-                "kind": "const",
-                "value": [
-                  99,
-                  111,
-                  110,
-                  102,
-                  105,
-                  103
-                ]
-              }
-            ]
-          }
-        },
-        {
-          "docs": [
-            "The trader account (executing the swap, paying for all rents)"
-          ],
-          "name": "payer",
-          "signer": true
-        },
-        {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-          "docs": [
-            "Solana ecosystem accounts"
-          ],
-          "name": "token_program"
-        },
-        {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
-        }
-      ],
-      "args": [
-        {
-          "name": "data",
-          "type": {
-            "defined": {
-              "name": "SwapExactInData"
-            }
-          }
-        }
-      ],
+      "name": "swap_exact_in_hinted",
       "discriminator": [
         98,
         239,
@@ -2171,13 +1780,10 @@
         40,
         49
       ],
-      "name": "swap_exact_in_hinted",
-      "returns": "u64"
-    },
-    {
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -2185,8 +1791,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "in_mint",
@@ -2206,13 +1811,13 @@
         },
         {
           "name": "in_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "out_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "numeraire_config",
@@ -2233,22 +1838,22 @@
           }
         },
         {
+          "name": "payer",
           "docs": [
             "The trader account (executing the swap, paying for all rents)"
           ],
-          "name": "payer",
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": [
@@ -2261,6 +1866,10 @@
           }
         }
       ],
+      "returns": "u64"
+    },
+    {
+      "name": "swap_exact_in_quote",
       "discriminator": [
         68,
         209,
@@ -2271,13 +1880,10 @@
         29,
         191
       ],
-      "name": "swap_exact_in_quote",
-      "returns": "u64"
-    },
-    {
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -2285,8 +1891,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "in_mint",
@@ -2306,13 +1911,13 @@
         },
         {
           "name": "in_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "out_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "numeraire_config",
@@ -2333,22 +1938,122 @@
           }
         },
         {
+          "name": "payer",
           "docs": [
             "The trader account (executing the swap, paying for all rents)"
           ],
-          "name": "payer",
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
+        }
+      ],
+      "args": [
+        {
+          "name": "data",
+          "type": {
+            "defined": {
+              "name": "SwapExactInData"
+            }
+          }
+        }
+      ],
+      "returns": "u64"
+    },
+    {
+      "name": "swap_exact_out",
+      "discriminator": [
+        250,
+        73,
+        101,
+        33,
+        38,
+        207,
+        75,
+        184
+      ],
+      "accounts": [
+        {
+          "name": "pool",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "account",
+                "path": "pool"
+              }
+            ]
+          }
+        },
+        {
+          "name": "in_mint",
+          "writable": true
+        },
+        {
+          "name": "out_mint",
+          "writable": true
+        },
+        {
+          "name": "in_trader",
+          "writable": true
+        },
+        {
+          "name": "out_trader",
+          "writable": true
+        },
+        {
+          "name": "in_vault",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "out_vault",
+          "writable": true,
+          "optional": true
+        },
+        {
+          "name": "numeraire_config",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  99,
+                  111,
+                  110,
+                  102,
+                  105,
+                  103
+                ]
+              }
+            ]
+          }
+        },
+        {
+          "name": "payer",
+          "docs": [
+            "The trader account (executing the swap, paying for all rents)"
+          ],
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "docs": [
+            "Solana ecosystem accounts"
+          ],
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": [
@@ -2361,23 +2066,24 @@
           }
         }
       ],
-      "discriminator": [
-        250,
-        73,
-        101,
-        33,
-        38,
-        207,
-        75,
-        184
-      ],
-      "name": "swap_exact_out",
       "returns": "u64"
     },
     {
+      "name": "swap_exact_out_hinted",
+      "discriminator": [
+        153,
+        208,
+        206,
+        70,
+        62,
+        234,
+        98,
+        182
+      ],
       "accounts": [
         {
           "name": "pool",
+          "writable": true,
           "pda": {
             "seeds": [
               {
@@ -2385,8 +2091,7 @@
                 "path": "pool"
               }
             ]
-          },
-          "writable": true
+          }
         },
         {
           "name": "in_mint",
@@ -2406,13 +2111,13 @@
         },
         {
           "name": "in_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "out_vault",
-          "optional": true,
-          "writable": true
+          "writable": true,
+          "optional": true
         },
         {
           "name": "numeraire_config",
@@ -2433,22 +2138,22 @@
           }
         },
         {
+          "name": "payer",
           "docs": [
             "The trader account (executing the swap, paying for all rents)"
           ],
-          "name": "payer",
           "signer": true
         },
         {
-          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "name": "token_program",
           "docs": [
             "Solana ecosystem accounts"
           ],
-          "name": "token_program"
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
         },
         {
-          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
-          "name": "token_2022_program"
+          "name": "token_2022_program",
+          "address": "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb"
         }
       ],
       "args": [
@@ -2461,30 +2166,294 @@
           }
         }
       ],
-      "discriminator": [
-        153,
-        208,
-        206,
-        70,
-        62,
-        234,
-        98,
-        182
-      ],
-      "name": "swap_exact_out_hinted",
       "returns": "u64"
     }
   ],
-  "metadata": {
-    "description": "Created with Anchor",
-    "name": "numeraire",
-    "spec": "0.1.0",
-    "version": "0.1.0"
-  },
+  "accounts": [
+    {
+      "name": "NumeraireConfig",
+      "discriminator": [
+        230,
+        62,
+        124,
+        43,
+        102,
+        101,
+        88,
+        63
+      ]
+    },
+    {
+      "name": "StablePool",
+      "discriminator": [
+        239,
+        91,
+        93,
+        162,
+        171,
+        14,
+        42,
+        66
+      ]
+    },
+    {
+      "name": "VirtualStablePair",
+      "discriminator": [
+        112,
+        153,
+        135,
+        223,
+        53,
+        247,
+        129,
+        101
+      ]
+    }
+  ],
+  "events": [
+    {
+      "name": "AddLiquidity",
+      "discriminator": [
+        31,
+        94,
+        125,
+        90,
+        227,
+        52,
+        61,
+        186
+      ]
+    },
+    {
+      "name": "Quote",
+      "discriminator": [
+        133,
+        244,
+        92,
+        134,
+        193,
+        24,
+        187,
+        158
+      ]
+    },
+    {
+      "name": "RemoveLiquidity",
+      "discriminator": [
+        116,
+        244,
+        97,
+        232,
+        103,
+        31,
+        152,
+        58
+      ]
+    },
+    {
+      "name": "SwapExactIn",
+      "discriminator": [
+        147,
+        136,
+        213,
+        11,
+        150,
+        23,
+        141,
+        152
+      ]
+    },
+    {
+      "name": "SwapExactOut",
+      "discriminator": [
+        71,
+        66,
+        127,
+        123,
+        231,
+        29,
+        227,
+        92
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "OnlyOwner",
+      "msg": "Attempt to call an owner only function not by the owner"
+    },
+    {
+      "code": 6001,
+      "name": "InvalidTokenAccountData",
+      "msg": "Token account data is not as expected"
+    },
+    {
+      "code": 6002,
+      "name": "InvalidAccountData",
+      "msg": "Account data is not as expected"
+    },
+    {
+      "code": 6003,
+      "name": "DecimalsMismatch",
+      "msg": "Token pair decimals mismatch"
+    },
+    {
+      "code": 6004,
+      "name": "InvalidTokenExtension",
+      "msg": "Token should not have this extension"
+    },
+    {
+      "code": 6005,
+      "name": "IncorrectAccounts",
+      "msg": "Wrong account(s) passed as input"
+    },
+    {
+      "code": 6006,
+      "name": "IncorrectAuthority",
+      "msg": "Wrong authority passed as input"
+    },
+    {
+      "code": 6007,
+      "name": "InvalidDelegate",
+      "msg": "Delegate not allowed"
+    },
+    {
+      "code": 6008,
+      "name": "UnsupportedFeature",
+      "msg": "This feature is currently unsupported or unenabled"
+    },
+    {
+      "code": 6009,
+      "name": "FunctionPaused",
+      "msg": "This function is currently paused"
+    },
+    {
+      "code": 6010,
+      "name": "InvalidFee",
+      "msg": "Fee must be less than 100 basis points"
+    },
+    {
+      "code": 6011,
+      "name": "InvalidPoolCreate",
+      "msg": "Token mints must be ordered by pubkey"
+    },
+    {
+      "code": 6012,
+      "name": "InvalidCurveParams",
+      "msg": "Curve params must be positive"
+    },
+    {
+      "code": 6013,
+      "name": "InsufficientLiquidity",
+      "msg": "Pool has too little liquidity for action"
+    },
+    {
+      "code": 6014,
+      "name": "LiquidityAddUnbalanced",
+      "msg": "Liquidity add does not make pool balanced (or curve params are asymmetric)"
+    },
+    {
+      "code": 6015,
+      "name": "InsufficientBalance",
+      "msg": "Input is more than trader balance"
+    },
+    {
+      "code": 6016,
+      "name": "InputTooSmall",
+      "msg": "Input is below the minimum expected"
+    },
+    {
+      "code": 6017,
+      "name": "InputTooBig",
+      "msg": "Input is more than available liquidity"
+    },
+    {
+      "code": 6018,
+      "name": "OutputTooSmall",
+      "msg": "Output is below the minimum expected"
+    },
+    {
+      "code": 6019,
+      "name": "InvariantOverflow",
+      "msg": "Invariant computation overflowed"
+    },
+    {
+      "code": 6020,
+      "name": "InvariantViolated",
+      "msg": "Invariant does not hold"
+    },
+    {
+      "code": 6021,
+      "name": "LiquidityAddTooSmall",
+      "msg": "Depositing too little liquidity"
+    },
+    {
+      "code": 6022,
+      "name": "UnsupportedTokenProgram",
+      "msg": "Only Token Program 2022 and/or Token Program are supported"
+    },
+    {
+      "code": 6023,
+      "name": "InvalidPoolWeights",
+      "msg": "Some pool weights are zero or nonzero and shouldn't be"
+    },
+    {
+      "code": 6024,
+      "name": "SwapOverflowError",
+      "msg": "A swap math operation overflowed"
+    },
+    {
+      "code": 6025,
+      "name": "LiquidityMathOverflow",
+      "msg": "An add/remove liquidity math operation overflowed"
+    },
+    {
+      "code": 6026,
+      "name": "InvalidBalanceDeltas",
+      "msg": "Some add/remove balance deltas are nonzero and shouldn't be"
+    },
+    {
+      "code": 6027,
+      "name": "InvalidPoolParams",
+      "msg": "The provided pool params were not well formed"
+    },
+    {
+      "code": 6028,
+      "name": "InvalidHints",
+      "msg": "The hints provided do not bound the swap amounts"
+    },
+    {
+      "code": 6029,
+      "name": "FeeError",
+      "msg": "Unexpected fee result"
+    },
+    {
+      "code": 6030,
+      "name": "VaultOverflowError",
+      "msg": "A vault math operation overflowed"
+    },
+    {
+      "code": 6031,
+      "name": "OutputTooBig",
+      "msg": "Output is above the maximum expected"
+    },
+    {
+      "code": 6032,
+      "name": "Unreachable",
+      "msg": "This cannot happen"
+    },
+    {
+      "code": 6033,
+      "name": "InvalidAction",
+      "msg": "This action is not allowed"
+    }
+  ],
   "types": [
     {
       "name": "AddLiquidity",
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "lp_token_mint_amount",
@@ -2529,8 +2498,7 @@
             "name": "pool",
             "type": "pubkey"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2539,6 +2507,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "max_amounts_in",
@@ -2575,8 +2544,7 @@
               ]
             }
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2585,6 +2553,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "decimals",
@@ -2619,8 +2588,7 @@
             "name": "inv_T_max",
             "type": "u64"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2629,6 +2597,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "decimals",
@@ -2662,17 +2631,17 @@
             "name": "pair_seed",
             "type": "pubkey"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
       "name": "NumeraireConfig",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
-      "serialization": "bytemuck",
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "owner",
@@ -2727,25 +2696,25 @@
               ]
             }
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
       "name": "Quote",
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "amount",
             "type": "u64"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
       "name": "RemoveLiquidity",
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "lp_token_redeem_amount",
@@ -2795,8 +2764,7 @@
             "name": "pool",
             "type": "pubkey"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2805,6 +2773,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "lp_token_redeem_amount",
@@ -2823,8 +2792,7 @@
             "name": "out_index",
             "type": "u8"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2833,6 +2801,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "fee_num",
@@ -2842,8 +2811,7 @@
             "name": "fee_denom",
             "type": "u32"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2852,13 +2820,13 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "inv_T_max",
             "type": "u64"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2867,6 +2835,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "name",
@@ -2880,8 +2849,7 @@
             "name": "uri",
             "type": "string"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2890,13 +2858,13 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "owner",
             "type": "pubkey"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2905,6 +2873,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "rate_mint",
@@ -2918,8 +2887,7 @@
             "name": "rate_denom",
             "type": "u32"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2928,13 +2896,13 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "status",
             "type": "u32"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -2943,22 +2911,23 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "whitelisted_addr",
             "type": "pubkey"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
       "name": "StablePool",
+      "serialization": "bytemuck",
       "repr": {
         "kind": "c"
       },
-      "serialization": "bytemuck",
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "pool_seed",
@@ -3048,13 +3017,13 @@
               ]
             }
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
       "name": "SwapExactIn",
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "amount_in",
@@ -3084,8 +3053,7 @@
             "name": "pool",
             "type": "pubkey"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -3094,6 +3062,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "in_index",
@@ -3129,8 +3098,7 @@
               ]
             }
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -3139,6 +3107,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "in_index",
@@ -3156,13 +3125,13 @@
             "name": "min_amount_out",
             "type": "u64"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
       "name": "SwapExactOut",
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "amount_in",
@@ -3192,8 +3161,7 @@
             "name": "pool",
             "type": "pubkey"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -3202,6 +3170,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "in_index",
@@ -3237,8 +3206,7 @@
               ]
             }
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -3247,6 +3215,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "in_index",
@@ -3264,8 +3233,7 @@
             "name": "max_amount_in",
             "type": "u64"
           }
-        ],
-        "kind": "struct"
+        ]
       }
     },
     {
@@ -3274,6 +3242,7 @@
         "kind": "c"
       },
       "type": {
+        "kind": "struct",
         "fields": [
           {
             "name": "pair_authority",
@@ -3288,10 +3257,10 @@
             "type": "u64"
           },
           {
+            "name": "curve_Amp",
             "docs": [
               "Curve params. Define bonding curve shape: x + y + a + b - A / (x + a) - A / (y + b) - D = 0"
             ],
-            "name": "curve_Amp",
             "type": "u128"
           },
           {
@@ -3303,10 +3272,10 @@
             "type": "u128"
           },
           {
+            "name": "inv_L",
             "docs": [
               "Invariant constant. For invariant: x/L + y/L + a + b - A / (x/L + a) - A / (y/L + b) - D = 0"
             ],
-            "name": "inv_L",
             "type": "u128"
           },
           {
@@ -3367,10 +3336,40 @@
               ]
             }
           }
-        ],
-        "kind": "struct"
+        ]
       }
     }
   ],
-  "name": "perena"
+  "constants": [
+    {
+      "name": "AUTHORITY_SEED",
+      "type": "bytes",
+      "value": "[97, 117, 116, 104, 111, 114, 105, 116, 121]"
+    },
+    {
+      "name": "CONFIG_SEED",
+      "type": "bytes",
+      "value": "[99, 111, 110, 102, 105, 103]"
+    },
+    {
+      "name": "LIQUIDITY_SEED",
+      "type": "bytes",
+      "value": "[108, 105, 113, 117, 105, 100, 105, 116, 121]"
+    },
+    {
+      "name": "LP_TOKEN_PROGRAM",
+      "type": "pubkey",
+      "value": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+    },
+    {
+      "name": "MAX_STABLES_PER_POOL",
+      "type": "u8",
+      "value": "10"
+    },
+    {
+      "name": "NORMALIZED_VALUE_DECIMALS",
+      "type": "u8",
+      "value": "6"
+    }
+  ]
 }

@@ -142,6 +142,96 @@ impl AdminUpdateTokenIncentivesEventEvent {
         Ok(data)
     }
 }
+pub const BOOST_BUY_AND_BURN_EVENT_EVENT_DISCM: [u8; 8] = [
+    63, 69, 28, 22, 48, 92, 194, 185,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct BoostBuyAndBurnEvent {
+    pub timestamp: i64,
+    pub mint: Pubkey,
+    pub bonding_curve: Pubkey,
+    pub pool: Pubkey,
+    pub authority: Pubkey,
+    pub quote_amount_in_requested: u64,
+    pub quote_amount_in_used: u64,
+    pub base_amount_burned: u64,
+    pub virtual_quote_reserves: i128,
+    pub real_quote_reserves_after: u64,
+    pub base_reserves_after: u64,
+    pub boost_vault_remaining: u64,
+}
+impl BoostBuyAndBurnEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
+        let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let bonding_curve: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let quote_amount_in_requested: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let quote_amount_in_used: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let base_amount_burned: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let virtual_quote_reserves: i128 = crate::borsh_de_or_default(&mut reader)?;
+        let real_quote_reserves_after: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let base_reserves_after: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let boost_vault_remaining: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            timestamp,
+            mint,
+            bonding_curve,
+            pool,
+            authority,
+            quote_amount_in_requested,
+            quote_amount_in_used,
+            base_amount_burned,
+            virtual_quote_reserves,
+            real_quote_reserves_after,
+            base_reserves_after,
+            boost_vault_remaining,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.timestamp, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.bonding_curve, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.authority, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.quote_amount_in_requested, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.quote_amount_in_used, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.base_amount_burned, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.virtual_quote_reserves, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.real_quote_reserves_after, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.base_reserves_after, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.boost_vault_remaining, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct BoostBuyAndBurnEventEvent(pub BoostBuyAndBurnEvent);
+impl BoostBuyAndBurnEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != BOOST_BUY_AND_BURN_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = BoostBuyAndBurnEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&BOOST_BUY_AND_BURN_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const BUY_EVENT_EVENT_DISCM: [u8; 8] = [103, 244, 82, 31, 44, 245, 119, 119];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct BuyEvent {
@@ -179,6 +269,8 @@ pub struct BuyEvent {
     pub cashback: u64,
     pub buyback_fee_basis_points: u64,
     pub buyback_fee: u64,
+    pub virtual_quote_reserves: i128,
+    pub can_boost: bool,
 }
 impl BuyEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -221,6 +313,8 @@ impl BuyEvent {
         let cashback: u64 = crate::borsh_de_or_default(&mut reader)?;
         let buyback_fee_basis_points: u64 = crate::borsh_de_or_default(&mut reader)?;
         let buyback_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let virtual_quote_reserves: i128 = crate::borsh_de_or_default(&mut reader)?;
+        let can_boost: bool = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             timestamp,
@@ -257,6 +351,8 @@ impl BuyEvent {
             cashback,
             buyback_fee_basis_points,
             buyback_fee,
+            virtual_quote_reserves,
+            can_boost,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -303,6 +399,8 @@ impl BuyEvent {
         borsh::BorshSerialize::serialize(&self.cashback, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.buyback_fee_basis_points, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.buyback_fee, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.virtual_quote_reserves, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.can_boost, &mut writer)?;
         Ok(())
     }
 }
@@ -1029,6 +1127,70 @@ impl ExtendAccountEventEvent {
         Ok(data)
     }
 }
+pub const INIT_BOOST_EVENT_EVENT_DISCM: [u8; 8] = [174, 124, 74, 249, 4, 81, 246, 17];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct InitBoostEvent {
+    pub timestamp: i64,
+    pub mint: Pubkey,
+    pub bonding_curve: Pubkey,
+    pub pool: Pubkey,
+    pub virtual_quote_reserves: i128,
+    pub real_quote_reserves_after: u64,
+}
+impl InitBoostEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
+        let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let bonding_curve: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let virtual_quote_reserves: i128 = crate::borsh_de_or_default(&mut reader)?;
+        let real_quote_reserves_after: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            timestamp,
+            mint,
+            bonding_curve,
+            pool,
+            virtual_quote_reserves,
+            real_quote_reserves_after,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.timestamp, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.bonding_curve, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.virtual_quote_reserves, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.real_quote_reserves_after, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitBoostEventEvent(pub InitBoostEvent);
+impl InitBoostEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != INIT_BOOST_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = InitBoostEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&INIT_BOOST_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const INIT_USER_VOLUME_ACCUMULATOR_EVENT_EVENT_DISCM: [u8; 8] = [
     134, 36, 13, 72, 232, 101, 130, 216,
 ];
@@ -1231,6 +1393,8 @@ pub struct SellEvent {
     pub cashback: u64,
     pub buyback_fee_basis_points: u64,
     pub buyback_fee: u64,
+    pub virtual_quote_reserves: i128,
+    pub can_boost: bool,
 }
 impl SellEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1268,6 +1432,8 @@ impl SellEvent {
         let cashback: u64 = crate::borsh_de_or_default(&mut reader)?;
         let buyback_fee_basis_points: u64 = crate::borsh_de_or_default(&mut reader)?;
         let buyback_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let virtual_quote_reserves: i128 = crate::borsh_de_or_default(&mut reader)?;
+        let can_boost: bool = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             timestamp,
@@ -1297,6 +1463,8 @@ impl SellEvent {
             cashback,
             buyback_fee_basis_points,
             buyback_fee,
+            virtual_quote_reserves,
+            can_boost,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1336,6 +1504,8 @@ impl SellEvent {
         borsh::BorshSerialize::serialize(&self.cashback, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.buyback_fee_basis_points, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.buyback_fee, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.virtual_quote_reserves, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.can_boost, &mut writer)?;
         Ok(())
     }
 }
@@ -1418,6 +1588,64 @@ impl SetBondingCurveCoinCreatorEventEvent {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&SET_BONDING_CURVE_COIN_CREATOR_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const SET_BOOST_AUTHORITY_EVENT_EVENT_DISCM: [u8; 8] = [
+    89, 128, 240, 141, 91, 202, 71, 105,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SetBoostAuthorityEvent {
+    pub timestamp: i64,
+    pub admin: Pubkey,
+    pub old_boost_authority: Pubkey,
+    pub new_boost_authority: Pubkey,
+}
+impl SetBoostAuthorityEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
+        let admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let old_boost_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let new_boost_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            timestamp,
+            admin,
+            old_boost_authority,
+            new_boost_authority,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.timestamp, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.admin, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.old_boost_authority, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.new_boost_authority, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetBoostAuthorityEventEvent(pub SetBoostAuthorityEvent);
+impl SetBoostAuthorityEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SET_BOOST_AUTHORITY_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = SetBoostAuthorityEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SET_BOOST_AUTHORITY_EVENT_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

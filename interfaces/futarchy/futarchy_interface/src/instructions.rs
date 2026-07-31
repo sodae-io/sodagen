@@ -26,7 +26,8 @@ pub enum FutarchyProgramIx {
     CollectMeteoraDammFees,
     InitiateVaultSpendOptimisticProposal(InitiateVaultSpendOptimisticProposalIxArgs),
     FinalizeOptimisticProposal,
-    AdminApproveMultisigProposal(AdminApproveMultisigProposalIxArgs),
+    AdminEnqueueMultisigProposalApproval(AdminEnqueueMultisigProposalApprovalIxArgs),
+    ExecuteMultisigProposalApproval,
     AdminExecuteMultisigProposal,
     AdminCancelProposal,
     AdminRemoveProposal,
@@ -150,18 +151,22 @@ impl FutarchyProgramIx {
         if buf.starts_with(&FINALIZE_OPTIMISTIC_PROPOSAL_IX_DISCM) {
             return Ok(Self::FinalizeOptimisticProposal);
         }
-        if buf.starts_with(&ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_DISCM) {
-            let mut reader = &buf[ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_DISCM.len()..];
+        if buf.starts_with(&ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM) {
+            let mut reader = &buf[ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM
+                .len()..];
             let args = if reader.is_empty() {
                 Default::default()
             } else {
-                <AdminApproveMultisigProposalArgs>::deserialize(&mut reader)?
+                <AdminEnqueueMultisigProposalApprovalArgs>::deserialize(&mut reader)?
             };
             return Ok(
-                Self::AdminApproveMultisigProposal(AdminApproveMultisigProposalIxArgs {
+                Self::AdminEnqueueMultisigProposalApproval(AdminEnqueueMultisigProposalApprovalIxArgs {
                     args,
                 }),
             );
+        }
+        if buf.starts_with(&EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM) {
+            return Ok(Self::ExecuteMultisigProposalApproval);
         }
         if buf.starts_with(&ADMIN_EXECUTE_MULTISIG_PROPOSAL_IX_DISCM) {
             return Ok(Self::AdminExecuteMultisigProposal);
@@ -236,10 +241,13 @@ impl FutarchyProgramIx {
             Self::FinalizeOptimisticProposal => {
                 writer.write_all(&FINALIZE_OPTIMISTIC_PROPOSAL_IX_DISCM)
             }
-            Self::AdminApproveMultisigProposal(args) => {
-                writer.write_all(&ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_DISCM)?;
+            Self::AdminEnqueueMultisigProposalApproval(args) => {
+                writer.write_all(&ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.args, &mut writer)?;
                 Ok(())
+            }
+            Self::ExecuteMultisigProposalApproval => {
+                writer.write_all(&EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM)
             }
             Self::AdminExecuteMultisigProposal => {
                 writer.write_all(&ADMIN_EXECUTE_MULTISIG_PROPOSAL_IX_DISCM)
@@ -6155,38 +6163,324 @@ pub fn finalize_optimistic_proposal_verify_account_privileges<'me, 'info>(
     finalize_optimistic_proposal_verify_writable_privileges(accounts)?;
     Ok(())
 }
-pub const ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN: usize = 5;
+pub const ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
-pub struct AdminApproveMultisigProposalAccounts<'me, 'info> {
+pub struct AdminEnqueueMultisigProposalApprovalAccounts<'me, 'info> {
     pub dao: &'me AccountInfo<'info>,
     pub admin: &'me AccountInfo<'info>,
     pub squads_multisig: &'me AccountInfo<'info>,
     pub squads_multisig_proposal: &'me AccountInfo<'info>,
-    pub squads_multisig_program: &'me AccountInfo<'info>,
+    pub enqueued_approval: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct AdminApproveMultisigProposalKeys {
+pub struct AdminEnqueueMultisigProposalApprovalKeys {
     pub dao: Pubkey,
     pub admin: Pubkey,
     pub squads_multisig: Pubkey,
     pub squads_multisig_proposal: Pubkey,
-    pub squads_multisig_program: Pubkey,
+    pub enqueued_approval: Pubkey,
+    pub system_program: Pubkey,
 }
-impl From<AdminApproveMultisigProposalAccounts<'_, '_>>
-for AdminApproveMultisigProposalKeys {
-    fn from(accounts: AdminApproveMultisigProposalAccounts) -> Self {
+impl From<AdminEnqueueMultisigProposalApprovalAccounts<'_, '_>>
+for AdminEnqueueMultisigProposalApprovalKeys {
+    fn from(accounts: AdminEnqueueMultisigProposalApprovalAccounts) -> Self {
         Self {
             dao: *accounts.dao.key,
             admin: *accounts.admin.key,
             squads_multisig: *accounts.squads_multisig.key,
             squads_multisig_proposal: *accounts.squads_multisig_proposal.key,
+            enqueued_approval: *accounts.enqueued_approval.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<AdminEnqueueMultisigProposalApprovalKeys>
+for [AccountMeta; ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN] {
+    fn from(keys: AdminEnqueueMultisigProposalApprovalKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.dao,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.admin,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.squads_multisig,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.squads_multisig_proposal,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.enqueued_approval,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN]>
+for AdminEnqueueMultisigProposalApprovalKeys {
+    fn from(
+        pubkeys: [Pubkey; ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            dao: pubkeys[0],
+            admin: pubkeys[1],
+            squads_multisig: pubkeys[2],
+            squads_multisig_proposal: pubkeys[3],
+            enqueued_approval: pubkeys[4],
+            system_program: pubkeys[5],
+        }
+    }
+}
+impl<'info> From<AdminEnqueueMultisigProposalApprovalAccounts<'_, 'info>>
+for [AccountInfo<'info>; ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN] {
+    fn from(accounts: AdminEnqueueMultisigProposalApprovalAccounts<'_, 'info>) -> Self {
+        [
+            accounts.dao.clone(),
+            accounts.admin.clone(),
+            accounts.squads_multisig.clone(),
+            accounts.squads_multisig_proposal.clone(),
+            accounts.enqueued_approval.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<
+    &'me [AccountInfo<'info>; ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN],
+> for AdminEnqueueMultisigProposalApprovalAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<
+            'info,
+        >; ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            dao: &arr[0],
+            admin: &arr[1],
+            squads_multisig: &arr[2],
+            squads_multisig_proposal: &arr[3],
+            enqueued_approval: &arr[4],
+            system_program: &arr[5],
+        }
+    }
+}
+pub const ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM: [u8; 8usize] = [
+    61, 199, 241, 100, 238, 220, 84, 78,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct AdminEnqueueMultisigProposalApprovalIxArgs {
+    pub args: AdminEnqueueMultisigProposalApprovalArgs,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct AdminEnqueueMultisigProposalApprovalIxData(
+    pub AdminEnqueueMultisigProposalApprovalIxArgs,
+);
+impl From<AdminEnqueueMultisigProposalApprovalIxArgs>
+for AdminEnqueueMultisigProposalApprovalIxData {
+    fn from(args: AdminEnqueueMultisigProposalApprovalIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl AdminEnqueueMultisigProposalApprovalIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let args = if reader.is_empty() {
+            Default::default()
+        } else {
+            <AdminEnqueueMultisigProposalApprovalArgs>::deserialize(&mut reader)?
+        };
+        Ok(
+            Self(AdminEnqueueMultisigProposalApprovalIxArgs {
+                args,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.args, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn admin_enqueue_multisig_proposal_approval_ix_with_program_id(
+    program_id: Pubkey,
+    keys: AdminEnqueueMultisigProposalApprovalKeys,
+    args: AdminEnqueueMultisigProposalApprovalIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; ADMIN_ENQUEUE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN] = keys
+        .into();
+    let data: AdminEnqueueMultisigProposalApprovalIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn admin_enqueue_multisig_proposal_approval_ix(
+    keys: AdminEnqueueMultisigProposalApprovalKeys,
+    args: AdminEnqueueMultisigProposalApprovalIxArgs,
+) -> std::io::Result<Instruction> {
+    admin_enqueue_multisig_proposal_approval_ix_with_program_id(
+        FUTARCHY_PROGRAM_ID,
+        keys,
+        args,
+    )
+}
+pub fn admin_enqueue_multisig_proposal_approval_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'_, '_>,
+    args: AdminEnqueueMultisigProposalApprovalIxArgs,
+) -> ProgramResult {
+    let keys: AdminEnqueueMultisigProposalApprovalKeys = accounts.into();
+    let ix = admin_enqueue_multisig_proposal_approval_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn admin_enqueue_multisig_proposal_approval_invoke(
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'_, '_>,
+    args: AdminEnqueueMultisigProposalApprovalIxArgs,
+) -> ProgramResult {
+    admin_enqueue_multisig_proposal_approval_invoke_with_program_id(
+        FUTARCHY_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn admin_enqueue_multisig_proposal_approval_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'_, '_>,
+    args: AdminEnqueueMultisigProposalApprovalIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: AdminEnqueueMultisigProposalApprovalKeys = accounts.into();
+    let ix = admin_enqueue_multisig_proposal_approval_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn admin_enqueue_multisig_proposal_approval_invoke_signed(
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'_, '_>,
+    args: AdminEnqueueMultisigProposalApprovalIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    admin_enqueue_multisig_proposal_approval_invoke_signed_with_program_id(
+        FUTARCHY_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn admin_enqueue_multisig_proposal_approval_verify_account_keys(
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'_, '_>,
+    keys: AdminEnqueueMultisigProposalApprovalKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.dao.key, keys.dao),
+        (*accounts.admin.key, keys.admin),
+        (*accounts.squads_multisig.key, keys.squads_multisig),
+        (*accounts.squads_multisig_proposal.key, keys.squads_multisig_proposal),
+        (*accounts.enqueued_approval.key, keys.enqueued_approval),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn admin_enqueue_multisig_proposal_approval_verify_writable_privileges<'me, 'info>(
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.admin, accounts.enqueued_approval] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn admin_enqueue_multisig_proposal_approval_verify_signer_privileges<'me, 'info>(
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn admin_enqueue_multisig_proposal_approval_verify_account_privileges<'me, 'info>(
+    accounts: AdminEnqueueMultisigProposalApprovalAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    admin_enqueue_multisig_proposal_approval_verify_writable_privileges(accounts)?;
+    admin_enqueue_multisig_proposal_approval_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN: usize = 6;
+#[derive(Copy, Clone, Debug)]
+pub struct ExecuteMultisigProposalApprovalAccounts<'me, 'info> {
+    pub dao: &'me AccountInfo<'info>,
+    pub rent_receiver: &'me AccountInfo<'info>,
+    pub squads_multisig: &'me AccountInfo<'info>,
+    pub squads_multisig_proposal: &'me AccountInfo<'info>,
+    pub enqueued_approval: &'me AccountInfo<'info>,
+    pub squads_multisig_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ExecuteMultisigProposalApprovalKeys {
+    pub dao: Pubkey,
+    pub rent_receiver: Pubkey,
+    pub squads_multisig: Pubkey,
+    pub squads_multisig_proposal: Pubkey,
+    pub enqueued_approval: Pubkey,
+    pub squads_multisig_program: Pubkey,
+}
+impl From<ExecuteMultisigProposalApprovalAccounts<'_, '_>>
+for ExecuteMultisigProposalApprovalKeys {
+    fn from(accounts: ExecuteMultisigProposalApprovalAccounts) -> Self {
+        Self {
+            dao: *accounts.dao.key,
+            rent_receiver: *accounts.rent_receiver.key,
+            squads_multisig: *accounts.squads_multisig.key,
+            squads_multisig_proposal: *accounts.squads_multisig_proposal.key,
+            enqueued_approval: *accounts.enqueued_approval.key,
             squads_multisig_program: *accounts.squads_multisig_program.key,
         }
     }
 }
-impl From<AdminApproveMultisigProposalKeys>
-for [AccountMeta; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN] {
-    fn from(keys: AdminApproveMultisigProposalKeys) -> Self {
+impl From<ExecuteMultisigProposalApprovalKeys>
+for [AccountMeta; EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN] {
+    fn from(keys: ExecuteMultisigProposalApprovalKeys) -> Self {
         [
             AccountMeta {
                 pubkey: keys.dao,
@@ -6194,7 +6488,7 @@ for [AccountMeta; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.admin,
+                pubkey: keys.rent_receiver,
                 is_signer: true,
                 is_writable: true,
             },
@@ -6209,6 +6503,11 @@ for [AccountMeta; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
+                pubkey: keys.enqueued_approval,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
                 pubkey: keys.squads_multisig_program,
                 is_signer: false,
                 is_writable: false,
@@ -6216,26 +6515,30 @@ for [AccountMeta; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN] {
         ]
     }
 }
-impl From<[Pubkey; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN]>
-for AdminApproveMultisigProposalKeys {
-    fn from(pubkeys: [Pubkey; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN]) -> Self {
+impl From<[Pubkey; EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN]>
+for ExecuteMultisigProposalApprovalKeys {
+    fn from(
+        pubkeys: [Pubkey; EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN],
+    ) -> Self {
         Self {
             dao: pubkeys[0],
-            admin: pubkeys[1],
+            rent_receiver: pubkeys[1],
             squads_multisig: pubkeys[2],
             squads_multisig_proposal: pubkeys[3],
-            squads_multisig_program: pubkeys[4],
+            enqueued_approval: pubkeys[4],
+            squads_multisig_program: pubkeys[5],
         }
     }
 }
-impl<'info> From<AdminApproveMultisigProposalAccounts<'_, 'info>>
-for [AccountInfo<'info>; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN] {
-    fn from(accounts: AdminApproveMultisigProposalAccounts<'_, 'info>) -> Self {
+impl<'info> From<ExecuteMultisigProposalApprovalAccounts<'_, 'info>>
+for [AccountInfo<'info>; EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ExecuteMultisigProposalApprovalAccounts<'_, 'info>) -> Self {
         [
             accounts.dao.clone(),
-            accounts.admin.clone(),
+            accounts.rent_receiver.clone(),
             accounts.squads_multisig.clone(),
             accounts.squads_multisig_proposal.clone(),
+            accounts.enqueued_approval.clone(),
             accounts.squads_multisig_program.clone(),
         ]
     }
@@ -6243,57 +6546,40 @@ for [AccountInfo<'info>; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN] {
 impl<
     'me,
     'info,
-> From<&'me [AccountInfo<'info>; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN]>
-for AdminApproveMultisigProposalAccounts<'me, 'info> {
+> From<&'me [AccountInfo<'info>; EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN]>
+for ExecuteMultisigProposalApprovalAccounts<'me, 'info> {
     fn from(
-        arr: &'me [AccountInfo<'info>; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN],
+        arr: &'me [AccountInfo<
+            'info,
+        >; EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN],
     ) -> Self {
         Self {
             dao: &arr[0],
-            admin: &arr[1],
+            rent_receiver: &arr[1],
             squads_multisig: &arr[2],
             squads_multisig_proposal: &arr[3],
-            squads_multisig_program: &arr[4],
+            enqueued_approval: &arr[4],
+            squads_multisig_program: &arr[5],
         }
     }
 }
-pub const ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_DISCM: [u8; 8usize] = [
-    157, 1, 93, 74, 82, 60, 30, 203,
+pub const EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM: [u8; 8usize] = [
+    124, 144, 201, 164, 182, 226, 193, 224,
 ];
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct AdminApproveMultisigProposalIxArgs {
-    pub args: AdminApproveMultisigProposalArgs,
-}
 #[derive(Clone, Debug, PartialEq)]
-pub struct AdminApproveMultisigProposalIxData(pub AdminApproveMultisigProposalIxArgs);
-impl From<AdminApproveMultisigProposalIxArgs> for AdminApproveMultisigProposalIxData {
-    fn from(args: AdminApproveMultisigProposalIxArgs) -> Self {
-        Self(args)
-    }
-}
-impl AdminApproveMultisigProposalIxData {
+pub struct ExecuteMultisigProposalApprovalIxData;
+impl ExecuteMultisigProposalApprovalIxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8usize];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_DISCM {
+        if maybe_discm != EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let args = if reader.is_empty() {
-            Default::default()
-        } else {
-            <AdminApproveMultisigProposalArgs>::deserialize(&mut reader)?
-        };
-        Ok(
-            Self(AdminApproveMultisigProposalIxArgs {
-                args,
-            }),
-        )
+        Ok(Self)
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0.args, &mut writer)?;
-        Ok(())
+        writer.write_all(&EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_DISCM)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut data = Vec::new();
@@ -6301,76 +6587,68 @@ impl AdminApproveMultisigProposalIxData {
         Ok(data)
     }
 }
-pub fn admin_approve_multisig_proposal_ix_with_program_id(
+pub fn execute_multisig_proposal_approval_ix_with_program_id(
     program_id: Pubkey,
-    keys: AdminApproveMultisigProposalKeys,
-    args: AdminApproveMultisigProposalIxArgs,
+    keys: ExecuteMultisigProposalApprovalKeys,
 ) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; ADMIN_APPROVE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN] = keys
+    let metas: [AccountMeta; EXECUTE_MULTISIG_PROPOSAL_APPROVAL_IX_ACCOUNTS_LEN] = keys
         .into();
-    let data: AdminApproveMultisigProposalIxData = args.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
-        data: data.try_to_vec()?,
+        data: ExecuteMultisigProposalApprovalIxData.try_to_vec()?,
     })
 }
-pub fn admin_approve_multisig_proposal_ix(
-    keys: AdminApproveMultisigProposalKeys,
-    args: AdminApproveMultisigProposalIxArgs,
+pub fn execute_multisig_proposal_approval_ix(
+    keys: ExecuteMultisigProposalApprovalKeys,
 ) -> std::io::Result<Instruction> {
-    admin_approve_multisig_proposal_ix_with_program_id(FUTARCHY_PROGRAM_ID, keys, args)
+    execute_multisig_proposal_approval_ix_with_program_id(FUTARCHY_PROGRAM_ID, keys)
 }
-pub fn admin_approve_multisig_proposal_invoke_with_program_id(
+pub fn execute_multisig_proposal_approval_invoke_with_program_id(
     program_id: Pubkey,
-    accounts: AdminApproveMultisigProposalAccounts<'_, '_>,
-    args: AdminApproveMultisigProposalIxArgs,
+    accounts: ExecuteMultisigProposalApprovalAccounts<'_, '_>,
 ) -> ProgramResult {
-    let keys: AdminApproveMultisigProposalKeys = accounts.into();
-    let ix = admin_approve_multisig_proposal_ix_with_program_id(program_id, keys, args)?;
+    let keys: ExecuteMultisigProposalApprovalKeys = accounts.into();
+    let ix = execute_multisig_proposal_approval_ix_with_program_id(program_id, keys)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn admin_approve_multisig_proposal_invoke(
-    accounts: AdminApproveMultisigProposalAccounts<'_, '_>,
-    args: AdminApproveMultisigProposalIxArgs,
+pub fn execute_multisig_proposal_approval_invoke(
+    accounts: ExecuteMultisigProposalApprovalAccounts<'_, '_>,
 ) -> ProgramResult {
-    admin_approve_multisig_proposal_invoke_with_program_id(
+    execute_multisig_proposal_approval_invoke_with_program_id(
         FUTARCHY_PROGRAM_ID,
         accounts,
-        args,
     )
 }
-pub fn admin_approve_multisig_proposal_invoke_signed_with_program_id(
+pub fn execute_multisig_proposal_approval_invoke_signed_with_program_id(
     program_id: Pubkey,
-    accounts: AdminApproveMultisigProposalAccounts<'_, '_>,
-    args: AdminApproveMultisigProposalIxArgs,
+    accounts: ExecuteMultisigProposalApprovalAccounts<'_, '_>,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let keys: AdminApproveMultisigProposalKeys = accounts.into();
-    let ix = admin_approve_multisig_proposal_ix_with_program_id(program_id, keys, args)?;
+    let keys: ExecuteMultisigProposalApprovalKeys = accounts.into();
+    let ix = execute_multisig_proposal_approval_ix_with_program_id(program_id, keys)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
-pub fn admin_approve_multisig_proposal_invoke_signed(
-    accounts: AdminApproveMultisigProposalAccounts<'_, '_>,
-    args: AdminApproveMultisigProposalIxArgs,
+pub fn execute_multisig_proposal_approval_invoke_signed(
+    accounts: ExecuteMultisigProposalApprovalAccounts<'_, '_>,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    admin_approve_multisig_proposal_invoke_signed_with_program_id(
+    execute_multisig_proposal_approval_invoke_signed_with_program_id(
         FUTARCHY_PROGRAM_ID,
         accounts,
-        args,
         seeds,
     )
 }
-pub fn admin_approve_multisig_proposal_verify_account_keys(
-    accounts: AdminApproveMultisigProposalAccounts<'_, '_>,
-    keys: AdminApproveMultisigProposalKeys,
+pub fn execute_multisig_proposal_approval_verify_account_keys(
+    accounts: ExecuteMultisigProposalApprovalAccounts<'_, '_>,
+    keys: ExecuteMultisigProposalApprovalKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
         (*accounts.dao.key, keys.dao),
-        (*accounts.admin.key, keys.admin),
+        (*accounts.rent_receiver.key, keys.rent_receiver),
         (*accounts.squads_multisig.key, keys.squads_multisig),
         (*accounts.squads_multisig_proposal.key, keys.squads_multisig_proposal),
+        (*accounts.enqueued_approval.key, keys.enqueued_approval),
         (*accounts.squads_multisig_program.key, keys.squads_multisig_program),
     ] {
         if actual != expected {
@@ -6379,14 +6657,15 @@ pub fn admin_approve_multisig_proposal_verify_account_keys(
     }
     Ok(())
 }
-pub fn admin_approve_multisig_proposal_verify_writable_privileges<'me, 'info>(
-    accounts: AdminApproveMultisigProposalAccounts<'me, 'info>,
+pub fn execute_multisig_proposal_approval_verify_writable_privileges<'me, 'info>(
+    accounts: ExecuteMultisigProposalApprovalAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     for should_be_writable in [
         accounts.dao,
-        accounts.admin,
+        accounts.rent_receiver,
         accounts.squads_multisig,
         accounts.squads_multisig_proposal,
+        accounts.enqueued_approval,
     ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
@@ -6394,21 +6673,21 @@ pub fn admin_approve_multisig_proposal_verify_writable_privileges<'me, 'info>(
     }
     Ok(())
 }
-pub fn admin_approve_multisig_proposal_verify_signer_privileges<'me, 'info>(
-    accounts: AdminApproveMultisigProposalAccounts<'me, 'info>,
+pub fn execute_multisig_proposal_approval_verify_signer_privileges<'me, 'info>(
+    accounts: ExecuteMultisigProposalApprovalAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.admin] {
+    for should_be_signer in [accounts.rent_receiver] {
         if !should_be_signer.is_signer {
             return Err((should_be_signer, ProgramError::MissingRequiredSignature));
         }
     }
     Ok(())
 }
-pub fn admin_approve_multisig_proposal_verify_account_privileges<'me, 'info>(
-    accounts: AdminApproveMultisigProposalAccounts<'me, 'info>,
+pub fn execute_multisig_proposal_approval_verify_account_privileges<'me, 'info>(
+    accounts: ExecuteMultisigProposalApprovalAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    admin_approve_multisig_proposal_verify_writable_privileges(accounts)?;
-    admin_approve_multisig_proposal_verify_signer_privileges(accounts)?;
+    execute_multisig_proposal_approval_verify_writable_privileges(accounts)?;
+    execute_multisig_proposal_approval_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const ADMIN_EXECUTE_MULTISIG_PROPOSAL_IX_ACCOUNTS_LEN: usize = 6;

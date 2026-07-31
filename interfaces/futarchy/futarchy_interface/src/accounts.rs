@@ -376,6 +376,67 @@ impl OldDaoAccount {
         Ok(data)
     }
 }
+pub const ENQUEUED_MULTISIG_PROPOSAL_APPROVAL_ACCOUNT_DISCM: [u8; 8] = [
+    172, 225, 237, 72, 8, 241, 28, 124,
+];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct EnqueuedMultisigProposalApproval {
+    pub dao: Pubkey,
+    pub transaction_index: u64,
+    pub pda_bump: u8,
+}
+impl EnqueuedMultisigProposalApproval {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let dao: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let transaction_index: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let pda_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            dao,
+            transaction_index,
+            pda_bump,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.dao, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.transaction_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pda_bump, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct EnqueuedMultisigProposalApprovalAccount(pub EnqueuedMultisigProposalApproval);
+impl EnqueuedMultisigProposalApprovalAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != ENQUEUED_MULTISIG_PROPOSAL_APPROVAL_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(EnqueuedMultisigProposalApproval::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&ENQUEUED_MULTISIG_PROPOSAL_APPROVAL_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const PROPOSAL_ACCOUNT_DISCM: [u8; 8] = [26, 94, 189, 187, 116, 136, 53, 33];
 #[derive(
     Clone,

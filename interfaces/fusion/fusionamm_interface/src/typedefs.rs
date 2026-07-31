@@ -32,6 +32,21 @@ pub enum AccountsType {
     serde::Serialize,
     serde::Deserialize
 )]
+pub enum MaybeTick {
+    #[default]
+    Uninitialized,
+    Initialized(TickData),
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub enum PositionLockType {
     #[default]
     Permanent,
@@ -92,8 +107,7 @@ impl RemainingAccountsSlice {
     serde::Serialize,
     serde::Deserialize
 )]
-pub struct Tick {
-    pub initialized: bool,
+pub struct TickData {
     pub liquidity_net: i128,
     pub liquidity_gross: u128,
     pub fee_growth_outside_a: u128,
@@ -105,10 +119,9 @@ pub struct Tick {
     pub fulfilled_a_to_b_orders_input: u64,
     pub fulfilled_b_to_a_orders_input: u64,
 }
-impl Tick {
+impl TickData {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
-        let initialized: bool = crate::borsh_de_or_default(&mut reader)?;
         let liquidity_net: i128 = crate::borsh_de_or_default(&mut reader)?;
         let liquidity_gross: u128 = crate::borsh_de_or_default(&mut reader)?;
         let fee_growth_outside_a: u128 = crate::borsh_de_or_default(&mut reader)?;
@@ -127,7 +140,6 @@ impl Tick {
         )?;
         *__buf = reader;
         Ok(Self {
-            initialized,
             liquidity_net,
             liquidity_gross,
             fee_growth_outside_a,

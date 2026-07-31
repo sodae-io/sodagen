@@ -549,7 +549,7 @@ impl PositionLockAccount {
         Ok(data)
     }
 }
-pub const TICK_ARRAY_ACCOUNT_DISCM: [u8; 8] = [69, 97, 189, 190, 110, 7, 66, 187];
+pub const TICK_ARRAY_ACCOUNT_DISCM: [u8; 8] = [85, 1, 199, 2, 188, 97, 101, 139];
 #[derive(
     Clone,
     Debug,
@@ -561,29 +561,29 @@ pub const TICK_ARRAY_ACCOUNT_DISCM: [u8; 8] = [69, 97, 189, 190, 110, 7, 66, 187
 )]
 pub struct TickArray {
     pub start_tick_index: i32,
-    #[serde(with = "crate::big_array_serde")]
-    pub ticks: [Tick; 88],
     pub fusion_pool: Pubkey,
+    #[serde(with = "crate::big_array_serde")]
+    pub ticks: [MaybeTick; 88],
 }
 impl TickArray {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let start_tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
-        let ticks = <[Tick; 88] as borsh::BorshDeserialize>::deserialize_reader(
+        let fusion_pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let ticks = <[MaybeTick; 88] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
-        let fusion_pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             start_tick_index,
-            ticks,
             fusion_pool,
+            ticks,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.start_tick_index, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.ticks, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fusion_pool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.ticks, &mut writer)?;
         Ok(())
     }
 }

@@ -8,35 +8,46 @@ use std::io::Read;
 use crate::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum AmmV3ProgramIx {
+    CloseLimitOrder,
     ClosePosition,
     CloseProtocolPosition,
     CollectFundFee(CollectFundFeeIxArgs),
     CollectProtocolFee(CollectProtocolFeeIxArgs),
     CollectRemainingRewards(CollectRemainingRewardsIxArgs),
     CreateAmmConfig(CreateAmmConfigIxArgs),
+    CreateCustomizablePool(CreateCustomizablePoolIxArgs),
+    CreateDynamicFeeConfig(CreateDynamicFeeConfigIxArgs),
     CreateOperationAccount,
     CreatePool(CreatePoolIxArgs),
     CreateSupportMintAssociated,
+    DecreaseLimitOrder(DecreaseLimitOrderIxArgs),
     DecreaseLiquidity(DecreaseLiquidityIxArgs),
     DecreaseLiquidityV2(DecreaseLiquidityV2IxArgs),
+    IncreaseLimitOrder(IncreaseLimitOrderIxArgs),
     IncreaseLiquidity(IncreaseLiquidityIxArgs),
     IncreaseLiquidityV2(IncreaseLiquidityV2IxArgs),
     InitializeReward(InitializeRewardIxArgs),
+    OpenLimitOrder(OpenLimitOrderIxArgs),
     OpenPosition(OpenPositionIxArgs),
     OpenPositionV2(OpenPositionV2IxArgs),
     OpenPositionWithToken22Nft(OpenPositionWithToken22NftIxArgs),
     SetRewardParams(SetRewardParamsIxArgs),
+    SettleLimitOrder,
     Swap(SwapIxArgs),
     SwapRouterBaseIn(SwapRouterBaseInIxArgs),
     SwapV2(SwapV2IxArgs),
     TransferRewardOwner(TransferRewardOwnerIxArgs),
     UpdateAmmConfig(UpdateAmmConfigIxArgs),
+    UpdateDynamicFeeConfig(UpdateDynamicFeeConfigIxArgs),
     UpdateOperationAccount(UpdateOperationAccountIxArgs),
     UpdatePoolStatus(UpdatePoolStatusIxArgs),
     UpdateRewardInfos,
 }
 impl AmmV3ProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        if buf.starts_with(&CLOSE_LIMIT_ORDER_IX_DISCM) {
+            return Ok(Self::CloseLimitOrder);
+        }
         if buf.starts_with(&CLOSE_POSITION_IX_DISCM) {
             return Ok(Self::ClosePosition);
         }
@@ -91,6 +102,40 @@ impl AmmV3ProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&CREATE_CUSTOMIZABLE_POOL_IX_DISCM) {
+            let mut reader = &buf[CREATE_CUSTOMIZABLE_POOL_IX_DISCM.len()..];
+            let customizable_params = if reader.is_empty() {
+                Default::default()
+            } else {
+                <CreateCustomizableParams>::deserialize(&mut reader)?
+            };
+            return Ok(
+                Self::CreateCustomizablePool(CreateCustomizablePoolIxArgs {
+                    customizable_params,
+                }),
+            );
+        }
+        if buf.starts_with(&CREATE_DYNAMIC_FEE_CONFIG_IX_DISCM) {
+            let mut reader = &buf[CREATE_DYNAMIC_FEE_CONFIG_IX_DISCM.len()..];
+            let index: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let filter_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let decay_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let reduction_factor: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let dynamic_fee_control: u32 = crate::borsh_de_or_default(&mut reader)?;
+            let max_volatility_accumulator: u32 = crate::borsh_de_or_default(
+                &mut reader,
+            )?;
+            return Ok(
+                Self::CreateDynamicFeeConfig(CreateDynamicFeeConfigIxArgs {
+                    index,
+                    filter_period,
+                    decay_period,
+                    reduction_factor,
+                    dynamic_fee_control,
+                    max_volatility_accumulator,
+                }),
+            );
+        }
         if buf.starts_with(&CREATE_OPERATION_ACCOUNT_IX_DISCM) {
             return Ok(Self::CreateOperationAccount);
         }
@@ -107,6 +152,17 @@ impl AmmV3ProgramIx {
         }
         if buf.starts_with(&CREATE_SUPPORT_MINT_ASSOCIATED_IX_DISCM) {
             return Ok(Self::CreateSupportMintAssociated);
+        }
+        if buf.starts_with(&DECREASE_LIMIT_ORDER_IX_DISCM) {
+            let mut reader = &buf[DECREASE_LIMIT_ORDER_IX_DISCM.len()..];
+            let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let amount_min: u64 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::DecreaseLimitOrder(DecreaseLimitOrderIxArgs {
+                    amount,
+                    amount_min,
+                }),
+            );
         }
         if buf.starts_with(&DECREASE_LIQUIDITY_IX_DISCM) {
             let mut reader = &buf[DECREASE_LIQUIDITY_IX_DISCM.len()..];
@@ -133,6 +189,11 @@ impl AmmV3ProgramIx {
                     amount_1_min,
                 }),
             );
+        }
+        if buf.starts_with(&INCREASE_LIMIT_ORDER_IX_DISCM) {
+            let mut reader = &buf[INCREASE_LIMIT_ORDER_IX_DISCM.len()..];
+            let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(Self::IncreaseLimitOrder(IncreaseLimitOrderIxArgs { amount }));
         }
         if buf.starts_with(&INCREASE_LIQUIDITY_IX_DISCM) {
             let mut reader = &buf[INCREASE_LIQUIDITY_IX_DISCM.len()..];
@@ -170,6 +231,21 @@ impl AmmV3ProgramIx {
                 <InitializeRewardParam>::deserialize(&mut reader)?
             };
             return Ok(Self::InitializeReward(InitializeRewardIxArgs { param }));
+        }
+        if buf.starts_with(&OPEN_LIMIT_ORDER_IX_DISCM) {
+            let mut reader = &buf[OPEN_LIMIT_ORDER_IX_DISCM.len()..];
+            let nonce_index: u8 = crate::borsh_de_or_default(&mut reader)?;
+            let zero_for_one: bool = crate::borsh_de_or_default(&mut reader)?;
+            let tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+            let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::OpenLimitOrder(OpenLimitOrderIxArgs {
+                    nonce_index,
+                    zero_for_one,
+                    tick_index,
+                    amount,
+                }),
+            );
         }
         if buf.starts_with(&OPEN_POSITION_IX_DISCM) {
             let mut reader = &buf[OPEN_POSITION_IX_DISCM.len()..];
@@ -271,6 +347,9 @@ impl AmmV3ProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&SETTLE_LIMIT_ORDER_IX_DISCM) {
+            return Ok(Self::SettleLimitOrder);
+        }
         if buf.starts_with(&SWAP_IX_DISCM) {
             let mut reader = &buf[SWAP_IX_DISCM.len()..];
             let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
@@ -332,6 +411,25 @@ impl AmmV3ProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&UPDATE_DYNAMIC_FEE_CONFIG_IX_DISCM) {
+            let mut reader = &buf[UPDATE_DYNAMIC_FEE_CONFIG_IX_DISCM.len()..];
+            let filter_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let decay_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let reduction_factor: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let dynamic_fee_control: u32 = crate::borsh_de_or_default(&mut reader)?;
+            let max_volatility_accumulator: u32 = crate::borsh_de_or_default(
+                &mut reader,
+            )?;
+            return Ok(
+                Self::UpdateDynamicFeeConfig(UpdateDynamicFeeConfigIxArgs {
+                    filter_period,
+                    decay_period,
+                    reduction_factor,
+                    dynamic_fee_control,
+                    max_volatility_accumulator,
+                }),
+            );
+        }
         if buf.starts_with(&UPDATE_OPERATION_ACCOUNT_IX_DISCM) {
             let mut reader = &buf[UPDATE_OPERATION_ACCOUNT_IX_DISCM.len()..];
             let param: u8 = crate::borsh_de_or_default(&mut reader)?;
@@ -355,6 +453,7 @@ impl AmmV3ProgramIx {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         match self {
+            Self::CloseLimitOrder => writer.write_all(&CLOSE_LIMIT_ORDER_IX_DISCM),
             Self::ClosePosition => writer.write_all(&CLOSE_POSITION_IX_DISCM),
             Self::CloseProtocolPosition => {
                 writer.write_all(&CLOSE_PROTOCOL_POSITION_IX_DISCM)
@@ -385,6 +484,30 @@ impl AmmV3ProgramIx {
                 borsh::BorshSerialize::serialize(&args.fund_fee_rate, &mut writer)?;
                 Ok(())
             }
+            Self::CreateCustomizablePool(args) => {
+                writer.write_all(&CREATE_CUSTOMIZABLE_POOL_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(
+                    &args.customizable_params,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
+            Self::CreateDynamicFeeConfig(args) => {
+                writer.write_all(&CREATE_DYNAMIC_FEE_CONFIG_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.index, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.filter_period, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.decay_period, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.reduction_factor, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.dynamic_fee_control,
+                    &mut writer,
+                )?;
+                borsh::BorshSerialize::serialize(
+                    &args.max_volatility_accumulator,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
             Self::CreateOperationAccount => {
                 writer.write_all(&CREATE_OPERATION_ACCOUNT_IX_DISCM)
             }
@@ -396,6 +519,12 @@ impl AmmV3ProgramIx {
             }
             Self::CreateSupportMintAssociated => {
                 writer.write_all(&CREATE_SUPPORT_MINT_ASSOCIATED_IX_DISCM)
+            }
+            Self::DecreaseLimitOrder(args) => {
+                writer.write_all(&DECREASE_LIMIT_ORDER_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.amount, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.amount_min, &mut writer)?;
+                Ok(())
             }
             Self::DecreaseLiquidity(args) => {
                 writer.write_all(&DECREASE_LIQUIDITY_IX_DISCM)?;
@@ -409,6 +538,11 @@ impl AmmV3ProgramIx {
                 borsh::BorshSerialize::serialize(&args.liquidity, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.amount_0_min, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.amount_1_min, &mut writer)?;
+                Ok(())
+            }
+            Self::IncreaseLimitOrder(args) => {
+                writer.write_all(&INCREASE_LIMIT_ORDER_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.amount, &mut writer)?;
                 Ok(())
             }
             Self::IncreaseLiquidity(args) => {
@@ -429,6 +563,14 @@ impl AmmV3ProgramIx {
             Self::InitializeReward(args) => {
                 writer.write_all(&INITIALIZE_REWARD_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.param, &mut writer)?;
+                Ok(())
+            }
+            Self::OpenLimitOrder(args) => {
+                writer.write_all(&OPEN_LIMIT_ORDER_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.nonce_index, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.zero_for_one, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.tick_index, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.amount, &mut writer)?;
                 Ok(())
             }
             Self::OpenPosition(args) => {
@@ -497,6 +639,7 @@ impl AmmV3ProgramIx {
                 borsh::BorshSerialize::serialize(&args.end_time, &mut writer)?;
                 Ok(())
             }
+            Self::SettleLimitOrder => writer.write_all(&SETTLE_LIMIT_ORDER_IX_DISCM),
             Self::Swap(args) => {
                 writer.write_all(&SWAP_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.amount, &mut writer)?;
@@ -542,6 +685,21 @@ impl AmmV3ProgramIx {
                 borsh::BorshSerialize::serialize(&args.value, &mut writer)?;
                 Ok(())
             }
+            Self::UpdateDynamicFeeConfig(args) => {
+                writer.write_all(&UPDATE_DYNAMIC_FEE_CONFIG_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.filter_period, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.decay_period, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.reduction_factor, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.dynamic_fee_control,
+                    &mut writer,
+                )?;
+                borsh::BorshSerialize::serialize(
+                    &args.max_volatility_accumulator,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
             Self::UpdateOperationAccount(args) => {
                 writer.write_all(&UPDATE_OPERATION_ACCOUNT_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.param, &mut writer)?;
@@ -576,6 +734,186 @@ fn invoke_instruction_signed<'info, A: Into<[AccountInfo<'info>; N]>, const N: u
 ) -> ProgramResult {
     let account_info: [AccountInfo<'info>; N] = accounts.into();
     invoke_signed(ix, &account_info, seeds)
+}
+pub const CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct CloseLimitOrderAccounts<'me, 'info> {
+    pub signer: &'me AccountInfo<'info>,
+    pub rent_receiver: &'me AccountInfo<'info>,
+    pub limit_order: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CloseLimitOrderKeys {
+    pub signer: Pubkey,
+    pub rent_receiver: Pubkey,
+    pub limit_order: Pubkey,
+}
+impl From<CloseLimitOrderAccounts<'_, '_>> for CloseLimitOrderKeys {
+    fn from(accounts: CloseLimitOrderAccounts) -> Self {
+        Self {
+            signer: *accounts.signer.key,
+            rent_receiver: *accounts.rent_receiver.key,
+            limit_order: *accounts.limit_order.key,
+        }
+    }
+}
+impl From<CloseLimitOrderKeys> for [AccountMeta; CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(keys: CloseLimitOrderKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.signer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.rent_receiver,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.limit_order,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN]> for CloseLimitOrderKeys {
+    fn from(pubkeys: [Pubkey; CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            signer: pubkeys[0],
+            rent_receiver: pubkeys[1],
+            limit_order: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<CloseLimitOrderAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CloseLimitOrderAccounts<'_, 'info>) -> Self {
+        [
+            accounts.signer.clone(),
+            accounts.rent_receiver.clone(),
+            accounts.limit_order.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN]>
+for CloseLimitOrderAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            signer: &arr[0],
+            rent_receiver: &arr[1],
+            limit_order: &arr[2],
+        }
+    }
+}
+pub const CLOSE_LIMIT_ORDER_IX_DISCM: [u8; 8usize] = [
+    76, 124, 128, 15, 213, 87, 37, 250,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CloseLimitOrderIxData;
+impl CloseLimitOrderIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLOSE_LIMIT_ORDER_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLOSE_LIMIT_ORDER_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn close_limit_order_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CloseLimitOrderKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLOSE_LIMIT_ORDER_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CloseLimitOrderIxData.try_to_vec()?,
+    })
+}
+pub fn close_limit_order_ix(keys: CloseLimitOrderKeys) -> std::io::Result<Instruction> {
+    close_limit_order_ix_with_program_id(AMM_V3_PROGRAM_ID, keys)
+}
+pub fn close_limit_order_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseLimitOrderAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CloseLimitOrderKeys = accounts.into();
+    let ix = close_limit_order_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn close_limit_order_invoke(
+    accounts: CloseLimitOrderAccounts<'_, '_>,
+) -> ProgramResult {
+    close_limit_order_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts)
+}
+pub fn close_limit_order_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseLimitOrderAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CloseLimitOrderKeys = accounts.into();
+    let ix = close_limit_order_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn close_limit_order_invoke_signed(
+    accounts: CloseLimitOrderAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    close_limit_order_invoke_signed_with_program_id(AMM_V3_PROGRAM_ID, accounts, seeds)
+}
+pub fn close_limit_order_verify_account_keys(
+    accounts: CloseLimitOrderAccounts<'_, '_>,
+    keys: CloseLimitOrderKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.signer.key, keys.signer),
+        (*accounts.rent_receiver.key, keys.rent_receiver),
+        (*accounts.limit_order.key, keys.limit_order),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn close_limit_order_verify_writable_privileges<'me, 'info>(
+    accounts: CloseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.rent_receiver, accounts.limit_order] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn close_limit_order_verify_signer_privileges<'me, 'info>(
+    accounts: CloseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.signer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn close_limit_order_verify_account_privileges<'me, 'info>(
+    accounts: CloseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    close_limit_order_verify_writable_privileges(accounts)?;
+    close_limit_order_verify_signer_privileges(accounts)?;
+    Ok(())
 }
 pub const CLOSE_POSITION_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
@@ -2111,6 +2449,594 @@ pub fn create_amm_config_verify_account_privileges<'me, 'info>(
     create_amm_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN: usize = 13;
+#[derive(Copy, Clone, Debug)]
+pub struct CreateCustomizablePoolAccounts<'me, 'info> {
+    pub pool_creator: &'me AccountInfo<'info>,
+    pub amm_config: &'me AccountInfo<'info>,
+    pub pool_state: &'me AccountInfo<'info>,
+    pub token_mint_0: &'me AccountInfo<'info>,
+    pub token_mint_1: &'me AccountInfo<'info>,
+    pub token_vault_0: &'me AccountInfo<'info>,
+    pub token_vault_1: &'me AccountInfo<'info>,
+    pub observation_state: &'me AccountInfo<'info>,
+    pub tick_array_bitmap: &'me AccountInfo<'info>,
+    pub token_program_0: &'me AccountInfo<'info>,
+    pub token_program_1: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub rent: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CreateCustomizablePoolKeys {
+    pub pool_creator: Pubkey,
+    pub amm_config: Pubkey,
+    pub pool_state: Pubkey,
+    pub token_mint_0: Pubkey,
+    pub token_mint_1: Pubkey,
+    pub token_vault_0: Pubkey,
+    pub token_vault_1: Pubkey,
+    pub observation_state: Pubkey,
+    pub tick_array_bitmap: Pubkey,
+    pub token_program_0: Pubkey,
+    pub token_program_1: Pubkey,
+    pub system_program: Pubkey,
+    pub rent: Pubkey,
+}
+impl From<CreateCustomizablePoolAccounts<'_, '_>> for CreateCustomizablePoolKeys {
+    fn from(accounts: CreateCustomizablePoolAccounts) -> Self {
+        Self {
+            pool_creator: *accounts.pool_creator.key,
+            amm_config: *accounts.amm_config.key,
+            pool_state: *accounts.pool_state.key,
+            token_mint_0: *accounts.token_mint_0.key,
+            token_mint_1: *accounts.token_mint_1.key,
+            token_vault_0: *accounts.token_vault_0.key,
+            token_vault_1: *accounts.token_vault_1.key,
+            observation_state: *accounts.observation_state.key,
+            tick_array_bitmap: *accounts.tick_array_bitmap.key,
+            token_program_0: *accounts.token_program_0.key,
+            token_program_1: *accounts.token_program_1.key,
+            system_program: *accounts.system_program.key,
+            rent: *accounts.rent.key,
+        }
+    }
+}
+impl From<CreateCustomizablePoolKeys>
+for [AccountMeta; CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreateCustomizablePoolKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pool_creator,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.amm_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_mint_0,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_mint_1,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_vault_0,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_vault_1,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.observation_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.tick_array_bitmap,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_program_0,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program_1,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.rent,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN]>
+for CreateCustomizablePoolKeys {
+    fn from(pubkeys: [Pubkey; CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool_creator: pubkeys[0],
+            amm_config: pubkeys[1],
+            pool_state: pubkeys[2],
+            token_mint_0: pubkeys[3],
+            token_mint_1: pubkeys[4],
+            token_vault_0: pubkeys[5],
+            token_vault_1: pubkeys[6],
+            observation_state: pubkeys[7],
+            tick_array_bitmap: pubkeys[8],
+            token_program_0: pubkeys[9],
+            token_program_1: pubkeys[10],
+            system_program: pubkeys[11],
+            rent: pubkeys[12],
+        }
+    }
+}
+impl<'info> From<CreateCustomizablePoolAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreateCustomizablePoolAccounts<'_, 'info>) -> Self {
+        [
+            accounts.pool_creator.clone(),
+            accounts.amm_config.clone(),
+            accounts.pool_state.clone(),
+            accounts.token_mint_0.clone(),
+            accounts.token_mint_1.clone(),
+            accounts.token_vault_0.clone(),
+            accounts.token_vault_1.clone(),
+            accounts.observation_state.clone(),
+            accounts.tick_array_bitmap.clone(),
+            accounts.token_program_0.clone(),
+            accounts.token_program_1.clone(),
+            accounts.system_program.clone(),
+            accounts.rent.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN]>
+for CreateCustomizablePoolAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            pool_creator: &arr[0],
+            amm_config: &arr[1],
+            pool_state: &arr[2],
+            token_mint_0: &arr[3],
+            token_mint_1: &arr[4],
+            token_vault_0: &arr[5],
+            token_vault_1: &arr[6],
+            observation_state: &arr[7],
+            tick_array_bitmap: &arr[8],
+            token_program_0: &arr[9],
+            token_program_1: &arr[10],
+            system_program: &arr[11],
+            rent: &arr[12],
+        }
+    }
+}
+pub const CREATE_CUSTOMIZABLE_POOL_IX_DISCM: [u8; 8usize] = [
+    43, 68, 212, 167, 89, 47, 164, 1,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CreateCustomizablePoolIxArgs {
+    pub customizable_params: CreateCustomizableParams,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreateCustomizablePoolIxData(pub CreateCustomizablePoolIxArgs);
+impl From<CreateCustomizablePoolIxArgs> for CreateCustomizablePoolIxData {
+    fn from(args: CreateCustomizablePoolIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl CreateCustomizablePoolIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_CUSTOMIZABLE_POOL_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let customizable_params = if reader.is_empty() {
+            Default::default()
+        } else {
+            <CreateCustomizableParams>::deserialize(&mut reader)?
+        };
+        Ok(
+            Self(CreateCustomizablePoolIxArgs {
+                customizable_params,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_CUSTOMIZABLE_POOL_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.customizable_params, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn create_customizable_pool_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CreateCustomizablePoolKeys,
+    args: CreateCustomizablePoolIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CREATE_CUSTOMIZABLE_POOL_IX_ACCOUNTS_LEN] = keys.into();
+    let data: CreateCustomizablePoolIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn create_customizable_pool_ix(
+    keys: CreateCustomizablePoolKeys,
+    args: CreateCustomizablePoolIxArgs,
+) -> std::io::Result<Instruction> {
+    create_customizable_pool_ix_with_program_id(AMM_V3_PROGRAM_ID, keys, args)
+}
+pub fn create_customizable_pool_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateCustomizablePoolAccounts<'_, '_>,
+    args: CreateCustomizablePoolIxArgs,
+) -> ProgramResult {
+    let keys: CreateCustomizablePoolKeys = accounts.into();
+    let ix = create_customizable_pool_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn create_customizable_pool_invoke(
+    accounts: CreateCustomizablePoolAccounts<'_, '_>,
+    args: CreateCustomizablePoolIxArgs,
+) -> ProgramResult {
+    create_customizable_pool_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts, args)
+}
+pub fn create_customizable_pool_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateCustomizablePoolAccounts<'_, '_>,
+    args: CreateCustomizablePoolIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CreateCustomizablePoolKeys = accounts.into();
+    let ix = create_customizable_pool_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn create_customizable_pool_invoke_signed(
+    accounts: CreateCustomizablePoolAccounts<'_, '_>,
+    args: CreateCustomizablePoolIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    create_customizable_pool_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn create_customizable_pool_verify_account_keys(
+    accounts: CreateCustomizablePoolAccounts<'_, '_>,
+    keys: CreateCustomizablePoolKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pool_creator.key, keys.pool_creator),
+        (*accounts.amm_config.key, keys.amm_config),
+        (*accounts.pool_state.key, keys.pool_state),
+        (*accounts.token_mint_0.key, keys.token_mint_0),
+        (*accounts.token_mint_1.key, keys.token_mint_1),
+        (*accounts.token_vault_0.key, keys.token_vault_0),
+        (*accounts.token_vault_1.key, keys.token_vault_1),
+        (*accounts.observation_state.key, keys.observation_state),
+        (*accounts.tick_array_bitmap.key, keys.tick_array_bitmap),
+        (*accounts.token_program_0.key, keys.token_program_0),
+        (*accounts.token_program_1.key, keys.token_program_1),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.rent.key, keys.rent),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn create_customizable_pool_verify_writable_privileges<'me, 'info>(
+    accounts: CreateCustomizablePoolAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.pool_creator,
+        accounts.pool_state,
+        accounts.token_vault_0,
+        accounts.token_vault_1,
+        accounts.observation_state,
+        accounts.tick_array_bitmap,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn create_customizable_pool_verify_signer_privileges<'me, 'info>(
+    accounts: CreateCustomizablePoolAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.pool_creator] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn create_customizable_pool_verify_account_privileges<'me, 'info>(
+    accounts: CreateCustomizablePoolAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    create_customizable_pool_verify_writable_privileges(accounts)?;
+    create_customizable_pool_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct CreateDynamicFeeConfigAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub dynamic_fee_config: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CreateDynamicFeeConfigKeys {
+    pub owner: Pubkey,
+    pub dynamic_fee_config: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<CreateDynamicFeeConfigAccounts<'_, '_>> for CreateDynamicFeeConfigKeys {
+    fn from(accounts: CreateDynamicFeeConfigAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            dynamic_fee_config: *accounts.dynamic_fee_config.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<CreateDynamicFeeConfigKeys>
+for [AccountMeta; CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreateDynamicFeeConfigKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.dynamic_fee_config,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN]>
+for CreateDynamicFeeConfigKeys {
+    fn from(pubkeys: [Pubkey; CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            dynamic_fee_config: pubkeys[1],
+            system_program: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<CreateDynamicFeeConfigAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreateDynamicFeeConfigAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.dynamic_fee_config.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN]>
+for CreateDynamicFeeConfigAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            dynamic_fee_config: &arr[1],
+            system_program: &arr[2],
+        }
+    }
+}
+pub const CREATE_DYNAMIC_FEE_CONFIG_IX_DISCM: [u8; 8usize] = [
+    189, 14, 181, 120, 85, 118, 227, 62,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CreateDynamicFeeConfigIxArgs {
+    pub index: u16,
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    pub dynamic_fee_control: u32,
+    pub max_volatility_accumulator: u32,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreateDynamicFeeConfigIxData(pub CreateDynamicFeeConfigIxArgs);
+impl From<CreateDynamicFeeConfigIxArgs> for CreateDynamicFeeConfigIxData {
+    fn from(args: CreateDynamicFeeConfigIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl CreateDynamicFeeConfigIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_DYNAMIC_FEE_CONFIG_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let index: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let filter_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let decay_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let reduction_factor: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let dynamic_fee_control: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let max_volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(CreateDynamicFeeConfigIxArgs {
+                index,
+                filter_period,
+                decay_period,
+                reduction_factor,
+                dynamic_fee_control,
+                max_volatility_accumulator,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_DYNAMIC_FEE_CONFIG_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.filter_period, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.decay_period, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.reduction_factor, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.dynamic_fee_control, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.max_volatility_accumulator,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn create_dynamic_fee_config_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CreateDynamicFeeConfigKeys,
+    args: CreateDynamicFeeConfigIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CREATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN] = keys.into();
+    let data: CreateDynamicFeeConfigIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn create_dynamic_fee_config_ix(
+    keys: CreateDynamicFeeConfigKeys,
+    args: CreateDynamicFeeConfigIxArgs,
+) -> std::io::Result<Instruction> {
+    create_dynamic_fee_config_ix_with_program_id(AMM_V3_PROGRAM_ID, keys, args)
+}
+pub fn create_dynamic_fee_config_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateDynamicFeeConfigAccounts<'_, '_>,
+    args: CreateDynamicFeeConfigIxArgs,
+) -> ProgramResult {
+    let keys: CreateDynamicFeeConfigKeys = accounts.into();
+    let ix = create_dynamic_fee_config_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn create_dynamic_fee_config_invoke(
+    accounts: CreateDynamicFeeConfigAccounts<'_, '_>,
+    args: CreateDynamicFeeConfigIxArgs,
+) -> ProgramResult {
+    create_dynamic_fee_config_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts, args)
+}
+pub fn create_dynamic_fee_config_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateDynamicFeeConfigAccounts<'_, '_>,
+    args: CreateDynamicFeeConfigIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CreateDynamicFeeConfigKeys = accounts.into();
+    let ix = create_dynamic_fee_config_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn create_dynamic_fee_config_invoke_signed(
+    accounts: CreateDynamicFeeConfigAccounts<'_, '_>,
+    args: CreateDynamicFeeConfigIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    create_dynamic_fee_config_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn create_dynamic_fee_config_verify_account_keys(
+    accounts: CreateDynamicFeeConfigAccounts<'_, '_>,
+    keys: CreateDynamicFeeConfigKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.dynamic_fee_config.key, keys.dynamic_fee_config),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn create_dynamic_fee_config_verify_writable_privileges<'me, 'info>(
+    accounts: CreateDynamicFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.owner, accounts.dynamic_fee_config] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn create_dynamic_fee_config_verify_signer_privileges<'me, 'info>(
+    accounts: CreateDynamicFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn create_dynamic_fee_config_verify_account_privileges<'me, 'info>(
+    accounts: CreateDynamicFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    create_dynamic_fee_config_verify_writable_privileges(accounts)?;
+    create_dynamic_fee_config_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CREATE_OPERATION_ACCOUNT_IX_ACCOUNTS_LEN: usize = 3;
 #[derive(Copy, Clone, Debug)]
 pub struct CreateOperationAccountAccounts<'me, 'info> {
@@ -2845,6 +3771,339 @@ pub fn create_support_mint_associated_verify_account_privileges<'me, 'info>(
     create_support_mint_associated_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 12;
+#[derive(Copy, Clone, Debug)]
+pub struct DecreaseLimitOrderAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub pool_state: &'me AccountInfo<'info>,
+    pub tick_array: &'me AccountInfo<'info>,
+    pub limit_order: &'me AccountInfo<'info>,
+    pub input_token_account: &'me AccountInfo<'info>,
+    pub output_token_account: &'me AccountInfo<'info>,
+    pub input_vault: &'me AccountInfo<'info>,
+    pub output_vault: &'me AccountInfo<'info>,
+    pub input_vault_mint: &'me AccountInfo<'info>,
+    pub output_vault_mint: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub token_program_2022: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DecreaseLimitOrderKeys {
+    pub owner: Pubkey,
+    pub pool_state: Pubkey,
+    pub tick_array: Pubkey,
+    pub limit_order: Pubkey,
+    pub input_token_account: Pubkey,
+    pub output_token_account: Pubkey,
+    pub input_vault: Pubkey,
+    pub output_vault: Pubkey,
+    pub input_vault_mint: Pubkey,
+    pub output_vault_mint: Pubkey,
+    pub token_program: Pubkey,
+    pub token_program_2022: Pubkey,
+}
+impl From<DecreaseLimitOrderAccounts<'_, '_>> for DecreaseLimitOrderKeys {
+    fn from(accounts: DecreaseLimitOrderAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            pool_state: *accounts.pool_state.key,
+            tick_array: *accounts.tick_array.key,
+            limit_order: *accounts.limit_order.key,
+            input_token_account: *accounts.input_token_account.key,
+            output_token_account: *accounts.output_token_account.key,
+            input_vault: *accounts.input_vault.key,
+            output_vault: *accounts.output_vault.key,
+            input_vault_mint: *accounts.input_vault_mint.key,
+            output_vault_mint: *accounts.output_vault_mint.key,
+            token_program: *accounts.token_program.key,
+            token_program_2022: *accounts.token_program_2022.key,
+        }
+    }
+}
+impl From<DecreaseLimitOrderKeys>
+for [AccountMeta; DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(keys: DecreaseLimitOrderKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.tick_array,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.limit_order,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.output_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.output_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_vault_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.output_vault_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program_2022,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN]> for DecreaseLimitOrderKeys {
+    fn from(pubkeys: [Pubkey; DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            pool_state: pubkeys[1],
+            tick_array: pubkeys[2],
+            limit_order: pubkeys[3],
+            input_token_account: pubkeys[4],
+            output_token_account: pubkeys[5],
+            input_vault: pubkeys[6],
+            output_vault: pubkeys[7],
+            input_vault_mint: pubkeys[8],
+            output_vault_mint: pubkeys[9],
+            token_program: pubkeys[10],
+            token_program_2022: pubkeys[11],
+        }
+    }
+}
+impl<'info> From<DecreaseLimitOrderAccounts<'_, 'info>>
+for [AccountInfo<'info>; DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(accounts: DecreaseLimitOrderAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.pool_state.clone(),
+            accounts.tick_array.clone(),
+            accounts.limit_order.clone(),
+            accounts.input_token_account.clone(),
+            accounts.output_token_account.clone(),
+            accounts.input_vault.clone(),
+            accounts.output_vault.clone(),
+            accounts.input_vault_mint.clone(),
+            accounts.output_vault_mint.clone(),
+            accounts.token_program.clone(),
+            accounts.token_program_2022.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN]>
+for DecreaseLimitOrderAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            pool_state: &arr[1],
+            tick_array: &arr[2],
+            limit_order: &arr[3],
+            input_token_account: &arr[4],
+            output_token_account: &arr[5],
+            input_vault: &arr[6],
+            output_vault: &arr[7],
+            input_vault_mint: &arr[8],
+            output_vault_mint: &arr[9],
+            token_program: &arr[10],
+            token_program_2022: &arr[11],
+        }
+    }
+}
+pub const DECREASE_LIMIT_ORDER_IX_DISCM: [u8; 8usize] = [
+    117, 157, 60, 103, 66, 49, 163, 0,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DecreaseLimitOrderIxArgs {
+    pub amount: u64,
+    pub amount_min: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct DecreaseLimitOrderIxData(pub DecreaseLimitOrderIxArgs);
+impl From<DecreaseLimitOrderIxArgs> for DecreaseLimitOrderIxData {
+    fn from(args: DecreaseLimitOrderIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl DecreaseLimitOrderIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != DECREASE_LIMIT_ORDER_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let amount_min: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(DecreaseLimitOrderIxArgs {
+                amount,
+                amount_min,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&DECREASE_LIMIT_ORDER_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.amount_min, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn decrease_limit_order_ix_with_program_id(
+    program_id: Pubkey,
+    keys: DecreaseLimitOrderKeys,
+    args: DecreaseLimitOrderIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; DECREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN] = keys.into();
+    let data: DecreaseLimitOrderIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn decrease_limit_order_ix(
+    keys: DecreaseLimitOrderKeys,
+    args: DecreaseLimitOrderIxArgs,
+) -> std::io::Result<Instruction> {
+    decrease_limit_order_ix_with_program_id(AMM_V3_PROGRAM_ID, keys, args)
+}
+pub fn decrease_limit_order_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: DecreaseLimitOrderAccounts<'_, '_>,
+    args: DecreaseLimitOrderIxArgs,
+) -> ProgramResult {
+    let keys: DecreaseLimitOrderKeys = accounts.into();
+    let ix = decrease_limit_order_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn decrease_limit_order_invoke(
+    accounts: DecreaseLimitOrderAccounts<'_, '_>,
+    args: DecreaseLimitOrderIxArgs,
+) -> ProgramResult {
+    decrease_limit_order_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts, args)
+}
+pub fn decrease_limit_order_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: DecreaseLimitOrderAccounts<'_, '_>,
+    args: DecreaseLimitOrderIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: DecreaseLimitOrderKeys = accounts.into();
+    let ix = decrease_limit_order_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn decrease_limit_order_invoke_signed(
+    accounts: DecreaseLimitOrderAccounts<'_, '_>,
+    args: DecreaseLimitOrderIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    decrease_limit_order_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn decrease_limit_order_verify_account_keys(
+    accounts: DecreaseLimitOrderAccounts<'_, '_>,
+    keys: DecreaseLimitOrderKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.pool_state.key, keys.pool_state),
+        (*accounts.tick_array.key, keys.tick_array),
+        (*accounts.limit_order.key, keys.limit_order),
+        (*accounts.input_token_account.key, keys.input_token_account),
+        (*accounts.output_token_account.key, keys.output_token_account),
+        (*accounts.input_vault.key, keys.input_vault),
+        (*accounts.output_vault.key, keys.output_vault),
+        (*accounts.input_vault_mint.key, keys.input_vault_mint),
+        (*accounts.output_vault_mint.key, keys.output_vault_mint),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.token_program_2022.key, keys.token_program_2022),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn decrease_limit_order_verify_writable_privileges<'me, 'info>(
+    accounts: DecreaseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.pool_state,
+        accounts.tick_array,
+        accounts.limit_order,
+        accounts.input_token_account,
+        accounts.output_token_account,
+        accounts.input_vault,
+        accounts.output_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn decrease_limit_order_verify_signer_privileges<'me, 'info>(
+    accounts: DecreaseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn decrease_limit_order_verify_account_privileges<'me, 'info>(
+    accounts: DecreaseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    decrease_limit_order_verify_writable_privileges(accounts)?;
+    decrease_limit_order_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const DECREASE_LIQUIDITY_IX_ACCOUNTS_LEN: usize = 12;
 #[derive(Copy, Clone, Debug)]
 pub struct DecreaseLiquidityAccounts<'me, 'info> {
@@ -3564,6 +4823,280 @@ pub fn decrease_liquidity_v2_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     decrease_liquidity_v2_verify_writable_privileges(accounts)?;
     decrease_liquidity_v2_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 8;
+#[derive(Copy, Clone, Debug)]
+pub struct IncreaseLimitOrderAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub pool_state: &'me AccountInfo<'info>,
+    pub tick_array: &'me AccountInfo<'info>,
+    pub limit_order: &'me AccountInfo<'info>,
+    pub input_token_account: &'me AccountInfo<'info>,
+    pub input_vault: &'me AccountInfo<'info>,
+    pub input_vault_mint: &'me AccountInfo<'info>,
+    pub input_token_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct IncreaseLimitOrderKeys {
+    pub owner: Pubkey,
+    pub pool_state: Pubkey,
+    pub tick_array: Pubkey,
+    pub limit_order: Pubkey,
+    pub input_token_account: Pubkey,
+    pub input_vault: Pubkey,
+    pub input_vault_mint: Pubkey,
+    pub input_token_program: Pubkey,
+}
+impl From<IncreaseLimitOrderAccounts<'_, '_>> for IncreaseLimitOrderKeys {
+    fn from(accounts: IncreaseLimitOrderAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            pool_state: *accounts.pool_state.key,
+            tick_array: *accounts.tick_array.key,
+            limit_order: *accounts.limit_order.key,
+            input_token_account: *accounts.input_token_account.key,
+            input_vault: *accounts.input_vault.key,
+            input_vault_mint: *accounts.input_vault_mint.key,
+            input_token_program: *accounts.input_token_program.key,
+        }
+    }
+}
+impl From<IncreaseLimitOrderKeys>
+for [AccountMeta; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(keys: IncreaseLimitOrderKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_state,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.tick_array,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.limit_order,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_vault_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.input_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN]> for IncreaseLimitOrderKeys {
+    fn from(pubkeys: [Pubkey; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            pool_state: pubkeys[1],
+            tick_array: pubkeys[2],
+            limit_order: pubkeys[3],
+            input_token_account: pubkeys[4],
+            input_vault: pubkeys[5],
+            input_vault_mint: pubkeys[6],
+            input_token_program: pubkeys[7],
+        }
+    }
+}
+impl<'info> From<IncreaseLimitOrderAccounts<'_, 'info>>
+for [AccountInfo<'info>; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(accounts: IncreaseLimitOrderAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.pool_state.clone(),
+            accounts.tick_array.clone(),
+            accounts.limit_order.clone(),
+            accounts.input_token_account.clone(),
+            accounts.input_vault.clone(),
+            accounts.input_vault_mint.clone(),
+            accounts.input_token_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN]>
+for IncreaseLimitOrderAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            pool_state: &arr[1],
+            tick_array: &arr[2],
+            limit_order: &arr[3],
+            input_token_account: &arr[4],
+            input_vault: &arr[5],
+            input_vault_mint: &arr[6],
+            input_token_program: &arr[7],
+        }
+    }
+}
+pub const INCREASE_LIMIT_ORDER_IX_DISCM: [u8; 8usize] = [
+    177, 144, 89, 236, 250, 186, 125, 99,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct IncreaseLimitOrderIxArgs {
+    pub amount: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct IncreaseLimitOrderIxData(pub IncreaseLimitOrderIxArgs);
+impl From<IncreaseLimitOrderIxArgs> for IncreaseLimitOrderIxData {
+    fn from(args: IncreaseLimitOrderIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl IncreaseLimitOrderIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != INCREASE_LIMIT_ORDER_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(Self(IncreaseLimitOrderIxArgs { amount }))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&INCREASE_LIMIT_ORDER_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.amount, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn increase_limit_order_ix_with_program_id(
+    program_id: Pubkey,
+    keys: IncreaseLimitOrderKeys,
+    args: IncreaseLimitOrderIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN] = keys.into();
+    let data: IncreaseLimitOrderIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn increase_limit_order_ix(
+    keys: IncreaseLimitOrderKeys,
+    args: IncreaseLimitOrderIxArgs,
+) -> std::io::Result<Instruction> {
+    increase_limit_order_ix_with_program_id(AMM_V3_PROGRAM_ID, keys, args)
+}
+pub fn increase_limit_order_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: IncreaseLimitOrderAccounts<'_, '_>,
+    args: IncreaseLimitOrderIxArgs,
+) -> ProgramResult {
+    let keys: IncreaseLimitOrderKeys = accounts.into();
+    let ix = increase_limit_order_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn increase_limit_order_invoke(
+    accounts: IncreaseLimitOrderAccounts<'_, '_>,
+    args: IncreaseLimitOrderIxArgs,
+) -> ProgramResult {
+    increase_limit_order_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts, args)
+}
+pub fn increase_limit_order_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: IncreaseLimitOrderAccounts<'_, '_>,
+    args: IncreaseLimitOrderIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: IncreaseLimitOrderKeys = accounts.into();
+    let ix = increase_limit_order_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn increase_limit_order_invoke_signed(
+    accounts: IncreaseLimitOrderAccounts<'_, '_>,
+    args: IncreaseLimitOrderIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    increase_limit_order_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn increase_limit_order_verify_account_keys(
+    accounts: IncreaseLimitOrderAccounts<'_, '_>,
+    keys: IncreaseLimitOrderKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.pool_state.key, keys.pool_state),
+        (*accounts.tick_array.key, keys.tick_array),
+        (*accounts.limit_order.key, keys.limit_order),
+        (*accounts.input_token_account.key, keys.input_token_account),
+        (*accounts.input_vault.key, keys.input_vault),
+        (*accounts.input_vault_mint.key, keys.input_vault_mint),
+        (*accounts.input_token_program.key, keys.input_token_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn increase_limit_order_verify_writable_privileges<'me, 'info>(
+    accounts: IncreaseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.tick_array,
+        accounts.limit_order,
+        accounts.input_token_account,
+        accounts.input_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn increase_limit_order_verify_signer_privileges<'me, 'info>(
+    accounts: IncreaseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn increase_limit_order_verify_account_privileges<'me, 'info>(
+    accounts: IncreaseLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    increase_limit_order_verify_writable_privileges(accounts)?;
+    increase_limit_order_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const INCREASE_LIQUIDITY_IX_ACCOUNTS_LEN: usize = 12;
@@ -4576,6 +6109,318 @@ pub fn initialize_reward_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     initialize_reward_verify_writable_privileges(accounts)?;
     initialize_reward_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 10;
+#[derive(Copy, Clone, Debug)]
+pub struct OpenLimitOrderAccounts<'me, 'info> {
+    pub payer: &'me AccountInfo<'info>,
+    pub pool_state: &'me AccountInfo<'info>,
+    pub tick_array: &'me AccountInfo<'info>,
+    pub limit_order_nonce: &'me AccountInfo<'info>,
+    pub limit_order: &'me AccountInfo<'info>,
+    pub input_token_account: &'me AccountInfo<'info>,
+    pub input_vault: &'me AccountInfo<'info>,
+    pub input_vault_mint: &'me AccountInfo<'info>,
+    pub input_token_program: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OpenLimitOrderKeys {
+    pub payer: Pubkey,
+    pub pool_state: Pubkey,
+    pub tick_array: Pubkey,
+    pub limit_order_nonce: Pubkey,
+    pub limit_order: Pubkey,
+    pub input_token_account: Pubkey,
+    pub input_vault: Pubkey,
+    pub input_vault_mint: Pubkey,
+    pub input_token_program: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<OpenLimitOrderAccounts<'_, '_>> for OpenLimitOrderKeys {
+    fn from(accounts: OpenLimitOrderAccounts) -> Self {
+        Self {
+            payer: *accounts.payer.key,
+            pool_state: *accounts.pool_state.key,
+            tick_array: *accounts.tick_array.key,
+            limit_order_nonce: *accounts.limit_order_nonce.key,
+            limit_order: *accounts.limit_order.key,
+            input_token_account: *accounts.input_token_account.key,
+            input_vault: *accounts.input_vault.key,
+            input_vault_mint: *accounts.input_vault_mint.key,
+            input_token_program: *accounts.input_token_program.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<OpenLimitOrderKeys> for [AccountMeta; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(keys: OpenLimitOrderKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.pool_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.tick_array,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.limit_order_nonce,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.limit_order,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_vault_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.input_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN]> for OpenLimitOrderKeys {
+    fn from(pubkeys: [Pubkey; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            payer: pubkeys[0],
+            pool_state: pubkeys[1],
+            tick_array: pubkeys[2],
+            limit_order_nonce: pubkeys[3],
+            limit_order: pubkeys[4],
+            input_token_account: pubkeys[5],
+            input_vault: pubkeys[6],
+            input_vault_mint: pubkeys[7],
+            input_token_program: pubkeys[8],
+            system_program: pubkeys[9],
+        }
+    }
+}
+impl<'info> From<OpenLimitOrderAccounts<'_, 'info>>
+for [AccountInfo<'info>; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(accounts: OpenLimitOrderAccounts<'_, 'info>) -> Self {
+        [
+            accounts.payer.clone(),
+            accounts.pool_state.clone(),
+            accounts.tick_array.clone(),
+            accounts.limit_order_nonce.clone(),
+            accounts.limit_order.clone(),
+            accounts.input_token_account.clone(),
+            accounts.input_vault.clone(),
+            accounts.input_vault_mint.clone(),
+            accounts.input_token_program.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN]>
+for OpenLimitOrderAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            payer: &arr[0],
+            pool_state: &arr[1],
+            tick_array: &arr[2],
+            limit_order_nonce: &arr[3],
+            limit_order: &arr[4],
+            input_token_account: &arr[5],
+            input_vault: &arr[6],
+            input_vault_mint: &arr[7],
+            input_token_program: &arr[8],
+            system_program: &arr[9],
+        }
+    }
+}
+pub const OPEN_LIMIT_ORDER_IX_DISCM: [u8; 8usize] = [157, 32, 218, 183, 71, 29, 18, 147];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct OpenLimitOrderIxArgs {
+    pub nonce_index: u8,
+    pub zero_for_one: bool,
+    pub tick_index: i32,
+    pub amount: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct OpenLimitOrderIxData(pub OpenLimitOrderIxArgs);
+impl From<OpenLimitOrderIxArgs> for OpenLimitOrderIxData {
+    fn from(args: OpenLimitOrderIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl OpenLimitOrderIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != OPEN_LIMIT_ORDER_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let nonce_index: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let zero_for_one: bool = crate::borsh_de_or_default(&mut reader)?;
+        let tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(OpenLimitOrderIxArgs {
+                nonce_index,
+                zero_for_one,
+                tick_index,
+                amount,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&OPEN_LIMIT_ORDER_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.nonce_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.zero_for_one, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.tick_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.amount, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn open_limit_order_ix_with_program_id(
+    program_id: Pubkey,
+    keys: OpenLimitOrderKeys,
+    args: OpenLimitOrderIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN] = keys.into();
+    let data: OpenLimitOrderIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn open_limit_order_ix(
+    keys: OpenLimitOrderKeys,
+    args: OpenLimitOrderIxArgs,
+) -> std::io::Result<Instruction> {
+    open_limit_order_ix_with_program_id(AMM_V3_PROGRAM_ID, keys, args)
+}
+pub fn open_limit_order_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: OpenLimitOrderAccounts<'_, '_>,
+    args: OpenLimitOrderIxArgs,
+) -> ProgramResult {
+    let keys: OpenLimitOrderKeys = accounts.into();
+    let ix = open_limit_order_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn open_limit_order_invoke(
+    accounts: OpenLimitOrderAccounts<'_, '_>,
+    args: OpenLimitOrderIxArgs,
+) -> ProgramResult {
+    open_limit_order_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts, args)
+}
+pub fn open_limit_order_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: OpenLimitOrderAccounts<'_, '_>,
+    args: OpenLimitOrderIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: OpenLimitOrderKeys = accounts.into();
+    let ix = open_limit_order_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn open_limit_order_invoke_signed(
+    accounts: OpenLimitOrderAccounts<'_, '_>,
+    args: OpenLimitOrderIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    open_limit_order_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn open_limit_order_verify_account_keys(
+    accounts: OpenLimitOrderAccounts<'_, '_>,
+    keys: OpenLimitOrderKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.payer.key, keys.payer),
+        (*accounts.pool_state.key, keys.pool_state),
+        (*accounts.tick_array.key, keys.tick_array),
+        (*accounts.limit_order_nonce.key, keys.limit_order_nonce),
+        (*accounts.limit_order.key, keys.limit_order),
+        (*accounts.input_token_account.key, keys.input_token_account),
+        (*accounts.input_vault.key, keys.input_vault),
+        (*accounts.input_vault_mint.key, keys.input_vault_mint),
+        (*accounts.input_token_program.key, keys.input_token_program),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn open_limit_order_verify_writable_privileges<'me, 'info>(
+    accounts: OpenLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.payer,
+        accounts.pool_state,
+        accounts.tick_array,
+        accounts.limit_order_nonce,
+        accounts.limit_order,
+        accounts.input_token_account,
+        accounts.input_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn open_limit_order_verify_signer_privileges<'me, 'info>(
+    accounts: OpenLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn open_limit_order_verify_account_privileges<'me, 'info>(
+    accounts: OpenLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    open_limit_order_verify_writable_privileges(accounts)?;
+    open_limit_order_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const OPEN_POSITION_IX_ACCOUNTS_LEN: usize = 19;
@@ -6240,6 +8085,252 @@ pub fn set_reward_params_verify_account_privileges<'me, 'info>(
     set_reward_params_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 8;
+#[derive(Copy, Clone, Debug)]
+pub struct SettleLimitOrderAccounts<'me, 'info> {
+    pub signer: &'me AccountInfo<'info>,
+    pub pool_state: &'me AccountInfo<'info>,
+    pub tick_array: &'me AccountInfo<'info>,
+    pub limit_order: &'me AccountInfo<'info>,
+    pub output_token_account: &'me AccountInfo<'info>,
+    pub output_vault: &'me AccountInfo<'info>,
+    pub output_vault_mint: &'me AccountInfo<'info>,
+    pub output_token_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct SettleLimitOrderKeys {
+    pub signer: Pubkey,
+    pub pool_state: Pubkey,
+    pub tick_array: Pubkey,
+    pub limit_order: Pubkey,
+    pub output_token_account: Pubkey,
+    pub output_vault: Pubkey,
+    pub output_vault_mint: Pubkey,
+    pub output_token_program: Pubkey,
+}
+impl From<SettleLimitOrderAccounts<'_, '_>> for SettleLimitOrderKeys {
+    fn from(accounts: SettleLimitOrderAccounts) -> Self {
+        Self {
+            signer: *accounts.signer.key,
+            pool_state: *accounts.pool_state.key,
+            tick_array: *accounts.tick_array.key,
+            limit_order: *accounts.limit_order.key,
+            output_token_account: *accounts.output_token_account.key,
+            output_vault: *accounts.output_vault.key,
+            output_vault_mint: *accounts.output_vault_mint.key,
+            output_token_program: *accounts.output_token_program.key,
+        }
+    }
+}
+impl From<SettleLimitOrderKeys> for [AccountMeta; SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(keys: SettleLimitOrderKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.signer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_state,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.tick_array,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.limit_order,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.output_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.output_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.output_vault_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.output_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN]> for SettleLimitOrderKeys {
+    fn from(pubkeys: [Pubkey; SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            signer: pubkeys[0],
+            pool_state: pubkeys[1],
+            tick_array: pubkeys[2],
+            limit_order: pubkeys[3],
+            output_token_account: pubkeys[4],
+            output_vault: pubkeys[5],
+            output_vault_mint: pubkeys[6],
+            output_token_program: pubkeys[7],
+        }
+    }
+}
+impl<'info> From<SettleLimitOrderAccounts<'_, 'info>>
+for [AccountInfo<'info>; SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
+    fn from(accounts: SettleLimitOrderAccounts<'_, 'info>) -> Self {
+        [
+            accounts.signer.clone(),
+            accounts.pool_state.clone(),
+            accounts.tick_array.clone(),
+            accounts.limit_order.clone(),
+            accounts.output_token_account.clone(),
+            accounts.output_vault.clone(),
+            accounts.output_vault_mint.clone(),
+            accounts.output_token_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN]>
+for SettleLimitOrderAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            signer: &arr[0],
+            pool_state: &arr[1],
+            tick_array: &arr[2],
+            limit_order: &arr[3],
+            output_token_account: &arr[4],
+            output_vault: &arr[5],
+            output_vault_mint: &arr[6],
+            output_token_program: &arr[7],
+        }
+    }
+}
+pub const SETTLE_LIMIT_ORDER_IX_DISCM: [u8; 8usize] = [
+    205, 78, 116, 33, 92, 105, 26, 96,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct SettleLimitOrderIxData;
+impl SettleLimitOrderIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SETTLE_LIMIT_ORDER_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SETTLE_LIMIT_ORDER_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn settle_limit_order_ix_with_program_id(
+    program_id: Pubkey,
+    keys: SettleLimitOrderKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; SETTLE_LIMIT_ORDER_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: SettleLimitOrderIxData.try_to_vec()?,
+    })
+}
+pub fn settle_limit_order_ix(
+    keys: SettleLimitOrderKeys,
+) -> std::io::Result<Instruction> {
+    settle_limit_order_ix_with_program_id(AMM_V3_PROGRAM_ID, keys)
+}
+pub fn settle_limit_order_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: SettleLimitOrderAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: SettleLimitOrderKeys = accounts.into();
+    let ix = settle_limit_order_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn settle_limit_order_invoke(
+    accounts: SettleLimitOrderAccounts<'_, '_>,
+) -> ProgramResult {
+    settle_limit_order_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts)
+}
+pub fn settle_limit_order_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: SettleLimitOrderAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: SettleLimitOrderKeys = accounts.into();
+    let ix = settle_limit_order_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn settle_limit_order_invoke_signed(
+    accounts: SettleLimitOrderAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    settle_limit_order_invoke_signed_with_program_id(AMM_V3_PROGRAM_ID, accounts, seeds)
+}
+pub fn settle_limit_order_verify_account_keys(
+    accounts: SettleLimitOrderAccounts<'_, '_>,
+    keys: SettleLimitOrderKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.signer.key, keys.signer),
+        (*accounts.pool_state.key, keys.pool_state),
+        (*accounts.tick_array.key, keys.tick_array),
+        (*accounts.limit_order.key, keys.limit_order),
+        (*accounts.output_token_account.key, keys.output_token_account),
+        (*accounts.output_vault.key, keys.output_vault),
+        (*accounts.output_vault_mint.key, keys.output_vault_mint),
+        (*accounts.output_token_program.key, keys.output_token_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn settle_limit_order_verify_writable_privileges<'me, 'info>(
+    accounts: SettleLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.limit_order,
+        accounts.output_token_account,
+        accounts.output_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn settle_limit_order_verify_signer_privileges<'me, 'info>(
+    accounts: SettleLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.signer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn settle_limit_order_verify_account_privileges<'me, 'info>(
+    accounts: SettleLimitOrderAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    settle_limit_order_verify_writable_privileges(accounts)?;
+    settle_limit_order_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const SWAP_IX_ACCOUNTS_LEN: usize = 10;
 #[derive(Copy, Clone, Debug)]
 pub struct SwapAccounts<'me, 'info> {
@@ -7527,6 +9618,227 @@ pub fn update_amm_config_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     update_amm_config_verify_writable_privileges(accounts)?;
     update_amm_config_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN: usize = 2;
+#[derive(Copy, Clone, Debug)]
+pub struct UpdateDynamicFeeConfigAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub dynamic_fee_config: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct UpdateDynamicFeeConfigKeys {
+    pub owner: Pubkey,
+    pub dynamic_fee_config: Pubkey,
+}
+impl From<UpdateDynamicFeeConfigAccounts<'_, '_>> for UpdateDynamicFeeConfigKeys {
+    fn from(accounts: UpdateDynamicFeeConfigAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            dynamic_fee_config: *accounts.dynamic_fee_config.key,
+        }
+    }
+}
+impl From<UpdateDynamicFeeConfigKeys>
+for [AccountMeta; UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(keys: UpdateDynamicFeeConfigKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.dynamic_fee_config,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN]>
+for UpdateDynamicFeeConfigKeys {
+    fn from(pubkeys: [Pubkey; UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            dynamic_fee_config: pubkeys[1],
+        }
+    }
+}
+impl<'info> From<UpdateDynamicFeeConfigAccounts<'_, 'info>>
+for [AccountInfo<'info>; UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(accounts: UpdateDynamicFeeConfigAccounts<'_, 'info>) -> Self {
+        [accounts.owner.clone(), accounts.dynamic_fee_config.clone()]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN]>
+for UpdateDynamicFeeConfigAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            dynamic_fee_config: &arr[1],
+        }
+    }
+}
+pub const UPDATE_DYNAMIC_FEE_CONFIG_IX_DISCM: [u8; 8usize] = [
+    7, 7, 80, 8, 2, 199, 132, 240,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct UpdateDynamicFeeConfigIxArgs {
+    pub filter_period: u16,
+    pub decay_period: u16,
+    pub reduction_factor: u16,
+    pub dynamic_fee_control: u32,
+    pub max_volatility_accumulator: u32,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateDynamicFeeConfigIxData(pub UpdateDynamicFeeConfigIxArgs);
+impl From<UpdateDynamicFeeConfigIxArgs> for UpdateDynamicFeeConfigIxData {
+    fn from(args: UpdateDynamicFeeConfigIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl UpdateDynamicFeeConfigIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != UPDATE_DYNAMIC_FEE_CONFIG_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let filter_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let decay_period: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let reduction_factor: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let dynamic_fee_control: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let max_volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(UpdateDynamicFeeConfigIxArgs {
+                filter_period,
+                decay_period,
+                reduction_factor,
+                dynamic_fee_control,
+                max_volatility_accumulator,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&UPDATE_DYNAMIC_FEE_CONFIG_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.filter_period, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.decay_period, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.reduction_factor, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.dynamic_fee_control, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.max_volatility_accumulator,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn update_dynamic_fee_config_ix_with_program_id(
+    program_id: Pubkey,
+    keys: UpdateDynamicFeeConfigKeys,
+    args: UpdateDynamicFeeConfigIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; UPDATE_DYNAMIC_FEE_CONFIG_IX_ACCOUNTS_LEN] = keys.into();
+    let data: UpdateDynamicFeeConfigIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn update_dynamic_fee_config_ix(
+    keys: UpdateDynamicFeeConfigKeys,
+    args: UpdateDynamicFeeConfigIxArgs,
+) -> std::io::Result<Instruction> {
+    update_dynamic_fee_config_ix_with_program_id(AMM_V3_PROGRAM_ID, keys, args)
+}
+pub fn update_dynamic_fee_config_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: UpdateDynamicFeeConfigAccounts<'_, '_>,
+    args: UpdateDynamicFeeConfigIxArgs,
+) -> ProgramResult {
+    let keys: UpdateDynamicFeeConfigKeys = accounts.into();
+    let ix = update_dynamic_fee_config_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn update_dynamic_fee_config_invoke(
+    accounts: UpdateDynamicFeeConfigAccounts<'_, '_>,
+    args: UpdateDynamicFeeConfigIxArgs,
+) -> ProgramResult {
+    update_dynamic_fee_config_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts, args)
+}
+pub fn update_dynamic_fee_config_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: UpdateDynamicFeeConfigAccounts<'_, '_>,
+    args: UpdateDynamicFeeConfigIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: UpdateDynamicFeeConfigKeys = accounts.into();
+    let ix = update_dynamic_fee_config_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn update_dynamic_fee_config_invoke_signed(
+    accounts: UpdateDynamicFeeConfigAccounts<'_, '_>,
+    args: UpdateDynamicFeeConfigIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    update_dynamic_fee_config_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn update_dynamic_fee_config_verify_account_keys(
+    accounts: UpdateDynamicFeeConfigAccounts<'_, '_>,
+    keys: UpdateDynamicFeeConfigKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.dynamic_fee_config.key, keys.dynamic_fee_config),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn update_dynamic_fee_config_verify_writable_privileges<'me, 'info>(
+    accounts: UpdateDynamicFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.dynamic_fee_config] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn update_dynamic_fee_config_verify_signer_privileges<'me, 'info>(
+    accounts: UpdateDynamicFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn update_dynamic_fee_config_verify_account_privileges<'me, 'info>(
+    accounts: UpdateDynamicFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    update_dynamic_fee_config_verify_writable_privileges(accounts)?;
+    update_dynamic_fee_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const UPDATE_OPERATION_ACCOUNT_IX_ACCOUNTS_LEN: usize = 3;
