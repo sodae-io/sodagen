@@ -1,0 +1,492 @@
+{
+  "version": "1.0.0",
+  "name": "deriverse",
+  "docs": [
+    "Deriverse -- hybrid CLOB + embedded AMM (spot + perps) on Solana.",
+    "Not an Anchor program: instructions are a plain leading u8 tag.",
+    "Instruction table is verbatim from Deriverse's OWN public common crate",
+    "(github.com/deriverse/drv-smart-contract-common, crates/models/src/instruction_constants.rs).",
+    "The `swap` account list is from Deriverse's own OKX integration",
+    "(github.com/deriverse/okx-deriverse, programs/dex-solana/src/adapters/deriverse.rs).",
+    "Full account-state structs live in that same common crate under",
+    "crates/models/src/state/ (root, instrument, spots, perps, holder, token, ...);",
+    "a working quoter reference implementation is github.com/deriverse/jupiter-deriverse."
+  ],
+  "instructions": [
+    {
+      "name": "swap",
+      "docs": [
+        "Tag 26. 15 accounts as built by Deriverse's own OKX router adapter."
+      ],
+      "accounts": [
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "assetMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "crncyMint",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "drvsVaultAssetTokenAcc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "drvsVaultCrncyTokenAcc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "instrument",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "tree",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "orders",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "lines",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "map",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "spotClientInfos",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "clientAssetTokenAcc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "clientCrncyTokenAcc",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "assetTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "crncyTokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "inputCrncy",
+          "type": "u8",
+          "docs": [
+            "0 = sell `crncy`, non-zero = sell `asset`"
+          ]
+        },
+        {
+          "name": "paddingU16",
+          "type": "u16"
+        },
+        {
+          "name": "instrId",
+          "type": "u32"
+        },
+        {
+          "name": "price",
+          "type": "i64"
+        },
+        {
+          "name": "amount",
+          "type": "i64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 26
+      }
+    },
+    {
+      "name": "newHolder",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 0
+      }
+    },
+    {
+      "name": "newOperator",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 1
+      }
+    },
+    {
+      "name": "newRootAccount",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 2
+      }
+    },
+    {
+      "name": "perpWithdraw",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 3
+      }
+    },
+    {
+      "name": "newBaseCrncy",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    },
+    {
+      "name": "deposit",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 7
+      }
+    },
+    {
+      "name": "withdraw",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 8
+      }
+    },
+    {
+      "name": "newInstrument",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 9
+      }
+    },
+    {
+      "name": "upgradeToPerp",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 10
+      }
+    },
+    {
+      "name": "perpDeposit",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 11
+      }
+    },
+    {
+      "name": "newSpotOrder",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 12
+      }
+    },
+    {
+      "name": "spotOrderCancel",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 13
+      }
+    },
+    {
+      "name": "spotLp",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 14
+      }
+    },
+    {
+      "name": "spotMassCancel",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 15
+      }
+    },
+    {
+      "name": "nextVoting",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 16
+      }
+    },
+    {
+      "name": "newPerpOrder",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 19
+      }
+    },
+    {
+      "name": "dividendsAllocation",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 25
+      }
+    },
+    {
+      "name": "airdrop",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 27
+      }
+    },
+    {
+      "name": "dividendsClaim",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 28
+      }
+    },
+    {
+      "name": "perpOrderCancel",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 30
+      }
+    },
+    {
+      "name": "voting",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 32
+      }
+    },
+    {
+      "name": "spotQuotesReplace",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 34
+      }
+    },
+    {
+      "name": "perpMassCancel",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 36
+      }
+    },
+    {
+      "name": "perpChangeLeverage",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 37
+      }
+    },
+    {
+      "name": "setInstrReadyForPerpUpgrade",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 41
+      }
+    },
+    {
+      "name": "perpQuotesReplace",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 42
+      }
+    },
+    {
+      "name": "moveSpotAvailFunds",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 43
+      }
+    },
+    {
+      "name": "changeRefProgram",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 44
+      }
+    },
+    {
+      "name": "newRefLink",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 45
+      }
+    },
+    {
+      "name": "perpStatisticsReset",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 46
+      }
+    },
+    {
+      "name": "buyMarketSeat",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 47
+      }
+    },
+    {
+      "name": "sellMarketSeat",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 48
+      }
+    },
+    {
+      "name": "terminatePrivateMode",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 50
+      }
+    },
+    {
+      "name": "changePointsProgramExpiration",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 51
+      }
+    },
+    {
+      "name": "changeAirdropAuthority",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 52
+      }
+    },
+    {
+      "name": "changePrivateModeAuthority",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 53
+      }
+    },
+    {
+      "name": "setVariance",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 54
+      }
+    },
+    {
+      "name": "votingReset",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 55
+      }
+    },
+    {
+      "name": "changeDenominator",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 56
+      }
+    }
+  ],
+  "accounts": [],
+  "types": [],
+  "metadata": {
+    "origin": "shank",
+    "spec": "shank",
+    "name": "deriverse",
+    "version": "1.0.0",
+    "address": "DRVSpZ2YUYYKgZP8XtLhAGtT1zYSCKzeHfb4DgRnrgqD",
+    "source": "github.com/deriverse/drv-smart-contract-common + github.com/deriverse/okx-deriverse + github.com/deriverse/jupiter-deriverse",
+    "note": "Account structs are NOT inlined here -- they are large zero-copy CLOB structures. Vendor them from crates/models/src/state/ in drv-smart-contract-common (see ../sources/deriverse/)."
+  },
+  "address": "DRVSpZ2YUYYKgZP8XtLhAGtT1zYSCKzeHfb4DgRnrgqD"
+}

@@ -9,6 +9,7 @@ use crate::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum PumpAmmProgramIx {
     AdminSetCoinCreator(AdminSetCoinCreatorIxArgs),
+    AdminSetCoinCreatorFeeEditable,
     AdminUpdateTokenIncentives(AdminUpdateTokenIncentivesIxArgs),
     BoostBuyAndBurn(BoostBuyAndBurnIxArgs),
     Buy(BuyIxArgs),
@@ -28,6 +29,7 @@ pub enum PumpAmmProgramIx {
     Sell(SellIxArgs),
     SetBoostAuthority,
     SetCoinCreator,
+    SetCoinCreatorFeeBps(SetCoinCreatorFeeBpsIxArgs),
     SetReservedFeeRecipients(SetReservedFeeRecipientsIxArgs),
     SyncUserVolumeAccumulator,
     ToggleBoost(ToggleBoostIxArgs),
@@ -37,6 +39,7 @@ pub enum PumpAmmProgramIx {
     TransferCreatorFeesToPumpV2,
     UpdateAdmin,
     UpdateBuybackConfig(UpdateBuybackConfigIxArgs),
+    UpdateCreatorFeeConfig(UpdateCreatorFeeConfigIxArgs),
     UpdateFeeConfig(UpdateFeeConfigIxArgs),
     Withdraw(WithdrawIxArgs),
 }
@@ -50,6 +53,9 @@ impl PumpAmmProgramIx {
                     coin_creator,
                 }),
             );
+        }
+        if buf.starts_with(&ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_DISCM) {
+            return Ok(Self::AdminSetCoinCreatorFeeEditable);
         }
         if buf.starts_with(&ADMIN_UPDATE_TOKEN_INCENTIVES_IX_DISCM) {
             let mut reader = &buf[ADMIN_UPDATE_TOKEN_INCENTIVES_IX_DISCM.len()..];
@@ -162,6 +168,16 @@ impl PumpAmmProgramIx {
             } else {
                 <OptionBool>::deserialize(&mut reader)?
             };
+            let creator_fee_bps = if reader.is_empty() {
+                Default::default()
+            } else {
+                <OptionU64>::deserialize(&mut reader)?
+            };
+            let can_edit_creator_fee = if reader.is_empty() {
+                Default::default()
+            } else {
+                <OptionBool>::deserialize(&mut reader)?
+            };
             return Ok(
                 Self::CreatePool(CreatePoolIxArgs {
                     index,
@@ -170,6 +186,8 @@ impl PumpAmmProgramIx {
                     coin_creator,
                     is_mayhem_mode,
                     is_cashback_coin,
+                    creator_fee_bps,
+                    can_edit_creator_fee,
                 }),
             );
         }
@@ -232,6 +250,15 @@ impl PumpAmmProgramIx {
         if buf.starts_with(&SET_COIN_CREATOR_IX_DISCM) {
             return Ok(Self::SetCoinCreator);
         }
+        if buf.starts_with(&SET_COIN_CREATOR_FEE_BPS_IX_DISCM) {
+            let mut reader = &buf[SET_COIN_CREATOR_FEE_BPS_IX_DISCM.len()..];
+            let creator_fee_bps: u64 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::SetCoinCreatorFeeBps(SetCoinCreatorFeeBpsIxArgs {
+                    creator_fee_bps,
+                }),
+            );
+        }
         if buf.starts_with(&SET_RESERVED_FEE_RECIPIENTS_IX_DISCM) {
             let mut reader = &buf[SET_RESERVED_FEE_RECIPIENTS_IX_DISCM.len()..];
             let whitelist_pda: Pubkey = crate::borsh_de_or_default(&mut reader)?;
@@ -283,6 +310,21 @@ impl PumpAmmProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&UPDATE_CREATOR_FEE_CONFIG_IX_DISCM) {
+            let mut reader = &buf[UPDATE_CREATOR_FEE_CONFIG_IX_DISCM.len()..];
+            let creator_fee_configurable: bool = crate::borsh_de_or_default(
+                &mut reader,
+            )?;
+            let max_configurable_creator_fee_bps: u64 = crate::borsh_de_or_default(
+                &mut reader,
+            )?;
+            return Ok(
+                Self::UpdateCreatorFeeConfig(UpdateCreatorFeeConfigIxArgs {
+                    creator_fee_configurable,
+                    max_configurable_creator_fee_bps,
+                }),
+            );
+        }
         if buf.starts_with(&UPDATE_FEE_CONFIG_IX_DISCM) {
             let mut reader = &buf[UPDATE_FEE_CONFIG_IX_DISCM.len()..];
             let lp_fee_basis_points: u64 = crate::borsh_de_or_default(&mut reader)?;
@@ -329,6 +371,9 @@ impl PumpAmmProgramIx {
                 writer.write_all(&ADMIN_SET_COIN_CREATOR_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.coin_creator, &mut writer)?;
                 Ok(())
+            }
+            Self::AdminSetCoinCreatorFeeEditable => {
+                writer.write_all(&ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_DISCM)
             }
             Self::AdminUpdateTokenIncentives(args) => {
                 writer.write_all(&ADMIN_UPDATE_TOKEN_INCENTIVES_IX_DISCM)?;
@@ -413,6 +458,11 @@ impl PumpAmmProgramIx {
                 borsh::BorshSerialize::serialize(&args.coin_creator, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.is_mayhem_mode, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.is_cashback_coin, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.creator_fee_bps, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.can_edit_creator_fee,
+                    &mut writer,
+                )?;
                 Ok(())
             }
             Self::Deposit(args) => {
@@ -459,6 +509,11 @@ impl PumpAmmProgramIx {
             }
             Self::SetBoostAuthority => writer.write_all(&SET_BOOST_AUTHORITY_IX_DISCM),
             Self::SetCoinCreator => writer.write_all(&SET_COIN_CREATOR_IX_DISCM),
+            Self::SetCoinCreatorFeeBps(args) => {
+                writer.write_all(&SET_COIN_CREATOR_FEE_BPS_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.creator_fee_bps, &mut writer)?;
+                Ok(())
+            }
             Self::SetReservedFeeRecipients(args) => {
                 writer.write_all(&SET_RESERVED_FEE_RECIPIENTS_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.whitelist_pda, &mut writer)?;
@@ -493,6 +548,18 @@ impl PumpAmmProgramIx {
                 writer.write_all(&UPDATE_BUYBACK_CONFIG_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(
                     &args.buyback_basis_points,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
+            Self::UpdateCreatorFeeConfig(args) => {
+                writer.write_all(&UPDATE_CREATOR_FEE_CONFIG_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(
+                    &args.creator_fee_configurable,
+                    &mut writer,
+                )?;
+                borsh::BorshSerialize::serialize(
+                    &args.max_configurable_creator_fee_bps,
                     &mut writer,
                 )?;
                 Ok(())
@@ -797,6 +864,252 @@ pub fn admin_set_coin_creator_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     admin_set_coin_creator_verify_writable_privileges(accounts)?;
     admin_set_coin_creator_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN: usize = 6;
+#[derive(Copy, Clone, Debug)]
+pub struct AdminSetCoinCreatorFeeEditableAccounts<'me, 'info> {
+    pub admin_set_coin_creator_authority: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct AdminSetCoinCreatorFeeEditableKeys {
+    pub admin_set_coin_creator_authority: Pubkey,
+    pub global_config: Pubkey,
+    pub pool: Pubkey,
+    pub system_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<AdminSetCoinCreatorFeeEditableAccounts<'_, '_>>
+for AdminSetCoinCreatorFeeEditableKeys {
+    fn from(accounts: AdminSetCoinCreatorFeeEditableAccounts) -> Self {
+        Self {
+            admin_set_coin_creator_authority: *accounts
+                .admin_set_coin_creator_authority
+                .key,
+            global_config: *accounts.global_config.key,
+            pool: *accounts.pool.key,
+            system_program: *accounts.system_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<AdminSetCoinCreatorFeeEditableKeys>
+for [AccountMeta; ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN] {
+    fn from(keys: AdminSetCoinCreatorFeeEditableKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.admin_set_coin_creator_authority,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN]>
+for AdminSetCoinCreatorFeeEditableKeys {
+    fn from(
+        pubkeys: [Pubkey; ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            admin_set_coin_creator_authority: pubkeys[0],
+            global_config: pubkeys[1],
+            pool: pubkeys[2],
+            system_program: pubkeys[3],
+            event_authority: pubkeys[4],
+            program: pubkeys[5],
+        }
+    }
+}
+impl<'info> From<AdminSetCoinCreatorFeeEditableAccounts<'_, 'info>>
+for [AccountInfo<'info>; ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: AdminSetCoinCreatorFeeEditableAccounts<'_, 'info>) -> Self {
+        [
+            accounts.admin_set_coin_creator_authority.clone(),
+            accounts.global_config.clone(),
+            accounts.pool.clone(),
+            accounts.system_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN]>
+for AdminSetCoinCreatorFeeEditableAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<
+            'info,
+        >; ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            admin_set_coin_creator_authority: &arr[0],
+            global_config: &arr[1],
+            pool: &arr[2],
+            system_program: &arr[3],
+            event_authority: &arr[4],
+            program: &arr[5],
+        }
+    }
+}
+pub const ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_DISCM: [u8; 8usize] = [
+    204, 65, 86, 207, 110, 84, 239, 104,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct AdminSetCoinCreatorFeeEditableIxData;
+impl AdminSetCoinCreatorFeeEditableIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn admin_set_coin_creator_fee_editable_ix_with_program_id(
+    program_id: Pubkey,
+    keys: AdminSetCoinCreatorFeeEditableKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_IX_ACCOUNTS_LEN] = keys
+        .into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: AdminSetCoinCreatorFeeEditableIxData.try_to_vec()?,
+    })
+}
+pub fn admin_set_coin_creator_fee_editable_ix(
+    keys: AdminSetCoinCreatorFeeEditableKeys,
+) -> std::io::Result<Instruction> {
+    admin_set_coin_creator_fee_editable_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys)
+}
+pub fn admin_set_coin_creator_fee_editable_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: AdminSetCoinCreatorFeeEditableKeys = accounts.into();
+    let ix = admin_set_coin_creator_fee_editable_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn admin_set_coin_creator_fee_editable_invoke(
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'_, '_>,
+) -> ProgramResult {
+    admin_set_coin_creator_fee_editable_invoke_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+    )
+}
+pub fn admin_set_coin_creator_fee_editable_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: AdminSetCoinCreatorFeeEditableKeys = accounts.into();
+    let ix = admin_set_coin_creator_fee_editable_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn admin_set_coin_creator_fee_editable_invoke_signed(
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    admin_set_coin_creator_fee_editable_invoke_signed_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn admin_set_coin_creator_fee_editable_verify_account_keys(
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'_, '_>,
+    keys: AdminSetCoinCreatorFeeEditableKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (
+            *accounts.admin_set_coin_creator_authority.key,
+            keys.admin_set_coin_creator_authority,
+        ),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn admin_set_coin_creator_fee_editable_verify_writable_privileges<'me, 'info>(
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.admin_set_coin_creator_authority,
+        accounts.pool,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn admin_set_coin_creator_fee_editable_verify_signer_privileges<'me, 'info>(
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin_set_coin_creator_authority] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn admin_set_coin_creator_fee_editable_verify_account_privileges<'me, 'info>(
+    accounts: AdminSetCoinCreatorFeeEditableAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    admin_set_coin_creator_fee_editable_verify_writable_privileges(accounts)?;
+    admin_set_coin_creator_fee_editable_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const ADMIN_UPDATE_TOKEN_INCENTIVES_IX_ACCOUNTS_LEN: usize = 10;
@@ -3921,6 +4234,8 @@ pub struct CreatePoolIxArgs {
     pub coin_creator: Pubkey,
     pub is_mayhem_mode: bool,
     pub is_cashback_coin: OptionBool,
+    pub creator_fee_bps: OptionU64,
+    pub can_edit_creator_fee: OptionBool,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct CreatePoolIxData(pub CreatePoolIxArgs);
@@ -3947,6 +4262,16 @@ impl CreatePoolIxData {
         } else {
             <OptionBool>::deserialize(&mut reader)?
         };
+        let creator_fee_bps = if reader.is_empty() {
+            Default::default()
+        } else {
+            <OptionU64>::deserialize(&mut reader)?
+        };
+        let can_edit_creator_fee = if reader.is_empty() {
+            Default::default()
+        } else {
+            <OptionBool>::deserialize(&mut reader)?
+        };
         Ok(
             Self(CreatePoolIxArgs {
                 index,
@@ -3955,6 +4280,8 @@ impl CreatePoolIxData {
                 coin_creator,
                 is_mayhem_mode,
                 is_cashback_coin,
+                creator_fee_bps,
+                can_edit_creator_fee,
             }),
         )
     }
@@ -3966,6 +4293,8 @@ impl CreatePoolIxData {
         borsh::BorshSerialize::serialize(&self.0.coin_creator, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.0.is_mayhem_mode, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.0.is_cashback_coin, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.creator_fee_bps, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.can_edit_creator_fee, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -4724,7 +5053,7 @@ impl From<ExtendAccountKeys> for [AccountMeta; EXTEND_ACCOUNT_IX_ACCOUNTS_LEN] {
             AccountMeta {
                 pubkey: keys.user,
                 is_signer: true,
-                is_writable: false,
+                is_writable: true,
             },
             AccountMeta {
                 pubkey: keys.system_program,
@@ -4861,7 +5190,7 @@ pub fn extend_account_verify_account_keys(
 pub fn extend_account_verify_writable_privileges<'me, 'info>(
     accounts: ExtendAccountAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [accounts.account] {
+    for should_be_writable in [accounts.account, accounts.user] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
         }
@@ -6052,12 +6381,13 @@ pub fn sell_verify_account_privileges<'me, 'info>(
     sell_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN: usize = 5;
+pub const SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
 pub struct SetBoostAuthorityAccounts<'me, 'info> {
     pub admin: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
     pub boost_authority: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
     pub event_authority: &'me AccountInfo<'info>,
     pub program: &'me AccountInfo<'info>,
 }
@@ -6066,6 +6396,7 @@ pub struct SetBoostAuthorityKeys {
     pub admin: Pubkey,
     pub global_config: Pubkey,
     pub boost_authority: Pubkey,
+    pub system_program: Pubkey,
     pub event_authority: Pubkey,
     pub program: Pubkey,
 }
@@ -6075,6 +6406,7 @@ impl From<SetBoostAuthorityAccounts<'_, '_>> for SetBoostAuthorityKeys {
             admin: *accounts.admin.key,
             global_config: *accounts.global_config.key,
             boost_authority: *accounts.boost_authority.key,
+            system_program: *accounts.system_program.key,
             event_authority: *accounts.event_authority.key,
             program: *accounts.program.key,
         }
@@ -6099,6 +6431,11 @@ impl From<SetBoostAuthorityKeys> for [AccountMeta; SET_BOOST_AUTHORITY_IX_ACCOUN
                 is_writable: false,
             },
             AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
                 pubkey: keys.event_authority,
                 is_signer: false,
                 is_writable: false,
@@ -6117,8 +6454,9 @@ impl From<[Pubkey; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN]> for SetBoostAuthorityKe
             admin: pubkeys[0],
             global_config: pubkeys[1],
             boost_authority: pubkeys[2],
-            event_authority: pubkeys[3],
-            program: pubkeys[4],
+            system_program: pubkeys[3],
+            event_authority: pubkeys[4],
+            program: pubkeys[5],
         }
     }
 }
@@ -6129,6 +6467,7 @@ for [AccountInfo<'info>; SET_BOOST_AUTHORITY_IX_ACCOUNTS_LEN] {
             accounts.admin.clone(),
             accounts.global_config.clone(),
             accounts.boost_authority.clone(),
+            accounts.system_program.clone(),
             accounts.event_authority.clone(),
             accounts.program.clone(),
         ]
@@ -6143,8 +6482,9 @@ for SetBoostAuthorityAccounts<'me, 'info> {
             admin: &arr[0],
             global_config: &arr[1],
             boost_authority: &arr[2],
-            event_authority: &arr[3],
-            program: &arr[4],
+            system_program: &arr[3],
+            event_authority: &arr[4],
+            program: &arr[5],
         }
     }
 }
@@ -6228,6 +6568,7 @@ pub fn set_boost_authority_verify_account_keys(
         (*accounts.admin.key, keys.admin),
         (*accounts.global_config.key, keys.global_config),
         (*accounts.boost_authority.key, keys.boost_authority),
+        (*accounts.system_program.key, keys.system_program),
         (*accounts.event_authority.key, keys.event_authority),
         (*accounts.program.key, keys.program),
     ] {
@@ -6455,6 +6796,247 @@ pub fn set_coin_creator_verify_account_privileges<'me, 'info>(
     accounts: SetCoinCreatorAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     set_coin_creator_verify_writable_privileges(accounts)?;
+    Ok(())
+}
+pub const SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN: usize = 5;
+#[derive(Copy, Clone, Debug)]
+pub struct SetCoinCreatorFeeBpsAccounts<'me, 'info> {
+    pub coin_creator: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct SetCoinCreatorFeeBpsKeys {
+    pub coin_creator: Pubkey,
+    pub global_config: Pubkey,
+    pub pool: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<SetCoinCreatorFeeBpsAccounts<'_, '_>> for SetCoinCreatorFeeBpsKeys {
+    fn from(accounts: SetCoinCreatorFeeBpsAccounts) -> Self {
+        Self {
+            coin_creator: *accounts.coin_creator.key,
+            global_config: *accounts.global_config.key,
+            pool: *accounts.pool.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<SetCoinCreatorFeeBpsKeys>
+for [AccountMeta; SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN] {
+    fn from(keys: SetCoinCreatorFeeBpsKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.coin_creator,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN]>
+for SetCoinCreatorFeeBpsKeys {
+    fn from(pubkeys: [Pubkey; SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            coin_creator: pubkeys[0],
+            global_config: pubkeys[1],
+            pool: pubkeys[2],
+            event_authority: pubkeys[3],
+            program: pubkeys[4],
+        }
+    }
+}
+impl<'info> From<SetCoinCreatorFeeBpsAccounts<'_, 'info>>
+for [AccountInfo<'info>; SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN] {
+    fn from(accounts: SetCoinCreatorFeeBpsAccounts<'_, 'info>) -> Self {
+        [
+            accounts.coin_creator.clone(),
+            accounts.global_config.clone(),
+            accounts.pool.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN]>
+for SetCoinCreatorFeeBpsAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            coin_creator: &arr[0],
+            global_config: &arr[1],
+            pool: &arr[2],
+            event_authority: &arr[3],
+            program: &arr[4],
+        }
+    }
+}
+pub const SET_COIN_CREATOR_FEE_BPS_IX_DISCM: [u8; 8usize] = [
+    66, 89, 202, 237, 8, 118, 158, 169,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SetCoinCreatorFeeBpsIxArgs {
+    pub creator_fee_bps: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetCoinCreatorFeeBpsIxData(pub SetCoinCreatorFeeBpsIxArgs);
+impl From<SetCoinCreatorFeeBpsIxArgs> for SetCoinCreatorFeeBpsIxData {
+    fn from(args: SetCoinCreatorFeeBpsIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl SetCoinCreatorFeeBpsIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SET_COIN_CREATOR_FEE_BPS_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let creator_fee_bps: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(SetCoinCreatorFeeBpsIxArgs {
+                creator_fee_bps,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SET_COIN_CREATOR_FEE_BPS_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.creator_fee_bps, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn set_coin_creator_fee_bps_ix_with_program_id(
+    program_id: Pubkey,
+    keys: SetCoinCreatorFeeBpsKeys,
+    args: SetCoinCreatorFeeBpsIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; SET_COIN_CREATOR_FEE_BPS_IX_ACCOUNTS_LEN] = keys.into();
+    let data: SetCoinCreatorFeeBpsIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn set_coin_creator_fee_bps_ix(
+    keys: SetCoinCreatorFeeBpsKeys,
+    args: SetCoinCreatorFeeBpsIxArgs,
+) -> std::io::Result<Instruction> {
+    set_coin_creator_fee_bps_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys, args)
+}
+pub fn set_coin_creator_fee_bps_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: SetCoinCreatorFeeBpsAccounts<'_, '_>,
+    args: SetCoinCreatorFeeBpsIxArgs,
+) -> ProgramResult {
+    let keys: SetCoinCreatorFeeBpsKeys = accounts.into();
+    let ix = set_coin_creator_fee_bps_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn set_coin_creator_fee_bps_invoke(
+    accounts: SetCoinCreatorFeeBpsAccounts<'_, '_>,
+    args: SetCoinCreatorFeeBpsIxArgs,
+) -> ProgramResult {
+    set_coin_creator_fee_bps_invoke_with_program_id(PUMP_AMM_PROGRAM_ID, accounts, args)
+}
+pub fn set_coin_creator_fee_bps_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: SetCoinCreatorFeeBpsAccounts<'_, '_>,
+    args: SetCoinCreatorFeeBpsIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: SetCoinCreatorFeeBpsKeys = accounts.into();
+    let ix = set_coin_creator_fee_bps_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn set_coin_creator_fee_bps_invoke_signed(
+    accounts: SetCoinCreatorFeeBpsAccounts<'_, '_>,
+    args: SetCoinCreatorFeeBpsIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    set_coin_creator_fee_bps_invoke_signed_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn set_coin_creator_fee_bps_verify_account_keys(
+    accounts: SetCoinCreatorFeeBpsAccounts<'_, '_>,
+    keys: SetCoinCreatorFeeBpsKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.coin_creator.key, keys.coin_creator),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn set_coin_creator_fee_bps_verify_writable_privileges<'me, 'info>(
+    accounts: SetCoinCreatorFeeBpsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.pool] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn set_coin_creator_fee_bps_verify_signer_privileges<'me, 'info>(
+    accounts: SetCoinCreatorFeeBpsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.coin_creator] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn set_coin_creator_fee_bps_verify_account_privileges<'me, 'info>(
+    accounts: SetCoinCreatorFeeBpsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    set_coin_creator_fee_bps_verify_writable_privileges(accounts)?;
+    set_coin_creator_fee_bps_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const SET_RESERVED_FEE_RECIPIENTS_IX_ACCOUNTS_LEN: usize = 4;
@@ -8537,6 +9119,256 @@ pub fn update_buyback_config_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     update_buyback_config_verify_writable_privileges(accounts)?;
     update_buyback_config_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN: usize = 5;
+#[derive(Copy, Clone, Debug)]
+pub struct UpdateCreatorFeeConfigAccounts<'me, 'info> {
+    pub admin: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct UpdateCreatorFeeConfigKeys {
+    pub admin: Pubkey,
+    pub global_config: Pubkey,
+    pub system_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<UpdateCreatorFeeConfigAccounts<'_, '_>> for UpdateCreatorFeeConfigKeys {
+    fn from(accounts: UpdateCreatorFeeConfigAccounts) -> Self {
+        Self {
+            admin: *accounts.admin.key,
+            global_config: *accounts.global_config.key,
+            system_program: *accounts.system_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<UpdateCreatorFeeConfigKeys>
+for [AccountMeta; UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(keys: UpdateCreatorFeeConfigKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.admin,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN]>
+for UpdateCreatorFeeConfigKeys {
+    fn from(pubkeys: [Pubkey; UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            admin: pubkeys[0],
+            global_config: pubkeys[1],
+            system_program: pubkeys[2],
+            event_authority: pubkeys[3],
+            program: pubkeys[4],
+        }
+    }
+}
+impl<'info> From<UpdateCreatorFeeConfigAccounts<'_, 'info>>
+for [AccountInfo<'info>; UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(accounts: UpdateCreatorFeeConfigAccounts<'_, 'info>) -> Self {
+        [
+            accounts.admin.clone(),
+            accounts.global_config.clone(),
+            accounts.system_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN]>
+for UpdateCreatorFeeConfigAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            admin: &arr[0],
+            global_config: &arr[1],
+            system_program: &arr[2],
+            event_authority: &arr[3],
+            program: &arr[4],
+        }
+    }
+}
+pub const UPDATE_CREATOR_FEE_CONFIG_IX_DISCM: [u8; 8usize] = [
+    61, 175, 160, 249, 66, 66, 136, 175,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct UpdateCreatorFeeConfigIxArgs {
+    pub creator_fee_configurable: bool,
+    pub max_configurable_creator_fee_bps: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateCreatorFeeConfigIxData(pub UpdateCreatorFeeConfigIxArgs);
+impl From<UpdateCreatorFeeConfigIxArgs> for UpdateCreatorFeeConfigIxData {
+    fn from(args: UpdateCreatorFeeConfigIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl UpdateCreatorFeeConfigIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != UPDATE_CREATOR_FEE_CONFIG_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let creator_fee_configurable: bool = crate::borsh_de_or_default(&mut reader)?;
+        let max_configurable_creator_fee_bps: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        Ok(
+            Self(UpdateCreatorFeeConfigIxArgs {
+                creator_fee_configurable,
+                max_configurable_creator_fee_bps,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&UPDATE_CREATOR_FEE_CONFIG_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.creator_fee_configurable, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.max_configurable_creator_fee_bps,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn update_creator_fee_config_ix_with_program_id(
+    program_id: Pubkey,
+    keys: UpdateCreatorFeeConfigKeys,
+    args: UpdateCreatorFeeConfigIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; UPDATE_CREATOR_FEE_CONFIG_IX_ACCOUNTS_LEN] = keys.into();
+    let data: UpdateCreatorFeeConfigIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn update_creator_fee_config_ix(
+    keys: UpdateCreatorFeeConfigKeys,
+    args: UpdateCreatorFeeConfigIxArgs,
+) -> std::io::Result<Instruction> {
+    update_creator_fee_config_ix_with_program_id(PUMP_AMM_PROGRAM_ID, keys, args)
+}
+pub fn update_creator_fee_config_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: UpdateCreatorFeeConfigAccounts<'_, '_>,
+    args: UpdateCreatorFeeConfigIxArgs,
+) -> ProgramResult {
+    let keys: UpdateCreatorFeeConfigKeys = accounts.into();
+    let ix = update_creator_fee_config_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn update_creator_fee_config_invoke(
+    accounts: UpdateCreatorFeeConfigAccounts<'_, '_>,
+    args: UpdateCreatorFeeConfigIxArgs,
+) -> ProgramResult {
+    update_creator_fee_config_invoke_with_program_id(PUMP_AMM_PROGRAM_ID, accounts, args)
+}
+pub fn update_creator_fee_config_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: UpdateCreatorFeeConfigAccounts<'_, '_>,
+    args: UpdateCreatorFeeConfigIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: UpdateCreatorFeeConfigKeys = accounts.into();
+    let ix = update_creator_fee_config_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn update_creator_fee_config_invoke_signed(
+    accounts: UpdateCreatorFeeConfigAccounts<'_, '_>,
+    args: UpdateCreatorFeeConfigIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    update_creator_fee_config_invoke_signed_with_program_id(
+        PUMP_AMM_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn update_creator_fee_config_verify_account_keys(
+    accounts: UpdateCreatorFeeConfigAccounts<'_, '_>,
+    keys: UpdateCreatorFeeConfigKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.admin.key, keys.admin),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn update_creator_fee_config_verify_writable_privileges<'me, 'info>(
+    accounts: UpdateCreatorFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.admin, accounts.global_config] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn update_creator_fee_config_verify_signer_privileges<'me, 'info>(
+    accounts: UpdateCreatorFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn update_creator_fee_config_verify_account_privileges<'me, 'info>(
+    accounts: UpdateCreatorFeeConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    update_creator_fee_config_verify_writable_privileges(accounts)?;
+    update_creator_fee_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const UPDATE_FEE_CONFIG_IX_ACCOUNTS_LEN: usize = 4;

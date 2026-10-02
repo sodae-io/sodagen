@@ -83,6 +83,16 @@ pub enum MigrationKind {
     PSol,
     WSol,
 }
+impl TryFrom<u8> for MigrationKind {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::PSol),
+            1u8 => Ok(Self::WSol),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,

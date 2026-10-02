@@ -18,6 +18,17 @@ pub enum CollectFeeOn {
     Token0Only,
     Token1Only,
 }
+impl TryFrom<u8> for CollectFeeOn {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::FromInput),
+            1u8 => Ok(Self::Token0Only),
+            2u8 => Ok(Self::Token1Only),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,

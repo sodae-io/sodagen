@@ -41,6 +41,45 @@ impl ApprovalMessage {
     serde::Serialize,
     serde::Deserialize
 )]
+pub enum ConfigurableVaultKind {
+    #[default]
+    OfferFee,
+    ManagementFee,
+    PerformanceFee,
+    PropAmmBuyFee,
+    OfferProceeds,
+    PropAmmProceeds,
+    PermissionlessOfferFee,
+    RedemptionFee,
+    PropAmmSellFee,
+}
+impl TryFrom<u8> for ConfigurableVaultKind {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::OfferFee),
+            1u8 => Ok(Self::ManagementFee),
+            2u8 => Ok(Self::PerformanceFee),
+            3u8 => Ok(Self::PropAmmBuyFee),
+            4u8 => Ok(Self::OfferProceeds),
+            5u8 => Ok(Self::PropAmmProceeds),
+            6u8 => Ok(Self::PermissionlessOfferFee),
+            7u8 => Ok(Self::RedemptionFee),
+            8u8 => Ok(Self::PropAmmSellFee),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub struct OfferVector {
     pub start_time: u64,
     pub base_time: u64,

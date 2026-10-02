@@ -17,6 +17,16 @@ pub enum ConfigStatus {
     Paused,
     Active,
 }
+impl TryFrom<u8> for ConfigStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Paused),
+            1u8 => Ok(Self::Active),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -95,6 +105,27 @@ impl OptionBool {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let field_0: bool = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { field_0 })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct OptionU64 {
+    pub field_0: u64,
+}
+impl OptionU64 {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let field_0: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self { field_0 })
     }

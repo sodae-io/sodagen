@@ -51,12 +51,12 @@ pub struct Balance {
     pub bank_pk: Pubkey,
     pub bank_asset_tag: u8,
     pub tag: u16,
-    pub _pad0: [u8; 4],
+    pub pad0: [u8; 4],
     pub asset_shares: WrappedI80F48,
     pub liability_shares: WrappedI80F48,
     pub emissions_outstanding: WrappedI80F48,
     pub last_update: u64,
-    pub _padding: [u64; 1],
+    pub padding: [u64; 1],
 }
 impl Balance {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -65,7 +65,7 @@ impl Balance {
         let bank_pk: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let bank_asset_tag: u8 = crate::borsh_de_or_default(&mut reader)?;
         let tag: u16 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let asset_shares = if reader.is_empty() {
             Default::default()
         } else {
@@ -82,19 +82,19 @@ impl Balance {
             <WrappedI80F48>::deserialize(&mut reader)?
         };
         let last_update: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u64; 1] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 1] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             active,
             bank_pk,
             bank_asset_tag,
             tag,
-            _pad0,
+            pad0,
             asset_shares,
             liability_shares,
             emissions_outstanding,
             last_update,
-            _padding,
+            padding,
         })
     }
 }
@@ -118,7 +118,7 @@ pub struct BankCache {
     pub last_oracle_price_timestamp: i64,
     pub last_oracle_price_confidence: WrappedI80F48,
     pub liq_cache_flags: u8,
-    pub _padding: [u8; 23],
+    pub padding: [u8; 23],
     pub liquidation_price_rt: WrappedI80F48,
     pub liquidation_price_rt_confidence: WrappedI80F48,
     pub liquidation_price_twap: WrappedI80F48,
@@ -148,7 +148,7 @@ impl BankCache {
             <WrappedI80F48>::deserialize(&mut reader)?
         };
         let liq_cache_flags: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 23] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 23] = crate::borsh_de_or_default(&mut reader)?;
         let liquidation_price_rt = if reader.is_empty() {
             Default::default()
         } else {
@@ -180,7 +180,7 @@ impl BankCache {
             last_oracle_price_timestamp,
             last_oracle_price_confidence,
             liq_cache_flags,
-            _padding,
+            padding,
             liquidation_price_rt,
             liquidation_price_rt_confidence,
             liquidation_price_twap,
@@ -208,18 +208,18 @@ pub struct BankConfig {
     pub operational_state: BankOperationalState,
     pub oracle_setup: OracleSetup,
     pub oracle_keys: [Pubkey; 5],
-    pub _pad0: [u8; 6],
+    pub pad0: [u8; 6],
     pub borrow_limit: u64,
     pub risk_tier: RiskTier,
     pub asset_tag: u8,
     pub config_flags: u8,
-    pub _pad1: [u8; 5],
+    pub pad1: [u8; 5],
     pub total_asset_value_init_limit: u64,
     pub oracle_max_age: u16,
-    pub _padding0: [u8; 2],
+    pub padding0: [u8; 2],
     pub oracle_max_confidence: u32,
     pub fixed_price: WrappedI80F48,
-    pub _padding1: [u8; 16],
+    pub padding1: [u8; 16],
 }
 impl BankConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -255,22 +255,22 @@ impl BankConfig {
         )?;
         let oracle_setup: OracleSetup = crate::borsh_de_or_default(&mut reader)?;
         let oracle_keys: [Pubkey; 5] = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
         let borrow_limit: u64 = crate::borsh_de_or_default(&mut reader)?;
         let risk_tier: RiskTier = crate::borsh_de_or_default(&mut reader)?;
         let asset_tag: u8 = crate::borsh_de_or_default(&mut reader)?;
         let config_flags: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad1: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let pad1: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
         let total_asset_value_init_limit: u64 = crate::borsh_de_or_default(&mut reader)?;
         let oracle_max_age: u16 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding0: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let padding0: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
         let oracle_max_confidence: u32 = crate::borsh_de_or_default(&mut reader)?;
         let fixed_price = if reader.is_empty() {
             Default::default()
         } else {
             <WrappedI80F48>::deserialize(&mut reader)?
         };
-        let _padding1: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+        let padding1: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             asset_weight_init,
@@ -282,18 +282,18 @@ impl BankConfig {
             operational_state,
             oracle_setup,
             oracle_keys,
-            _pad0,
+            pad0,
             borrow_limit,
             risk_tier,
             asset_tag,
             config_flags,
-            _pad1,
+            pad1,
             total_asset_value_init_limit,
             oracle_max_age,
-            _padding0,
+            padding0,
             oracle_max_confidence,
             fixed_price,
-            _padding1,
+            padding1,
         })
     }
 }
@@ -319,7 +319,7 @@ pub struct BankConfigCompact {
     pub risk_tier: RiskTier,
     pub asset_tag: u8,
     pub config_flags: u8,
-    pub _pad0: [u8; 5],
+    pub pad0: [u8; 5],
     pub total_asset_value_init_limit: u64,
     pub oracle_max_age: u16,
     pub oracle_max_confidence: u32,
@@ -360,7 +360,7 @@ impl BankConfigCompact {
         let risk_tier: RiskTier = crate::borsh_de_or_default(&mut reader)?;
         let asset_tag: u8 = crate::borsh_de_or_default(&mut reader)?;
         let config_flags: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
         let total_asset_value_init_limit: u64 = crate::borsh_de_or_default(&mut reader)?;
         let oracle_max_age: u16 = crate::borsh_de_or_default(&mut reader)?;
         let oracle_max_confidence: u32 = crate::borsh_de_or_default(&mut reader)?;
@@ -377,7 +377,7 @@ impl BankConfigCompact {
             risk_tier,
             asset_tag,
             config_flags,
-            _pad0,
+            pad0,
             total_asset_value_init_limit,
             oracle_max_age,
             oracle_max_confidence,
@@ -488,6 +488,18 @@ pub enum BankOperationalState {
     Operational,
     ReduceOnly,
     KilledByBankruptcy,
+}
+impl TryFrom<u8> for BankOperationalState {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Paused),
+            1u8 => Ok(Self::Operational),
+            2u8 => Ok(Self::ReduceOnly),
+            3u8 => Ok(Self::KilledByBankruptcy),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -699,7 +711,7 @@ impl EmodeSettings {
 pub struct ExecuteOrderBalanceRecord {
     pub bank: Pubkey,
     pub is_asset: u8,
-    pub _pad0: [u8; 5],
+    pub pad0: [u8; 5],
     pub tag: u16,
     pub shares: WrappedI80F48,
 }
@@ -708,7 +720,7 @@ impl ExecuteOrderBalanceRecord {
         let mut reader: &[u8] = *__buf;
         let bank: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let is_asset: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
         let tag: u16 = crate::borsh_de_or_default(&mut reader)?;
         let shares = if reader.is_empty() {
             Default::default()
@@ -719,7 +731,7 @@ impl ExecuteOrderBalanceRecord {
         Ok(Self {
             bank,
             is_asset,
-            _pad0,
+            pad0,
             tag,
             shares,
         })
@@ -940,10 +952,10 @@ pub struct InterestRateConfig {
     pub hundred_util_rate: u32,
     pub points: [RatePoint; 5],
     pub curve_type: u8,
-    pub _pad0: [u8; 7],
-    pub _padding1: [u8; 32],
-    pub _padding2: [u8; 16],
-    pub _padding3: [u8; 8],
+    pub pad0: [u8; 7],
+    pub padding1: [u8; 32],
+    pub padding2: [u8; 16],
+    pub padding3: [u8; 8],
 }
 impl InterestRateConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -992,10 +1004,10 @@ impl InterestRateConfig {
         let hundred_util_rate: u32 = crate::borsh_de_or_default(&mut reader)?;
         let points: [RatePoint; 5] = crate::borsh_de_or_default(&mut reader)?;
         let curve_type: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding2: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let padding1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let padding2: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+        let padding3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             optimal_utilization_rate,
@@ -1010,10 +1022,10 @@ impl InterestRateConfig {
             hundred_util_rate,
             points,
             curve_type,
-            _pad0,
-            _padding1,
-            _padding2,
-            _padding3,
+            pad0,
+            padding1,
+            padding2,
+            padding3,
         })
     }
 }
@@ -1269,22 +1281,22 @@ impl KaminoConfigCompact {
 pub struct LendingAccount {
     pub balances: [Balance; 16],
     pub last_tag_used: u16,
-    pub _pad1: [u8; 6],
-    pub _padding: [u64; 7],
+    pub pad1: [u8; 6],
+    pub padding: [u64; 7],
 }
 impl LendingAccount {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let balances: [Balance; 16] = crate::borsh_de_or_default(&mut reader)?;
         let last_tag_used: u16 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad1: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u64; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let pad1: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 7] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             balances,
             last_tag_used,
-            _pad1,
-            _padding,
+            pad1,
+            padding,
         })
     }
 }
@@ -1335,8 +1347,8 @@ pub struct LiquidationCache {
     pub liability_value_maint: WrappedI80F48,
     pub asset_value_equity: WrappedI80F48,
     pub liability_value_equity: WrappedI80F48,
-    pub _placeholder: u64,
-    pub _reserved0: [u8; 32],
+    pub placeholder: u64,
+    pub reserved0: [u8; 32],
 }
 impl LiquidationCache {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1361,16 +1373,16 @@ impl LiquidationCache {
         } else {
             <WrappedI80F48>::deserialize(&mut reader)?
         };
-        let _placeholder: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved0: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let placeholder: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let reserved0: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             asset_value_maint,
             liability_value_maint,
             asset_value_equity,
             liability_value_equity,
-            _placeholder,
-            _reserved0,
+            placeholder,
+            reserved0,
         })
     }
 }
@@ -1389,7 +1401,7 @@ pub struct LiquidationEntry {
     pub liab_amount_repaid: [u8; 8],
     pub placeholder0: u64,
     pub timestamp: i64,
-    pub _reserved0: [u8; 16],
+    pub reserved0: [u8; 16],
 }
 impl LiquidationEntry {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1398,14 +1410,14 @@ impl LiquidationEntry {
         let liab_amount_repaid: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let placeholder0: u64 = crate::borsh_de_or_default(&mut reader)?;
         let timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved0: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved0: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             asset_amount_seized,
             liab_amount_repaid,
             placeholder0,
             timestamp,
-            _reserved0,
+            reserved0,
         })
     }
 }
@@ -1477,6 +1489,32 @@ pub enum OracleSetup {
     JuplendSwitchboardPull,
     FixedJuplend,
 }
+impl TryFrom<u8> for OracleSetup {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::PythLegacy),
+            2u8 => Ok(Self::SwitchboardV2),
+            3u8 => Ok(Self::PythPushOracle),
+            4u8 => Ok(Self::SwitchboardPull),
+            5u8 => Ok(Self::StakedWithPythPush),
+            6u8 => Ok(Self::KaminoPythPush),
+            7u8 => Ok(Self::KaminoSwitchboardPull),
+            8u8 => Ok(Self::Fixed),
+            9u8 => Ok(Self::DriftPythPull),
+            10u8 => Ok(Self::DriftSwitchboardPull),
+            11u8 => Ok(Self::SolendPythPull),
+            12u8 => Ok(Self::SolendSwitchboardPull),
+            13u8 => Ok(Self::FixedKamino),
+            14u8 => Ok(Self::FixedDrift),
+            15u8 => Ok(Self::JuplendPythPull),
+            16u8 => Ok(Self::JuplendSwitchboardPull),
+            17u8 => Ok(Self::FixedJuplend),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1507,6 +1545,17 @@ pub enum OrderTriggerType {
     TakeProfit,
     Both,
 }
+impl TryFrom<u8> for OrderTriggerType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::StopLoss),
+            1u8 => Ok(Self::TakeProfit),
+            2u8 => Ok(Self::Both),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1521,10 +1570,10 @@ pub struct PanicState {
     pub pause_flags: u8,
     pub daily_pause_count: u8,
     pub consecutive_pause_count: u8,
-    pub _reserved: [u8; 5],
+    pub reserved: [u8; 5],
     pub pause_start_timestamp: i64,
     pub last_daily_reset_timestamp: i64,
-    pub _reserved_space: [u8; 8],
+    pub reserved_space: [u8; 8],
 }
 impl PanicState {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1532,19 +1581,19 @@ impl PanicState {
         let pause_flags: u8 = crate::borsh_de_or_default(&mut reader)?;
         let daily_pause_count: u8 = crate::borsh_de_or_default(&mut reader)?;
         let consecutive_pause_count: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
         let pause_start_timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
         let last_daily_reset_timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved_space: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved_space: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pause_flags,
             daily_pause_count,
             consecutive_pause_count,
-            _reserved,
+            reserved,
             pause_start_timestamp,
             last_daily_reset_timestamp,
-            _reserved_space,
+            reserved_space,
         })
     }
 }
@@ -1560,7 +1609,7 @@ impl PanicState {
 )]
 pub struct PanicStateCache {
     pub pause_flags: u8,
-    pub _reserved: [u8; 7],
+    pub reserved: [u8; 7],
     pub pause_start_timestamp: i64,
     pub last_cache_update: i64,
 }
@@ -1568,13 +1617,13 @@ impl PanicStateCache {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let pause_flags: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         let pause_start_timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
         let last_cache_update: i64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pause_flags,
-            _reserved,
+            reserved,
             pause_start_timestamp,
             last_cache_update,
         })
@@ -1653,6 +1702,16 @@ pub enum RiskTier {
     Collateral,
     Isolated,
 }
+impl TryFrom<u8> for RiskTier {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Collateral),
+            1u8 => Ok(Self::Isolated),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1730,6 +1789,16 @@ pub enum SpotBalanceType {
     #[default]
     Deposit,
     Borrow,
+}
+impl TryFrom<u8> for SpotBalanceType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Deposit),
+            1u8 => Ok(Self::Borrow),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1889,6 +1958,20 @@ pub enum UserStatus {
     ReduceOnly,
     AdvancedLp,
     ProtectedMakerOrders,
+}
+impl TryFrom<u8> for UserStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Active),
+            1u8 => Ok(Self::BeingLiquidated),
+            2u8 => Ok(Self::Bankrupt),
+            3u8 => Ok(Self::ReduceOnly),
+            4u8 => Ok(Self::AdvancedLp),
+            5u8 => Ok(Self::ProtectedMakerOrders),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

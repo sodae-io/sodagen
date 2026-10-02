@@ -389,7 +389,7 @@ pub struct PoolState {
     pub observation_key: Pubkey,
     pub auth_bump: u8,
     pub status: u8,
-    pub _padding2: u8,
+    pub padding2: u8,
     pub mint_0_decimals: u8,
     pub mint_1_decimals: u8,
     pub lp_supply: u64,
@@ -416,7 +416,7 @@ pub struct PoolState {
     pub h13: u32,
     pub h12: u32,
     pub h10: u32,
-    pub _padding3: [u8; 8],
+    pub padding3: [u8; 8],
     pub token_0_amount_in_kamino: u64,
     pub token_1_amount_in_kamino: u64,
     pub withdrawn_kamino_profit_token_0: u64,
@@ -447,7 +447,7 @@ impl PoolState {
         let observation_key: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let auth_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
         let status: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding2: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding2: u8 = crate::borsh_de_or_default(&mut reader)?;
         let mint_0_decimals: u8 = crate::borsh_de_or_default(&mut reader)?;
         let mint_1_decimals: u8 = crate::borsh_de_or_default(&mut reader)?;
         let lp_supply: u64 = crate::borsh_de_or_default(&mut reader)?;
@@ -478,7 +478,7 @@ impl PoolState {
         let h13: u32 = crate::borsh_de_or_default(&mut reader)?;
         let h12: u32 = crate::borsh_de_or_default(&mut reader)?;
         let h10: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let token_0_amount_in_kamino: u64 = crate::borsh_de_or_default(&mut reader)?;
         let token_1_amount_in_kamino: u64 = crate::borsh_de_or_default(&mut reader)?;
         let withdrawn_kamino_profit_token_0: u64 = crate::borsh_de_or_default(
@@ -515,7 +515,7 @@ impl PoolState {
             observation_key,
             auth_bump,
             status,
-            _padding2,
+            padding2,
             mint_0_decimals,
             mint_1_decimals,
             lp_supply,
@@ -542,7 +542,7 @@ impl PoolState {
             h13,
             h12,
             h10,
-            _padding3,
+            padding3,
             token_0_amount_in_kamino,
             token_1_amount_in_kamino,
             withdrawn_kamino_profit_token_0,
@@ -572,7 +572,7 @@ impl PoolState {
         borsh::BorshSerialize::serialize(&self.observation_key, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.auth_bump, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.status, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding2, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.mint_0_decimals, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.mint_1_decimals, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lp_supply, &mut writer)?;
@@ -605,7 +605,7 @@ impl PoolState {
         borsh::BorshSerialize::serialize(&self.h13, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.h12, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.h10, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding3, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding3, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_0_amount_in_kamino, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_1_amount_in_kamino, &mut writer)?;
         borsh::BorshSerialize::serialize(
@@ -749,8 +749,8 @@ pub struct UserPoolLiquidity {
     pub token_0_withdrawn: u128,
     pub token_1_withdrawn: u128,
     pub lp_tokens_owned: u128,
-    pub _p1: u64,
-    pub _p2: u8,
+    pub p1: u64,
+    pub p2: u8,
     pub first_investment_at: u64,
     pub partner: Option<Pubkey>,
     pub padding: [u8; 15],
@@ -765,8 +765,8 @@ impl UserPoolLiquidity {
         let token_0_withdrawn: u128 = crate::borsh_de_or_default(&mut reader)?;
         let token_1_withdrawn: u128 = crate::borsh_de_or_default(&mut reader)?;
         let lp_tokens_owned: u128 = crate::borsh_de_or_default(&mut reader)?;
-        let _p1: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _p2: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let p1: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let p2: u8 = crate::borsh_de_or_default(&mut reader)?;
         let first_investment_at: u64 = crate::borsh_de_or_default(&mut reader)?;
         let partner: Option<Pubkey> = crate::borsh_de_or_default(&mut reader)?;
         let padding: [u8; 15] = crate::borsh_de_or_default(&mut reader)?;
@@ -779,8 +779,8 @@ impl UserPoolLiquidity {
             token_0_withdrawn,
             token_1_withdrawn,
             lp_tokens_owned,
-            _p1,
-            _p2,
+            p1,
+            p2,
             first_investment_at,
             partner,
             padding,
@@ -794,8 +794,8 @@ impl UserPoolLiquidity {
         borsh::BorshSerialize::serialize(&self.token_0_withdrawn, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_1_withdrawn, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lp_tokens_owned, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._p1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._p2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.p1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.p2, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.first_investment_at, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.partner, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;

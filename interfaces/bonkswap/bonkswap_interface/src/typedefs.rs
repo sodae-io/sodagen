@@ -80,3 +80,14 @@ pub enum FarmType {
     Dual,
     Triple,
 }
+impl TryFrom<u8> for FarmType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Single),
+            1u8 => Ok(Self::Dual),
+            2u8 => Ok(Self::Triple),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}

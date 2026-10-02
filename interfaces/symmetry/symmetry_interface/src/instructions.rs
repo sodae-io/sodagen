@@ -51,6 +51,8 @@ pub enum SymmetryProgramIx {
     CloseOpenOrders,
     CreateFundTokenMintMetadata(CreateFundTokenMintMetadataIxArgs),
     UpdateFundTokenMintMetadata(UpdateFundTokenMintMetadataIxArgs),
+    FreezeProgram,
+    UnfreezeProgram,
 }
 impl SymmetryProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
@@ -535,6 +537,12 @@ impl SymmetryProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&FREEZE_PROGRAM_IX_DISCM) {
+            return Ok(Self::FreezeProgram);
+        }
+        if buf.starts_with(&UNFREEZE_PROGRAM_IX_DISCM) {
+            return Ok(Self::UnfreezeProgram);
+        }
         Err(std::io::Error::from(std::io::ErrorKind::InvalidData))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -831,6 +839,8 @@ impl SymmetryProgramIx {
                 borsh::BorshSerialize::serialize(&args.params, &mut writer)?;
                 Ok(())
             }
+            Self::FreezeProgram => writer.write_all(&FREEZE_PROGRAM_IX_DISCM),
+            Self::UnfreezeProgram => writer.write_all(&UNFREEZE_PROGRAM_IX_DISCM),
         }
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -11457,5 +11467,359 @@ pub fn update_fund_token_mint_metadata_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     update_fund_token_mint_metadata_verify_writable_privileges(accounts)?;
     update_fund_token_mint_metadata_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const FREEZE_PROGRAM_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct FreezeProgramAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub token_list: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct FreezeProgramKeys {
+    pub owner: Pubkey,
+    pub token_list: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<FreezeProgramAccounts<'_, '_>> for FreezeProgramKeys {
+    fn from(accounts: FreezeProgramAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            token_list: *accounts.token_list.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<FreezeProgramKeys> for [AccountMeta; FREEZE_PROGRAM_IX_ACCOUNTS_LEN] {
+    fn from(keys: FreezeProgramKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_list,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; FREEZE_PROGRAM_IX_ACCOUNTS_LEN]> for FreezeProgramKeys {
+    fn from(pubkeys: [Pubkey; FREEZE_PROGRAM_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            token_list: pubkeys[1],
+            system_program: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<FreezeProgramAccounts<'_, 'info>>
+for [AccountInfo<'info>; FREEZE_PROGRAM_IX_ACCOUNTS_LEN] {
+    fn from(accounts: FreezeProgramAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.token_list.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; FREEZE_PROGRAM_IX_ACCOUNTS_LEN]>
+for FreezeProgramAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; FREEZE_PROGRAM_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: &arr[0],
+            token_list: &arr[1],
+            system_program: &arr[2],
+        }
+    }
+}
+pub const FREEZE_PROGRAM_IX_DISCM: [u8; 8usize] = [197, 134, 244, 37, 49, 38, 23, 79];
+#[derive(Clone, Debug, PartialEq)]
+pub struct FreezeProgramIxData;
+impl FreezeProgramIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != FREEZE_PROGRAM_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&FREEZE_PROGRAM_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn freeze_program_ix_with_program_id(
+    program_id: Pubkey,
+    keys: FreezeProgramKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; FREEZE_PROGRAM_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: FreezeProgramIxData.try_to_vec()?,
+    })
+}
+pub fn freeze_program_ix(keys: FreezeProgramKeys) -> std::io::Result<Instruction> {
+    freeze_program_ix_with_program_id(SYMMETRY_PROGRAM_ID, keys)
+}
+pub fn freeze_program_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: FreezeProgramAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: FreezeProgramKeys = accounts.into();
+    let ix = freeze_program_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn freeze_program_invoke(accounts: FreezeProgramAccounts<'_, '_>) -> ProgramResult {
+    freeze_program_invoke_with_program_id(SYMMETRY_PROGRAM_ID, accounts)
+}
+pub fn freeze_program_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: FreezeProgramAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: FreezeProgramKeys = accounts.into();
+    let ix = freeze_program_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn freeze_program_invoke_signed(
+    accounts: FreezeProgramAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    freeze_program_invoke_signed_with_program_id(SYMMETRY_PROGRAM_ID, accounts, seeds)
+}
+pub fn freeze_program_verify_account_keys(
+    accounts: FreezeProgramAccounts<'_, '_>,
+    keys: FreezeProgramKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.token_list.key, keys.token_list),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn freeze_program_verify_writable_privileges<'me, 'info>(
+    accounts: FreezeProgramAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.owner, accounts.token_list] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn freeze_program_verify_signer_privileges<'me, 'info>(
+    accounts: FreezeProgramAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn freeze_program_verify_account_privileges<'me, 'info>(
+    accounts: FreezeProgramAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    freeze_program_verify_writable_privileges(accounts)?;
+    freeze_program_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct UnfreezeProgramAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub token_list: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct UnfreezeProgramKeys {
+    pub owner: Pubkey,
+    pub token_list: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<UnfreezeProgramAccounts<'_, '_>> for UnfreezeProgramKeys {
+    fn from(accounts: UnfreezeProgramAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            token_list: *accounts.token_list.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<UnfreezeProgramKeys> for [AccountMeta; UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN] {
+    fn from(keys: UnfreezeProgramKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_list,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN]> for UnfreezeProgramKeys {
+    fn from(pubkeys: [Pubkey; UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            token_list: pubkeys[1],
+            system_program: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<UnfreezeProgramAccounts<'_, 'info>>
+for [AccountInfo<'info>; UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN] {
+    fn from(accounts: UnfreezeProgramAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.token_list.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN]>
+for UnfreezeProgramAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: &arr[0],
+            token_list: &arr[1],
+            system_program: &arr[2],
+        }
+    }
+}
+pub const UNFREEZE_PROGRAM_IX_DISCM: [u8; 8usize] = [132, 209, 212, 32, 49, 219, 52, 33];
+#[derive(Clone, Debug, PartialEq)]
+pub struct UnfreezeProgramIxData;
+impl UnfreezeProgramIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != UNFREEZE_PROGRAM_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&UNFREEZE_PROGRAM_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn unfreeze_program_ix_with_program_id(
+    program_id: Pubkey,
+    keys: UnfreezeProgramKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; UNFREEZE_PROGRAM_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: UnfreezeProgramIxData.try_to_vec()?,
+    })
+}
+pub fn unfreeze_program_ix(keys: UnfreezeProgramKeys) -> std::io::Result<Instruction> {
+    unfreeze_program_ix_with_program_id(SYMMETRY_PROGRAM_ID, keys)
+}
+pub fn unfreeze_program_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: UnfreezeProgramAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: UnfreezeProgramKeys = accounts.into();
+    let ix = unfreeze_program_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn unfreeze_program_invoke(
+    accounts: UnfreezeProgramAccounts<'_, '_>,
+) -> ProgramResult {
+    unfreeze_program_invoke_with_program_id(SYMMETRY_PROGRAM_ID, accounts)
+}
+pub fn unfreeze_program_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: UnfreezeProgramAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: UnfreezeProgramKeys = accounts.into();
+    let ix = unfreeze_program_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn unfreeze_program_invoke_signed(
+    accounts: UnfreezeProgramAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    unfreeze_program_invoke_signed_with_program_id(SYMMETRY_PROGRAM_ID, accounts, seeds)
+}
+pub fn unfreeze_program_verify_account_keys(
+    accounts: UnfreezeProgramAccounts<'_, '_>,
+    keys: UnfreezeProgramKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.token_list.key, keys.token_list),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn unfreeze_program_verify_writable_privileges<'me, 'info>(
+    accounts: UnfreezeProgramAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.owner, accounts.token_list] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn unfreeze_program_verify_signer_privileges<'me, 'info>(
+    accounts: UnfreezeProgramAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn unfreeze_program_verify_account_privileges<'me, 'info>(
+    accounts: UnfreezeProgramAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    unfreeze_program_verify_writable_privileges(accounts)?;
+    unfreeze_program_verify_signer_privileges(accounts)?;
     Ok(())
 }

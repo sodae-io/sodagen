@@ -44,7 +44,7 @@ pub struct LiquidityPoolState {
     pub creator_trading_fee_claim_status: u8,
     pub fee_configuration_mode: u8,
     pub is_migrated: u8,
-    pub _pad: [u8; 13],
+    pub pad: [u8; 13],
     pub slot_offset_based_fees: LiquidityPoolSlotOffsetBasedFees,
     pub creator_trading_fee_receiver: Pubkey,
 }
@@ -128,7 +128,7 @@ impl LiquidityPoolState {
         )?;
         let fee_configuration_mode: u8 = crate::borsh_de_or_default(&mut reader)?;
         let is_migrated: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad: [u8; 13] = crate::borsh_de_or_default(&mut reader)?;
+        let pad: [u8; 13] = crate::borsh_de_or_default(&mut reader)?;
         let slot_offset_based_fees = <LiquidityPoolSlotOffsetBasedFees>::deserialize(
             &mut reader,
         )?;
@@ -166,7 +166,7 @@ impl LiquidityPoolState {
             creator_trading_fee_claim_status,
             fee_configuration_mode,
             is_migrated,
-            _pad,
+            pad,
             slot_offset_based_fees,
             creator_trading_fee_receiver,
         })
@@ -225,7 +225,7 @@ impl LiquidityPoolState {
         )?;
         borsh::BorshSerialize::serialize(&self.fee_configuration_mode, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.is_migrated, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._pad, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.slot_offset_based_fees, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.creator_trading_fee_receiver,
@@ -398,7 +398,7 @@ pub struct ProtocolConfig {
     pub sandwich_resistence_enabled: u8,
     pub token_a_decimals: u8,
     pub migration_market_cap_threshold: u16,
-    pub _pad: [u8; 8],
+    pub pad: [u8; 8],
     pub max_creator_trading_fee: u32,
     pub slot_offset_based_fees: LiquidityPoolSlotOffsetBasedFees,
 }
@@ -436,7 +436,7 @@ impl ProtocolConfig {
         let migration_market_cap_threshold: u16 = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let _pad: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let pad: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let max_creator_trading_fee: u32 = crate::borsh_de_or_default(&mut reader)?;
         let slot_offset_based_fees = <LiquidityPoolSlotOffsetBasedFees>::deserialize(
             &mut reader,
@@ -466,7 +466,7 @@ impl ProtocolConfig {
             sandwich_resistence_enabled,
             token_a_decimals,
             migration_market_cap_threshold,
-            _pad,
+            pad,
             max_creator_trading_fee,
             slot_offset_based_fees,
         })
@@ -504,7 +504,7 @@ impl ProtocolConfig {
             &self.migration_market_cap_threshold,
             &mut writer,
         )?;
-        borsh::BorshSerialize::serialize(&self._pad, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.max_creator_trading_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.slot_offset_based_fees, &mut writer)?;
         Ok(())

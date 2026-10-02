@@ -220,6 +220,18 @@ pub enum OracleType {
     Switchboardv2,
     Invalid,
 }
+impl TryFrom<u8> for OracleType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::Pyth),
+            2u8 => Ok(Self::Switchboardv2),
+            3u8 => Ok(Self::Invalid),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -238,6 +250,19 @@ pub enum AssetType {
     Stable,
     Invalid,
 }
+impl TryFrom<u8> for AssetType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::BlueChip),
+            2u8 => Ok(Self::Volatile),
+            3u8 => Ok(Self::Stable),
+            4u8 => Ok(Self::Invalid),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -253,6 +278,17 @@ pub enum ConfigSSLPoolStatus {
     Active,
     Suspended,
     Locked,
+}
+impl TryFrom<u8> for ConfigSSLPoolStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Active),
+            1u8 => Ok(Self::Suspended),
+            2u8 => Ok(Self::Locked),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -271,6 +307,18 @@ pub enum PricingAlgo {
     Version3,
     Invalid,
 }
+impl TryFrom<u8> for PricingAlgo {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Version1),
+            1u8 => Ok(Self::Version2),
+            2u8 => Ok(Self::Version3),
+            3u8 => Ok(Self::Invalid),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -288,4 +336,17 @@ pub enum SSLPoolStatus {
     Suspended,
     Locked,
     Invalid,
+}
+impl TryFrom<u8> for SSLPoolStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::Active),
+            2u8 => Ok(Self::Suspended),
+            3u8 => Ok(Self::Locked),
+            4u8 => Ok(Self::Invalid),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

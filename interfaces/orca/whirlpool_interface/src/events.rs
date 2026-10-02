@@ -157,6 +157,150 @@ impl LiquidityIncreasedEvent {
         Ok(data)
     }
 }
+pub const LIQUIDITY_REPOSITIONED_EVENT_DISCM: [u8; 8] = [
+    95, 130, 181, 132, 251, 50, 195, 38,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct LiquidityRepositioned {
+    pub whirlpool: Pubkey,
+    pub position: Pubkey,
+    pub existing_range_tick_lower_index: i32,
+    pub existing_range_tick_upper_index: i32,
+    pub new_range_tick_lower_index: i32,
+    pub new_range_tick_upper_index: i32,
+    pub existing_range_liquidity: u128,
+    pub new_range_liquidity: u128,
+    pub existing_range_token_a_amount: u64,
+    pub existing_range_token_b_amount: u64,
+    pub new_range_token_a_amount: u64,
+    pub new_range_token_b_amount: u64,
+    pub token_a_transfer_amount: u64,
+    pub token_a_transfer_fee: u64,
+    pub is_token_a_transfer_from_owner: bool,
+    pub token_b_transfer_amount: u64,
+    pub token_b_transfer_fee: u64,
+    pub is_token_b_transfer_from_owner: bool,
+}
+impl LiquidityRepositioned {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let whirlpool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let position: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let existing_range_tick_lower_index: i32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let existing_range_tick_upper_index: i32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let new_range_tick_lower_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let new_range_tick_upper_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let existing_range_liquidity: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let new_range_liquidity: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let existing_range_token_a_amount: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let existing_range_token_b_amount: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let new_range_token_a_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let new_range_token_b_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let token_a_transfer_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let token_a_transfer_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let is_token_a_transfer_from_owner: bool = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let token_b_transfer_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let token_b_transfer_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let is_token_b_transfer_from_owner: bool = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        *__buf = reader;
+        Ok(Self {
+            whirlpool,
+            position,
+            existing_range_tick_lower_index,
+            existing_range_tick_upper_index,
+            new_range_tick_lower_index,
+            new_range_tick_upper_index,
+            existing_range_liquidity,
+            new_range_liquidity,
+            existing_range_token_a_amount,
+            existing_range_token_b_amount,
+            new_range_token_a_amount,
+            new_range_token_b_amount,
+            token_a_transfer_amount,
+            token_a_transfer_fee,
+            is_token_a_transfer_from_owner,
+            token_b_transfer_amount,
+            token_b_transfer_fee,
+            is_token_b_transfer_from_owner,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.whirlpool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.position, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.existing_range_tick_lower_index,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.existing_range_tick_upper_index,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.new_range_tick_lower_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.new_range_tick_upper_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.existing_range_liquidity, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.new_range_liquidity, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.existing_range_token_a_amount,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.existing_range_token_b_amount,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.new_range_token_a_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.new_range_token_b_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_a_transfer_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_a_transfer_fee, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.is_token_a_transfer_from_owner,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.token_b_transfer_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_b_transfer_fee, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.is_token_b_transfer_from_owner,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct LiquidityRepositionedEvent(pub LiquidityRepositioned);
+impl LiquidityRepositionedEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != LIQUIDITY_REPOSITIONED_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = LiquidityRepositioned::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&LIQUIDITY_REPOSITIONED_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const POOL_INITIALIZED_EVENT_DISCM: [u8; 8] = [100, 118, 173, 87, 12, 198, 254, 229];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct PoolInitialized {
@@ -229,6 +373,64 @@ impl PoolInitializedEvent {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&POOL_INITIALIZED_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const POSITION_OPENED_EVENT_DISCM: [u8; 8] = [
+    237, 175, 243, 230, 147, 117, 101, 121,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct PositionOpened {
+    pub whirlpool: Pubkey,
+    pub position: Pubkey,
+    pub tick_lower_index: i32,
+    pub tick_upper_index: i32,
+}
+impl PositionOpened {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let whirlpool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let position: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let tick_lower_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let tick_upper_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            whirlpool,
+            position,
+            tick_lower_index,
+            tick_upper_index,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.whirlpool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.position, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_lower_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_upper_index, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct PositionOpenedEvent(pub PositionOpened);
+impl PositionOpenedEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != POSITION_OPENED_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = PositionOpened::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&POSITION_OPENED_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

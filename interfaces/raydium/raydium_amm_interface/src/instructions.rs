@@ -26,6 +26,7 @@ pub enum RaydiumAmmProgramIx {
     UpdateConfigAccount(UpdateConfigAccountIxArgs),
     SwapBaseInV2(SwapBaseInV2IxArgs),
     SwapBaseOutV2(SwapBaseOutV2IxArgs),
+    WithdrawExcessLamports,
 }
 impl RaydiumAmmProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
@@ -73,18 +74,28 @@ impl RaydiumAmmProgramIx {
             let max_coin_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
             let max_pc_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
             let base_side: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let other_amount_min: u64 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(
                 Self::Deposit(DepositIxArgs {
                     max_coin_amount,
                     max_pc_amount,
                     base_side,
+                    other_amount_min,
                 }),
             );
         }
         if buf.starts_with(&WITHDRAW_IX_DISCM) {
             let mut reader = &buf[WITHDRAW_IX_DISCM.len()..];
             let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
-            return Ok(Self::Withdraw(WithdrawIxArgs { amount }));
+            let min_coin_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let min_pc_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::Withdraw(WithdrawIxArgs {
+                    amount,
+                    min_coin_amount,
+                    min_pc_amount,
+                }),
+            );
         }
         if buf.starts_with(&MIGRATE_TO_OPEN_BOOK_IX_DISCM) {
             return Ok(Self::MigrateToOpenBook);
@@ -93,22 +104,12 @@ impl RaydiumAmmProgramIx {
             let mut reader = &buf[SET_PARAMS_IX_DISCM.len()..];
             let param: u8 = crate::borsh_de_or_default(&mut reader)?;
             let value: Option<u64> = crate::borsh_de_or_default(&mut reader)?;
-            let new_pubkey: Option<Pubkey> = crate::borsh_de_or_default(&mut reader)?;
             let fees: Option<Fees> = crate::borsh_de_or_default(&mut reader)?;
-            let last_order_distance: Option<LastOrderDistance> = crate::borsh_de_or_default(
-                &mut reader,
-            )?;
-            let need_take_amounts: Option<NeedTake> = crate::borsh_de_or_default(
-                &mut reader,
-            )?;
             return Ok(
                 Self::SetParams(SetParamsIxArgs {
                     param,
                     value,
-                    new_pubkey,
                     fees,
-                    last_order_distance,
-                    need_take_amounts,
                 }),
             );
         }
@@ -205,6 +206,9 @@ impl RaydiumAmmProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&WITHDRAW_EXCESS_LAMPORTS_IX_DISCM) {
+            return Ok(Self::WithdrawExcessLamports);
+        }
         Err(std::io::Error::from(std::io::ErrorKind::InvalidData))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -235,11 +239,14 @@ impl RaydiumAmmProgramIx {
                 borsh::BorshSerialize::serialize(&args.max_coin_amount, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.max_pc_amount, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.base_side, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.other_amount_min, &mut writer)?;
                 Ok(())
             }
             Self::Withdraw(args) => {
                 writer.write_all(&WITHDRAW_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.amount, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.min_coin_amount, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.min_pc_amount, &mut writer)?;
                 Ok(())
             }
             Self::MigrateToOpenBook => writer.write_all(&MIGRATE_TO_OPEN_BOOK_IX_DISCM),
@@ -247,13 +254,7 @@ impl RaydiumAmmProgramIx {
                 writer.write_all(&SET_PARAMS_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.param, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.value, &mut writer)?;
-                borsh::BorshSerialize::serialize(&args.new_pubkey, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.fees, &mut writer)?;
-                borsh::BorshSerialize::serialize(
-                    &args.last_order_distance,
-                    &mut writer,
-                )?;
-                borsh::BorshSerialize::serialize(&args.need_take_amounts, &mut writer)?;
                 Ok(())
             }
             Self::WithdrawPnl => writer.write_all(&WITHDRAW_PNL_IX_DISCM),
@@ -314,6 +315,9 @@ impl RaydiumAmmProgramIx {
                 borsh::BorshSerialize::serialize(&args.max_amount_in, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.amount_out, &mut writer)?;
                 Ok(())
+            }
+            Self::WithdrawExcessLamports => {
+                writer.write_all(&WITHDRAW_EXCESS_LAMPORTS_IX_DISCM)
             }
         }
     }
@@ -753,9 +757,9 @@ pub struct Initialize2Accounts<'me, 'info> {
     pub pc_mint: &'me AccountInfo<'info>,
     pub pool_coin_token_account: &'me AccountInfo<'info>,
     pub pool_pc_token_account: &'me AccountInfo<'info>,
-    pub pool_withdraw_queue: &'me AccountInfo<'info>,
     pub amm_target_orders: &'me AccountInfo<'info>,
-    pub pool_temp_lp: &'me AccountInfo<'info>,
+    pub amm_config: &'me AccountInfo<'info>,
+    pub create_fee_destination: &'me AccountInfo<'info>,
     pub serum_program: &'me AccountInfo<'info>,
     pub serum_market: &'me AccountInfo<'info>,
     pub user_wallet: &'me AccountInfo<'info>,
@@ -777,9 +781,9 @@ pub struct Initialize2Keys {
     pub pc_mint: Pubkey,
     pub pool_coin_token_account: Pubkey,
     pub pool_pc_token_account: Pubkey,
-    pub pool_withdraw_queue: Pubkey,
     pub amm_target_orders: Pubkey,
-    pub pool_temp_lp: Pubkey,
+    pub amm_config: Pubkey,
+    pub create_fee_destination: Pubkey,
     pub serum_program: Pubkey,
     pub serum_market: Pubkey,
     pub user_wallet: Pubkey,
@@ -802,9 +806,9 @@ impl From<Initialize2Accounts<'_, '_>> for Initialize2Keys {
             pc_mint: *accounts.pc_mint.key,
             pool_coin_token_account: *accounts.pool_coin_token_account.key,
             pool_pc_token_account: *accounts.pool_pc_token_account.key,
-            pool_withdraw_queue: *accounts.pool_withdraw_queue.key,
             amm_target_orders: *accounts.amm_target_orders.key,
-            pool_temp_lp: *accounts.pool_temp_lp.key,
+            amm_config: *accounts.amm_config.key,
+            create_fee_destination: *accounts.create_fee_destination.key,
             serum_program: *accounts.serum_program.key,
             serum_market: *accounts.serum_market.key,
             user_wallet: *accounts.user_wallet.key,
@@ -878,17 +882,17 @@ impl From<Initialize2Keys> for [AccountMeta; INITIALIZE2_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.pool_withdraw_queue,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
                 pubkey: keys.amm_target_orders,
                 is_signer: false,
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.pool_temp_lp,
+                pubkey: keys.amm_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.create_fee_destination,
                 is_signer: false,
                 is_writable: true,
             },
@@ -940,9 +944,9 @@ impl From<[Pubkey; INITIALIZE2_IX_ACCOUNTS_LEN]> for Initialize2Keys {
             pc_mint: pubkeys[9],
             pool_coin_token_account: pubkeys[10],
             pool_pc_token_account: pubkeys[11],
-            pool_withdraw_queue: pubkeys[12],
-            amm_target_orders: pubkeys[13],
-            pool_temp_lp: pubkeys[14],
+            amm_target_orders: pubkeys[12],
+            amm_config: pubkeys[13],
+            create_fee_destination: pubkeys[14],
             serum_program: pubkeys[15],
             serum_market: pubkeys[16],
             user_wallet: pubkeys[17],
@@ -968,9 +972,9 @@ for [AccountInfo<'info>; INITIALIZE2_IX_ACCOUNTS_LEN] {
             accounts.pc_mint.clone(),
             accounts.pool_coin_token_account.clone(),
             accounts.pool_pc_token_account.clone(),
-            accounts.pool_withdraw_queue.clone(),
             accounts.amm_target_orders.clone(),
-            accounts.pool_temp_lp.clone(),
+            accounts.amm_config.clone(),
+            accounts.create_fee_destination.clone(),
             accounts.serum_program.clone(),
             accounts.serum_market.clone(),
             accounts.user_wallet.clone(),
@@ -996,9 +1000,9 @@ for Initialize2Accounts<'me, 'info> {
             pc_mint: &arr[9],
             pool_coin_token_account: &arr[10],
             pool_pc_token_account: &arr[11],
-            pool_withdraw_queue: &arr[12],
-            amm_target_orders: &arr[13],
-            pool_temp_lp: &arr[14],
+            amm_target_orders: &arr[12],
+            amm_config: &arr[13],
+            create_fee_destination: &arr[14],
             serum_program: &arr[15],
             serum_market: &arr[16],
             user_wallet: &arr[17],
@@ -1131,9 +1135,9 @@ pub fn initialize2_verify_account_keys(
         (*accounts.pc_mint.key, keys.pc_mint),
         (*accounts.pool_coin_token_account.key, keys.pool_coin_token_account),
         (*accounts.pool_pc_token_account.key, keys.pool_pc_token_account),
-        (*accounts.pool_withdraw_queue.key, keys.pool_withdraw_queue),
         (*accounts.amm_target_orders.key, keys.amm_target_orders),
-        (*accounts.pool_temp_lp.key, keys.pool_temp_lp),
+        (*accounts.amm_config.key, keys.amm_config),
+        (*accounts.create_fee_destination.key, keys.create_fee_destination),
         (*accounts.serum_program.key, keys.serum_program),
         (*accounts.serum_market.key, keys.serum_market),
         (*accounts.user_wallet.key, keys.user_wallet),
@@ -1156,9 +1160,8 @@ pub fn initialize2_verify_writable_privileges<'me, 'info>(
         accounts.lp_mint,
         accounts.pool_coin_token_account,
         accounts.pool_pc_token_account,
-        accounts.pool_withdraw_queue,
         accounts.amm_target_orders,
-        accounts.pool_temp_lp,
+        accounts.create_fee_destination,
         accounts.user_wallet,
         accounts.user_token_coin,
         accounts.user_token_pc,
@@ -1797,6 +1800,7 @@ pub struct DepositIxArgs {
     pub max_coin_amount: u64,
     pub max_pc_amount: u64,
     pub base_side: u64,
+    pub other_amount_min: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct DepositIxData(pub DepositIxArgs);
@@ -1816,11 +1820,13 @@ impl DepositIxData {
         let max_coin_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
         let max_pc_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
         let base_side: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let other_amount_min: u64 = crate::borsh_de_or_default(&mut reader)?;
         Ok(
             Self(DepositIxArgs {
                 max_coin_amount,
                 max_pc_amount,
                 base_side,
+                other_amount_min,
             }),
         )
     }
@@ -1829,6 +1835,7 @@ impl DepositIxData {
         borsh::BorshSerialize::serialize(&self.0.max_coin_amount, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.0.max_pc_amount, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.0.base_side, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.other_amount_min, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -1950,7 +1957,7 @@ pub fn deposit_verify_account_privileges<'me, 'info>(
     deposit_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const WITHDRAW_IX_ACCOUNTS_LEN: usize = 22;
+pub const WITHDRAW_IX_ACCOUNTS_LEN: usize = 20;
 #[derive(Copy, Clone, Debug)]
 pub struct WithdrawAccounts<'me, 'info> {
     pub token_program: &'me AccountInfo<'info>,
@@ -1961,8 +1968,6 @@ pub struct WithdrawAccounts<'me, 'info> {
     pub lp_mint_address: &'me AccountInfo<'info>,
     pub pool_coin_token_account: &'me AccountInfo<'info>,
     pub pool_pc_token_account: &'me AccountInfo<'info>,
-    pub pool_withdraw_queue: &'me AccountInfo<'info>,
-    pub pool_temp_lp_token_account: &'me AccountInfo<'info>,
     pub serum_program: &'me AccountInfo<'info>,
     pub serum_market: &'me AccountInfo<'info>,
     pub serum_coin_vault_account: &'me AccountInfo<'info>,
@@ -1986,8 +1991,6 @@ pub struct WithdrawKeys {
     pub lp_mint_address: Pubkey,
     pub pool_coin_token_account: Pubkey,
     pub pool_pc_token_account: Pubkey,
-    pub pool_withdraw_queue: Pubkey,
-    pub pool_temp_lp_token_account: Pubkey,
     pub serum_program: Pubkey,
     pub serum_market: Pubkey,
     pub serum_coin_vault_account: Pubkey,
@@ -2012,8 +2015,6 @@ impl From<WithdrawAccounts<'_, '_>> for WithdrawKeys {
             lp_mint_address: *accounts.lp_mint_address.key,
             pool_coin_token_account: *accounts.pool_coin_token_account.key,
             pool_pc_token_account: *accounts.pool_pc_token_account.key,
-            pool_withdraw_queue: *accounts.pool_withdraw_queue.key,
-            pool_temp_lp_token_account: *accounts.pool_temp_lp_token_account.key,
             serum_program: *accounts.serum_program.key,
             serum_market: *accounts.serum_market.key,
             serum_coin_vault_account: *accounts.serum_coin_vault_account.key,
@@ -2069,16 +2070,6 @@ impl From<WithdrawKeys> for [AccountMeta; WITHDRAW_IX_ACCOUNTS_LEN] {
             },
             AccountMeta {
                 pubkey: keys.pool_pc_token_account,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.pool_withdraw_queue,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.pool_temp_lp_token_account,
                 is_signer: false,
                 is_writable: true,
             },
@@ -2156,20 +2147,18 @@ impl From<[Pubkey; WITHDRAW_IX_ACCOUNTS_LEN]> for WithdrawKeys {
             lp_mint_address: pubkeys[5],
             pool_coin_token_account: pubkeys[6],
             pool_pc_token_account: pubkeys[7],
-            pool_withdraw_queue: pubkeys[8],
-            pool_temp_lp_token_account: pubkeys[9],
-            serum_program: pubkeys[10],
-            serum_market: pubkeys[11],
-            serum_coin_vault_account: pubkeys[12],
-            serum_pc_vault_account: pubkeys[13],
-            serum_vault_signer: pubkeys[14],
-            user_lp_token_account: pubkeys[15],
-            uer_coin_token_account: pubkeys[16],
-            uer_pc_token_account: pubkeys[17],
-            user_owner: pubkeys[18],
-            serum_event_q: pubkeys[19],
-            serum_bids: pubkeys[20],
-            serum_asks: pubkeys[21],
+            serum_program: pubkeys[8],
+            serum_market: pubkeys[9],
+            serum_coin_vault_account: pubkeys[10],
+            serum_pc_vault_account: pubkeys[11],
+            serum_vault_signer: pubkeys[12],
+            user_lp_token_account: pubkeys[13],
+            uer_coin_token_account: pubkeys[14],
+            uer_pc_token_account: pubkeys[15],
+            user_owner: pubkeys[16],
+            serum_event_q: pubkeys[17],
+            serum_bids: pubkeys[18],
+            serum_asks: pubkeys[19],
         }
     }
 }
@@ -2185,8 +2174,6 @@ for [AccountInfo<'info>; WITHDRAW_IX_ACCOUNTS_LEN] {
             accounts.lp_mint_address.clone(),
             accounts.pool_coin_token_account.clone(),
             accounts.pool_pc_token_account.clone(),
-            accounts.pool_withdraw_queue.clone(),
-            accounts.pool_temp_lp_token_account.clone(),
             accounts.serum_program.clone(),
             accounts.serum_market.clone(),
             accounts.serum_coin_vault_account.clone(),
@@ -2214,20 +2201,18 @@ for WithdrawAccounts<'me, 'info> {
             lp_mint_address: &arr[5],
             pool_coin_token_account: &arr[6],
             pool_pc_token_account: &arr[7],
-            pool_withdraw_queue: &arr[8],
-            pool_temp_lp_token_account: &arr[9],
-            serum_program: &arr[10],
-            serum_market: &arr[11],
-            serum_coin_vault_account: &arr[12],
-            serum_pc_vault_account: &arr[13],
-            serum_vault_signer: &arr[14],
-            user_lp_token_account: &arr[15],
-            uer_coin_token_account: &arr[16],
-            uer_pc_token_account: &arr[17],
-            user_owner: &arr[18],
-            serum_event_q: &arr[19],
-            serum_bids: &arr[20],
-            serum_asks: &arr[21],
+            serum_program: &arr[8],
+            serum_market: &arr[9],
+            serum_coin_vault_account: &arr[10],
+            serum_pc_vault_account: &arr[11],
+            serum_vault_signer: &arr[12],
+            user_lp_token_account: &arr[13],
+            uer_coin_token_account: &arr[14],
+            uer_pc_token_account: &arr[15],
+            user_owner: &arr[16],
+            serum_event_q: &arr[17],
+            serum_bids: &arr[18],
+            serum_asks: &arr[19],
         }
     }
 }
@@ -2235,6 +2220,8 @@ pub const WITHDRAW_IX_DISCM: [u8; 8usize] = [183, 18, 70, 156, 148, 109, 161, 34
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct WithdrawIxArgs {
     pub amount: u64,
+    pub min_coin_amount: u64,
+    pub min_pc_amount: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct WithdrawIxData(pub WithdrawIxArgs);
@@ -2252,11 +2239,21 @@ impl WithdrawIxData {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
         let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
-        Ok(Self(WithdrawIxArgs { amount }))
+        let min_coin_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let min_pc_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(WithdrawIxArgs {
+                amount,
+                min_coin_amount,
+                min_pc_amount,
+            }),
+        )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&WITHDRAW_IX_DISCM)?;
         borsh::BorshSerialize::serialize(&self.0.amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.min_coin_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.min_pc_amount, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -2329,8 +2326,6 @@ pub fn withdraw_verify_account_keys(
         (*accounts.lp_mint_address.key, keys.lp_mint_address),
         (*accounts.pool_coin_token_account.key, keys.pool_coin_token_account),
         (*accounts.pool_pc_token_account.key, keys.pool_pc_token_account),
-        (*accounts.pool_withdraw_queue.key, keys.pool_withdraw_queue),
-        (*accounts.pool_temp_lp_token_account.key, keys.pool_temp_lp_token_account),
         (*accounts.serum_program.key, keys.serum_program),
         (*accounts.serum_market.key, keys.serum_market),
         (*accounts.serum_coin_vault_account.key, keys.serum_coin_vault_account),
@@ -2360,8 +2355,6 @@ pub fn withdraw_verify_writable_privileges<'me, 'info>(
         accounts.lp_mint_address,
         accounts.pool_coin_token_account,
         accounts.pool_pc_token_account,
-        accounts.pool_withdraw_queue,
-        accounts.pool_temp_lp_token_account,
         accounts.serum_market,
         accounts.serum_coin_vault_account,
         accounts.serum_pc_vault_account,
@@ -2814,63 +2807,21 @@ pub fn migrate_to_open_book_verify_account_privileges<'me, 'info>(
     migrate_to_open_book_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const SET_PARAMS_IX_ACCOUNTS_LEN: usize = 16;
+pub const SET_PARAMS_IX_ACCOUNTS_LEN: usize = 2;
 #[derive(Copy, Clone, Debug)]
 pub struct SetParamsAccounts<'me, 'info> {
-    pub token_program: &'me AccountInfo<'info>,
     pub amm: &'me AccountInfo<'info>,
-    pub amm_authority: &'me AccountInfo<'info>,
-    pub amm_open_orders: &'me AccountInfo<'info>,
-    pub amm_target_orders: &'me AccountInfo<'info>,
-    pub amm_coin_vault: &'me AccountInfo<'info>,
-    pub amm_pc_vault: &'me AccountInfo<'info>,
-    pub serum_program: &'me AccountInfo<'info>,
-    pub serum_market: &'me AccountInfo<'info>,
-    pub serum_coin_vault: &'me AccountInfo<'info>,
-    pub serum_pc_vault: &'me AccountInfo<'info>,
-    pub serum_vault_signer: &'me AccountInfo<'info>,
-    pub serum_event_queue: &'me AccountInfo<'info>,
-    pub serum_bids: &'me AccountInfo<'info>,
-    pub serum_asks: &'me AccountInfo<'info>,
     pub amm_admin_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SetParamsKeys {
-    pub token_program: Pubkey,
     pub amm: Pubkey,
-    pub amm_authority: Pubkey,
-    pub amm_open_orders: Pubkey,
-    pub amm_target_orders: Pubkey,
-    pub amm_coin_vault: Pubkey,
-    pub amm_pc_vault: Pubkey,
-    pub serum_program: Pubkey,
-    pub serum_market: Pubkey,
-    pub serum_coin_vault: Pubkey,
-    pub serum_pc_vault: Pubkey,
-    pub serum_vault_signer: Pubkey,
-    pub serum_event_queue: Pubkey,
-    pub serum_bids: Pubkey,
-    pub serum_asks: Pubkey,
     pub amm_admin_account: Pubkey,
 }
 impl From<SetParamsAccounts<'_, '_>> for SetParamsKeys {
     fn from(accounts: SetParamsAccounts) -> Self {
         Self {
-            token_program: *accounts.token_program.key,
             amm: *accounts.amm.key,
-            amm_authority: *accounts.amm_authority.key,
-            amm_open_orders: *accounts.amm_open_orders.key,
-            amm_target_orders: *accounts.amm_target_orders.key,
-            amm_coin_vault: *accounts.amm_coin_vault.key,
-            amm_pc_vault: *accounts.amm_pc_vault.key,
-            serum_program: *accounts.serum_program.key,
-            serum_market: *accounts.serum_market.key,
-            serum_coin_vault: *accounts.serum_coin_vault.key,
-            serum_pc_vault: *accounts.serum_pc_vault.key,
-            serum_vault_signer: *accounts.serum_vault_signer.key,
-            serum_event_queue: *accounts.serum_event_queue.key,
-            serum_bids: *accounts.serum_bids.key,
-            serum_asks: *accounts.serum_asks.key,
             amm_admin_account: *accounts.amm_admin_account.key,
         }
     }
@@ -2879,77 +2830,7 @@ impl From<SetParamsKeys> for [AccountMeta; SET_PARAMS_IX_ACCOUNTS_LEN] {
     fn from(keys: SetParamsKeys) -> Self {
         [
             AccountMeta {
-                pubkey: keys.token_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
                 pubkey: keys.amm,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.amm_authority,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.amm_open_orders,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.amm_target_orders,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.amm_coin_vault,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.amm_pc_vault,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.serum_market,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_coin_vault,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_pc_vault,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_vault_signer,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.serum_event_queue,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_bids,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_asks,
                 is_signer: false,
                 is_writable: true,
             },
@@ -2964,68 +2845,23 @@ impl From<SetParamsKeys> for [AccountMeta; SET_PARAMS_IX_ACCOUNTS_LEN] {
 impl From<[Pubkey; SET_PARAMS_IX_ACCOUNTS_LEN]> for SetParamsKeys {
     fn from(pubkeys: [Pubkey; SET_PARAMS_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            token_program: pubkeys[0],
-            amm: pubkeys[1],
-            amm_authority: pubkeys[2],
-            amm_open_orders: pubkeys[3],
-            amm_target_orders: pubkeys[4],
-            amm_coin_vault: pubkeys[5],
-            amm_pc_vault: pubkeys[6],
-            serum_program: pubkeys[7],
-            serum_market: pubkeys[8],
-            serum_coin_vault: pubkeys[9],
-            serum_pc_vault: pubkeys[10],
-            serum_vault_signer: pubkeys[11],
-            serum_event_queue: pubkeys[12],
-            serum_bids: pubkeys[13],
-            serum_asks: pubkeys[14],
-            amm_admin_account: pubkeys[15],
+            amm: pubkeys[0],
+            amm_admin_account: pubkeys[1],
         }
     }
 }
 impl<'info> From<SetParamsAccounts<'_, 'info>>
 for [AccountInfo<'info>; SET_PARAMS_IX_ACCOUNTS_LEN] {
     fn from(accounts: SetParamsAccounts<'_, 'info>) -> Self {
-        [
-            accounts.token_program.clone(),
-            accounts.amm.clone(),
-            accounts.amm_authority.clone(),
-            accounts.amm_open_orders.clone(),
-            accounts.amm_target_orders.clone(),
-            accounts.amm_coin_vault.clone(),
-            accounts.amm_pc_vault.clone(),
-            accounts.serum_program.clone(),
-            accounts.serum_market.clone(),
-            accounts.serum_coin_vault.clone(),
-            accounts.serum_pc_vault.clone(),
-            accounts.serum_vault_signer.clone(),
-            accounts.serum_event_queue.clone(),
-            accounts.serum_bids.clone(),
-            accounts.serum_asks.clone(),
-            accounts.amm_admin_account.clone(),
-        ]
+        [accounts.amm.clone(), accounts.amm_admin_account.clone()]
     }
 }
 impl<'me, 'info> From<&'me [AccountInfo<'info>; SET_PARAMS_IX_ACCOUNTS_LEN]>
 for SetParamsAccounts<'me, 'info> {
     fn from(arr: &'me [AccountInfo<'info>; SET_PARAMS_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            token_program: &arr[0],
-            amm: &arr[1],
-            amm_authority: &arr[2],
-            amm_open_orders: &arr[3],
-            amm_target_orders: &arr[4],
-            amm_coin_vault: &arr[5],
-            amm_pc_vault: &arr[6],
-            serum_program: &arr[7],
-            serum_market: &arr[8],
-            serum_coin_vault: &arr[9],
-            serum_pc_vault: &arr[10],
-            serum_vault_signer: &arr[11],
-            serum_event_queue: &arr[12],
-            serum_bids: &arr[13],
-            serum_asks: &arr[14],
-            amm_admin_account: &arr[15],
+            amm: &arr[0],
+            amm_admin_account: &arr[1],
         }
     }
 }
@@ -3034,10 +2870,7 @@ pub const SET_PARAMS_IX_DISCM: [u8; 8usize] = [27, 234, 178, 52, 147, 2, 187, 14
 pub struct SetParamsIxArgs {
     pub param: u8,
     pub value: Option<u64>,
-    pub new_pubkey: Option<Pubkey>,
     pub fees: Option<Fees>,
-    pub last_order_distance: Option<LastOrderDistance>,
-    pub need_take_amounts: Option<NeedTake>,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct SetParamsIxData(pub SetParamsIxArgs);
@@ -3056,22 +2889,12 @@ impl SetParamsIxData {
         }
         let param: u8 = crate::borsh_de_or_default(&mut reader)?;
         let value: Option<u64> = crate::borsh_de_or_default(&mut reader)?;
-        let new_pubkey: Option<Pubkey> = crate::borsh_de_or_default(&mut reader)?;
         let fees: Option<Fees> = crate::borsh_de_or_default(&mut reader)?;
-        let last_order_distance: Option<LastOrderDistance> = crate::borsh_de_or_default(
-            &mut reader,
-        )?;
-        let need_take_amounts: Option<NeedTake> = crate::borsh_de_or_default(
-            &mut reader,
-        )?;
         Ok(
             Self(SetParamsIxArgs {
                 param,
                 value,
-                new_pubkey,
                 fees,
-                last_order_distance,
-                need_take_amounts,
             }),
         )
     }
@@ -3079,10 +2902,7 @@ impl SetParamsIxData {
         writer.write_all(&SET_PARAMS_IX_DISCM)?;
         borsh::BorshSerialize::serialize(&self.0.param, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.0.value, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.new_pubkey, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.0.fees, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.last_order_distance, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.need_take_amounts, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -3152,21 +2972,7 @@ pub fn set_params_verify_account_keys(
     keys: SetParamsKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
-        (*accounts.token_program.key, keys.token_program),
         (*accounts.amm.key, keys.amm),
-        (*accounts.amm_authority.key, keys.amm_authority),
-        (*accounts.amm_open_orders.key, keys.amm_open_orders),
-        (*accounts.amm_target_orders.key, keys.amm_target_orders),
-        (*accounts.amm_coin_vault.key, keys.amm_coin_vault),
-        (*accounts.amm_pc_vault.key, keys.amm_pc_vault),
-        (*accounts.serum_program.key, keys.serum_program),
-        (*accounts.serum_market.key, keys.serum_market),
-        (*accounts.serum_coin_vault.key, keys.serum_coin_vault),
-        (*accounts.serum_pc_vault.key, keys.serum_pc_vault),
-        (*accounts.serum_vault_signer.key, keys.serum_vault_signer),
-        (*accounts.serum_event_queue.key, keys.serum_event_queue),
-        (*accounts.serum_bids.key, keys.serum_bids),
-        (*accounts.serum_asks.key, keys.serum_asks),
         (*accounts.amm_admin_account.key, keys.amm_admin_account),
     ] {
         if actual != expected {
@@ -3178,19 +2984,7 @@ pub fn set_params_verify_account_keys(
 pub fn set_params_verify_writable_privileges<'me, 'info>(
     accounts: SetParamsAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [
-        accounts.amm,
-        accounts.amm_open_orders,
-        accounts.amm_target_orders,
-        accounts.amm_coin_vault,
-        accounts.amm_pc_vault,
-        accounts.serum_market,
-        accounts.serum_coin_vault,
-        accounts.serum_pc_vault,
-        accounts.serum_event_queue,
-        accounts.serum_bids,
-        accounts.serum_asks,
-    ] {
+    for should_be_writable in [accounts.amm] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
         }
@@ -3214,26 +3008,19 @@ pub fn set_params_verify_account_privileges<'me, 'info>(
     set_params_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const WITHDRAW_PNL_IX_ACCOUNTS_LEN: usize = 17;
+pub const WITHDRAW_PNL_IX_ACCOUNTS_LEN: usize = 10;
 #[derive(Copy, Clone, Debug)]
 pub struct WithdrawPnlAccounts<'me, 'info> {
     pub token_program: &'me AccountInfo<'info>,
     pub amm: &'me AccountInfo<'info>,
     pub amm_config: &'me AccountInfo<'info>,
     pub amm_authority: &'me AccountInfo<'info>,
-    pub amm_open_orders: &'me AccountInfo<'info>,
     pub pool_coin_token_account: &'me AccountInfo<'info>,
     pub pool_pc_token_account: &'me AccountInfo<'info>,
     pub coin_pnl_token_account: &'me AccountInfo<'info>,
     pub pc_pnl_token_account: &'me AccountInfo<'info>,
     pub pnl_owner_account: &'me AccountInfo<'info>,
     pub amm_target_orders: &'me AccountInfo<'info>,
-    pub serum_program: &'me AccountInfo<'info>,
-    pub serum_market: &'me AccountInfo<'info>,
-    pub serum_event_queue: &'me AccountInfo<'info>,
-    pub serum_coin_vault_account: &'me AccountInfo<'info>,
-    pub serum_pc_vault_account: &'me AccountInfo<'info>,
-    pub serum_vault_signer: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WithdrawPnlKeys {
@@ -3241,19 +3028,12 @@ pub struct WithdrawPnlKeys {
     pub amm: Pubkey,
     pub amm_config: Pubkey,
     pub amm_authority: Pubkey,
-    pub amm_open_orders: Pubkey,
     pub pool_coin_token_account: Pubkey,
     pub pool_pc_token_account: Pubkey,
     pub coin_pnl_token_account: Pubkey,
     pub pc_pnl_token_account: Pubkey,
     pub pnl_owner_account: Pubkey,
     pub amm_target_orders: Pubkey,
-    pub serum_program: Pubkey,
-    pub serum_market: Pubkey,
-    pub serum_event_queue: Pubkey,
-    pub serum_coin_vault_account: Pubkey,
-    pub serum_pc_vault_account: Pubkey,
-    pub serum_vault_signer: Pubkey,
 }
 impl From<WithdrawPnlAccounts<'_, '_>> for WithdrawPnlKeys {
     fn from(accounts: WithdrawPnlAccounts) -> Self {
@@ -3262,19 +3042,12 @@ impl From<WithdrawPnlAccounts<'_, '_>> for WithdrawPnlKeys {
             amm: *accounts.amm.key,
             amm_config: *accounts.amm_config.key,
             amm_authority: *accounts.amm_authority.key,
-            amm_open_orders: *accounts.amm_open_orders.key,
             pool_coin_token_account: *accounts.pool_coin_token_account.key,
             pool_pc_token_account: *accounts.pool_pc_token_account.key,
             coin_pnl_token_account: *accounts.coin_pnl_token_account.key,
             pc_pnl_token_account: *accounts.pc_pnl_token_account.key,
             pnl_owner_account: *accounts.pnl_owner_account.key,
             amm_target_orders: *accounts.amm_target_orders.key,
-            serum_program: *accounts.serum_program.key,
-            serum_market: *accounts.serum_market.key,
-            serum_event_queue: *accounts.serum_event_queue.key,
-            serum_coin_vault_account: *accounts.serum_coin_vault_account.key,
-            serum_pc_vault_account: *accounts.serum_pc_vault_account.key,
-            serum_vault_signer: *accounts.serum_vault_signer.key,
         }
     }
 }
@@ -3300,11 +3073,6 @@ impl From<WithdrawPnlKeys> for [AccountMeta; WITHDRAW_PNL_IX_ACCOUNTS_LEN] {
                 pubkey: keys.amm_authority,
                 is_signer: false,
                 is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.amm_open_orders,
-                is_signer: false,
-                is_writable: true,
             },
             AccountMeta {
                 pubkey: keys.pool_coin_token_account,
@@ -3336,36 +3104,6 @@ impl From<WithdrawPnlKeys> for [AccountMeta; WITHDRAW_PNL_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
-            AccountMeta {
-                pubkey: keys.serum_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.serum_market,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_event_queue,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.serum_coin_vault_account,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_pc_vault_account,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.serum_vault_signer,
-                is_signer: false,
-                is_writable: false,
-            },
         ]
     }
 }
@@ -3376,19 +3114,12 @@ impl From<[Pubkey; WITHDRAW_PNL_IX_ACCOUNTS_LEN]> for WithdrawPnlKeys {
             amm: pubkeys[1],
             amm_config: pubkeys[2],
             amm_authority: pubkeys[3],
-            amm_open_orders: pubkeys[4],
-            pool_coin_token_account: pubkeys[5],
-            pool_pc_token_account: pubkeys[6],
-            coin_pnl_token_account: pubkeys[7],
-            pc_pnl_token_account: pubkeys[8],
-            pnl_owner_account: pubkeys[9],
-            amm_target_orders: pubkeys[10],
-            serum_program: pubkeys[11],
-            serum_market: pubkeys[12],
-            serum_event_queue: pubkeys[13],
-            serum_coin_vault_account: pubkeys[14],
-            serum_pc_vault_account: pubkeys[15],
-            serum_vault_signer: pubkeys[16],
+            pool_coin_token_account: pubkeys[4],
+            pool_pc_token_account: pubkeys[5],
+            coin_pnl_token_account: pubkeys[6],
+            pc_pnl_token_account: pubkeys[7],
+            pnl_owner_account: pubkeys[8],
+            amm_target_orders: pubkeys[9],
         }
     }
 }
@@ -3400,19 +3131,12 @@ for [AccountInfo<'info>; WITHDRAW_PNL_IX_ACCOUNTS_LEN] {
             accounts.amm.clone(),
             accounts.amm_config.clone(),
             accounts.amm_authority.clone(),
-            accounts.amm_open_orders.clone(),
             accounts.pool_coin_token_account.clone(),
             accounts.pool_pc_token_account.clone(),
             accounts.coin_pnl_token_account.clone(),
             accounts.pc_pnl_token_account.clone(),
             accounts.pnl_owner_account.clone(),
             accounts.amm_target_orders.clone(),
-            accounts.serum_program.clone(),
-            accounts.serum_market.clone(),
-            accounts.serum_event_queue.clone(),
-            accounts.serum_coin_vault_account.clone(),
-            accounts.serum_pc_vault_account.clone(),
-            accounts.serum_vault_signer.clone(),
         ]
     }
 }
@@ -3424,19 +3148,12 @@ for WithdrawPnlAccounts<'me, 'info> {
             amm: &arr[1],
             amm_config: &arr[2],
             amm_authority: &arr[3],
-            amm_open_orders: &arr[4],
-            pool_coin_token_account: &arr[5],
-            pool_pc_token_account: &arr[6],
-            coin_pnl_token_account: &arr[7],
-            pc_pnl_token_account: &arr[8],
-            pnl_owner_account: &arr[9],
-            amm_target_orders: &arr[10],
-            serum_program: &arr[11],
-            serum_market: &arr[12],
-            serum_event_queue: &arr[13],
-            serum_coin_vault_account: &arr[14],
-            serum_pc_vault_account: &arr[15],
-            serum_vault_signer: &arr[16],
+            pool_coin_token_account: &arr[4],
+            pool_pc_token_account: &arr[5],
+            coin_pnl_token_account: &arr[6],
+            pc_pnl_token_account: &arr[7],
+            pnl_owner_account: &arr[8],
+            amm_target_orders: &arr[9],
         }
     }
 }
@@ -3511,19 +3228,12 @@ pub fn withdraw_pnl_verify_account_keys(
         (*accounts.amm.key, keys.amm),
         (*accounts.amm_config.key, keys.amm_config),
         (*accounts.amm_authority.key, keys.amm_authority),
-        (*accounts.amm_open_orders.key, keys.amm_open_orders),
         (*accounts.pool_coin_token_account.key, keys.pool_coin_token_account),
         (*accounts.pool_pc_token_account.key, keys.pool_pc_token_account),
         (*accounts.coin_pnl_token_account.key, keys.coin_pnl_token_account),
         (*accounts.pc_pnl_token_account.key, keys.pc_pnl_token_account),
         (*accounts.pnl_owner_account.key, keys.pnl_owner_account),
         (*accounts.amm_target_orders.key, keys.amm_target_orders),
-        (*accounts.serum_program.key, keys.serum_program),
-        (*accounts.serum_market.key, keys.serum_market),
-        (*accounts.serum_event_queue.key, keys.serum_event_queue),
-        (*accounts.serum_coin_vault_account.key, keys.serum_coin_vault_account),
-        (*accounts.serum_pc_vault_account.key, keys.serum_pc_vault_account),
-        (*accounts.serum_vault_signer.key, keys.serum_vault_signer),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -3536,15 +3246,11 @@ pub fn withdraw_pnl_verify_writable_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     for should_be_writable in [
         accounts.amm,
-        accounts.amm_open_orders,
         accounts.pool_coin_token_account,
         accounts.pool_pc_token_account,
         accounts.coin_pnl_token_account,
         accounts.pc_pnl_token_account,
         accounts.amm_target_orders,
-        accounts.serum_market,
-        accounts.serum_coin_vault_account,
-        accounts.serum_pc_vault_account,
     ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
@@ -6585,5 +6291,198 @@ pub fn swap_base_out_v2_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     swap_base_out_v2_verify_writable_privileges(accounts)?;
     swap_base_out_v2_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct WithdrawExcessLamportsAccounts<'me, 'info> {
+    pub collect_lamports_wallet: &'me AccountInfo<'info>,
+    pub amm_authority: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct WithdrawExcessLamportsKeys {
+    pub collect_lamports_wallet: Pubkey,
+    pub amm_authority: Pubkey,
+    pub token_program: Pubkey,
+}
+impl From<WithdrawExcessLamportsAccounts<'_, '_>> for WithdrawExcessLamportsKeys {
+    fn from(accounts: WithdrawExcessLamportsAccounts) -> Self {
+        Self {
+            collect_lamports_wallet: *accounts.collect_lamports_wallet.key,
+            amm_authority: *accounts.amm_authority.key,
+            token_program: *accounts.token_program.key,
+        }
+    }
+}
+impl From<WithdrawExcessLamportsKeys>
+for [AccountMeta; WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] {
+    fn from(keys: WithdrawExcessLamportsKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.collect_lamports_wallet,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.amm_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]>
+for WithdrawExcessLamportsKeys {
+    fn from(pubkeys: [Pubkey; WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            collect_lamports_wallet: pubkeys[0],
+            amm_authority: pubkeys[1],
+            token_program: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<WithdrawExcessLamportsAccounts<'_, 'info>>
+for [AccountInfo<'info>; WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] {
+    fn from(accounts: WithdrawExcessLamportsAccounts<'_, 'info>) -> Self {
+        [
+            accounts.collect_lamports_wallet.clone(),
+            accounts.amm_authority.clone(),
+            accounts.token_program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]>
+for WithdrawExcessLamportsAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            collect_lamports_wallet: &arr[0],
+            amm_authority: &arr[1],
+            token_program: &arr[2],
+        }
+    }
+}
+pub const WITHDRAW_EXCESS_LAMPORTS_IX_DISCM: [u8; 8usize] = [
+    221, 166, 235, 25, 123, 95, 232, 59,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct WithdrawExcessLamportsIxData;
+impl WithdrawExcessLamportsIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != WITHDRAW_EXCESS_LAMPORTS_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&WITHDRAW_EXCESS_LAMPORTS_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn withdraw_excess_lamports_ix_with_program_id(
+    program_id: Pubkey,
+    keys: WithdrawExcessLamportsKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; WITHDRAW_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: WithdrawExcessLamportsIxData.try_to_vec()?,
+    })
+}
+pub fn withdraw_excess_lamports_ix(
+    keys: WithdrawExcessLamportsKeys,
+) -> std::io::Result<Instruction> {
+    withdraw_excess_lamports_ix_with_program_id(RAYDIUM_AMM_PROGRAM_ID, keys)
+}
+pub fn withdraw_excess_lamports_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: WithdrawExcessLamportsAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: WithdrawExcessLamportsKeys = accounts.into();
+    let ix = withdraw_excess_lamports_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn withdraw_excess_lamports_invoke(
+    accounts: WithdrawExcessLamportsAccounts<'_, '_>,
+) -> ProgramResult {
+    withdraw_excess_lamports_invoke_with_program_id(RAYDIUM_AMM_PROGRAM_ID, accounts)
+}
+pub fn withdraw_excess_lamports_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: WithdrawExcessLamportsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: WithdrawExcessLamportsKeys = accounts.into();
+    let ix = withdraw_excess_lamports_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn withdraw_excess_lamports_invoke_signed(
+    accounts: WithdrawExcessLamportsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    withdraw_excess_lamports_invoke_signed_with_program_id(
+        RAYDIUM_AMM_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn withdraw_excess_lamports_verify_account_keys(
+    accounts: WithdrawExcessLamportsAccounts<'_, '_>,
+    keys: WithdrawExcessLamportsKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.collect_lamports_wallet.key, keys.collect_lamports_wallet),
+        (*accounts.amm_authority.key, keys.amm_authority),
+        (*accounts.token_program.key, keys.token_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn withdraw_excess_lamports_verify_writable_privileges<'me, 'info>(
+    accounts: WithdrawExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.collect_lamports_wallet] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn withdraw_excess_lamports_verify_signer_privileges<'me, 'info>(
+    accounts: WithdrawExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.collect_lamports_wallet] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn withdraw_excess_lamports_verify_account_privileges<'me, 'info>(
+    accounts: WithdrawExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    withdraw_excess_lamports_verify_writable_privileges(accounts)?;
+    withdraw_excess_lamports_verify_signer_privileges(accounts)?;
     Ok(())
 }

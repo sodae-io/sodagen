@@ -138,6 +138,16 @@ pub enum CpAmmError {
     InvalidZapAccounts = 6066,
     #[error("Invalid compounding fee bps")]
     InvalidCompoundingFeeBps = 6067,
+    #[error("Invalid claim protocol fee accounts")]
+    InvalidClaimProtocolFeeAccounts = 6068,
+    #[error("Transfer fee excluded amount is zero")]
+    TransferFeeExcludedAmountIsZero = 6069,
+    #[error("Delegated amount is not zero")]
+    DelegatedAmountNonZero = 6070,
+    #[error("Deprecated base fee mode")]
+    DeprecatedBaseFeeMode = 6071,
+    #[error("Invalid config permission")]
+    InvalidConfigPermission = 6072,
 }
 impl From<CpAmmError> for ProgramError {
     fn from(e: CpAmmError) -> Self {

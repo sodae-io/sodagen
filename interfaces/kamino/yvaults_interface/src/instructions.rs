@@ -18,8 +18,10 @@ pub enum YvaultsProgramIx {
     InitializeSharesMetadata(InitializeSharesMetadataIxArgs),
     UpdateSharesMetadata(UpdateSharesMetadataIxArgs),
     UpdateGlobalConfig(UpdateGlobalConfigIxArgs),
+    AcceptGlobalConfigOwnership,
     UpdateTreasuryFeeVault(UpdateTreasuryFeeVaultIxArgs),
     UpdateStrategyConfig(UpdateStrategyConfigIxArgs),
+    SetRefTickIndexPrice(SetRefTickIndexPriceIxArgs),
     UpdateRewardMapping(UpdateRewardMappingIxArgs),
     OpenLiquidityPosition(OpenLiquidityPositionIxArgs),
     CloseStrategy,
@@ -46,6 +48,9 @@ pub enum YvaultsProgramIx {
     UpdateStrategyAdmin,
     ResizeTokenInfos,
     DeprecateCollateralInfo(DeprecateCollateralInfoIxArgs),
+    DeprecateStrategy,
+    ResetStrategyPadding,
+    GetKtokenPrice,
 }
 impl YvaultsProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
@@ -157,6 +162,9 @@ impl YvaultsProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_DISCM) {
+            return Ok(Self::AcceptGlobalConfigOwnership);
+        }
         if buf.starts_with(&UPDATE_TREASURY_FEE_VAULT_IX_DISCM) {
             let mut reader = &buf[UPDATE_TREASURY_FEE_VAULT_IX_DISCM.len()..];
             let collateral_id: u16 = crate::borsh_de_or_default(&mut reader)?;
@@ -176,6 +184,15 @@ impl YvaultsProgramIx {
                 Self::UpdateStrategyConfig(UpdateStrategyConfigIxArgs {
                     mode,
                     value,
+                }),
+            );
+        }
+        if buf.starts_with(&SET_REF_TICK_INDEX_PRICE_IX_DISCM) {
+            let mut reader = &buf[SET_REF_TICK_INDEX_PRICE_IX_DISCM.len()..];
+            let ref_tick_index_price: i32 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::SetRefTickIndexPrice(SetRefTickIndexPriceIxArgs {
+                    ref_tick_index_price,
                 }),
             );
         }
@@ -408,6 +425,15 @@ impl YvaultsProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&DEPRECATE_STRATEGY_IX_DISCM) {
+            return Ok(Self::DeprecateStrategy);
+        }
+        if buf.starts_with(&RESET_STRATEGY_PADDING_IX_DISCM) {
+            return Ok(Self::ResetStrategyPadding);
+        }
+        if buf.starts_with(&GET_KTOKEN_PRICE_IX_DISCM) {
+            return Ok(Self::GetKtokenPrice);
+        }
         Err(std::io::Error::from(std::io::ErrorKind::InvalidData))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -483,6 +509,9 @@ impl YvaultsProgramIx {
                 borsh::BorshSerialize::serialize(&args.value, &mut writer)?;
                 Ok(())
             }
+            Self::AcceptGlobalConfigOwnership => {
+                writer.write_all(&ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_DISCM)
+            }
             Self::UpdateTreasuryFeeVault(args) => {
                 writer.write_all(&UPDATE_TREASURY_FEE_VAULT_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.collateral_id, &mut writer)?;
@@ -492,6 +521,14 @@ impl YvaultsProgramIx {
                 writer.write_all(&UPDATE_STRATEGY_CONFIG_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.mode, &mut writer)?;
                 borsh::BorshSerialize::serialize(&args.value, &mut writer)?;
+                Ok(())
+            }
+            Self::SetRefTickIndexPrice(args) => {
+                writer.write_all(&SET_REF_TICK_INDEX_PRICE_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(
+                    &args.ref_tick_index_price,
+                    &mut writer,
+                )?;
                 Ok(())
             }
             Self::UpdateRewardMapping(args) => {
@@ -660,6 +697,11 @@ impl YvaultsProgramIx {
                 borsh::BorshSerialize::serialize(&args.index, &mut writer)?;
                 Ok(())
             }
+            Self::DeprecateStrategy => writer.write_all(&DEPRECATE_STRATEGY_IX_DISCM),
+            Self::ResetStrategyPadding => {
+                writer.write_all(&RESET_STRATEGY_PADDING_IX_DISCM)
+            }
+            Self::GetKtokenPrice => writer.write_all(&GET_KTOKEN_PRICE_IX_DISCM),
         }
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -1390,11 +1432,12 @@ pub fn initialize_kamino_reward_verify_account_privileges<'me, 'info>(
     initialize_kamino_reward_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const ADD_KAMINO_REWARDS_IX_ACCOUNTS_LEN: usize = 7;
+pub const ADD_KAMINO_REWARDS_IX_ACCOUNTS_LEN: usize = 8;
 #[derive(Copy, Clone, Debug)]
 pub struct AddKaminoRewardsAccounts<'me, 'info> {
     pub admin_authority: &'me AccountInfo<'info>,
     pub strategy: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
     pub reward_mint: &'me AccountInfo<'info>,
     pub reward_vault: &'me AccountInfo<'info>,
     pub base_vault_authority: &'me AccountInfo<'info>,
@@ -1405,6 +1448,7 @@ pub struct AddKaminoRewardsAccounts<'me, 'info> {
 pub struct AddKaminoRewardsKeys {
     pub admin_authority: Pubkey,
     pub strategy: Pubkey,
+    pub global_config: Pubkey,
     pub reward_mint: Pubkey,
     pub reward_vault: Pubkey,
     pub base_vault_authority: Pubkey,
@@ -1416,6 +1460,7 @@ impl From<AddKaminoRewardsAccounts<'_, '_>> for AddKaminoRewardsKeys {
         Self {
             admin_authority: *accounts.admin_authority.key,
             strategy: *accounts.strategy.key,
+            global_config: *accounts.global_config.key,
             reward_mint: *accounts.reward_mint.key,
             reward_vault: *accounts.reward_vault.key,
             base_vault_authority: *accounts.base_vault_authority.key,
@@ -1436,6 +1481,11 @@ impl From<AddKaminoRewardsKeys> for [AccountMeta; ADD_KAMINO_REWARDS_IX_ACCOUNTS
                 pubkey: keys.strategy,
                 is_signer: false,
                 is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
             },
             AccountMeta {
                 pubkey: keys.reward_mint,
@@ -1470,11 +1520,12 @@ impl From<[Pubkey; ADD_KAMINO_REWARDS_IX_ACCOUNTS_LEN]> for AddKaminoRewardsKeys
         Self {
             admin_authority: pubkeys[0],
             strategy: pubkeys[1],
-            reward_mint: pubkeys[2],
-            reward_vault: pubkeys[3],
-            base_vault_authority: pubkeys[4],
-            reward_ata: pubkeys[5],
-            token_program: pubkeys[6],
+            global_config: pubkeys[2],
+            reward_mint: pubkeys[3],
+            reward_vault: pubkeys[4],
+            base_vault_authority: pubkeys[5],
+            reward_ata: pubkeys[6],
+            token_program: pubkeys[7],
         }
     }
 }
@@ -1484,6 +1535,7 @@ for [AccountInfo<'info>; ADD_KAMINO_REWARDS_IX_ACCOUNTS_LEN] {
         [
             accounts.admin_authority.clone(),
             accounts.strategy.clone(),
+            accounts.global_config.clone(),
             accounts.reward_mint.clone(),
             accounts.reward_vault.clone(),
             accounts.base_vault_authority.clone(),
@@ -1498,11 +1550,12 @@ for AddKaminoRewardsAccounts<'me, 'info> {
         Self {
             admin_authority: &arr[0],
             strategy: &arr[1],
-            reward_mint: &arr[2],
-            reward_vault: &arr[3],
-            base_vault_authority: &arr[4],
-            reward_ata: &arr[5],
-            token_program: &arr[6],
+            global_config: &arr[2],
+            reward_mint: &arr[3],
+            reward_vault: &arr[4],
+            base_vault_authority: &arr[5],
+            reward_ata: &arr[6],
+            token_program: &arr[7],
         }
     }
 }
@@ -1613,6 +1666,7 @@ pub fn add_kamino_rewards_verify_account_keys(
     for (actual, expected) in [
         (*accounts.admin_authority.key, keys.admin_authority),
         (*accounts.strategy.key, keys.strategy),
+        (*accounts.global_config.key, keys.global_config),
         (*accounts.reward_mint.key, keys.reward_mint),
         (*accounts.reward_vault.key, keys.reward_vault),
         (*accounts.base_vault_authority.key, keys.base_vault_authority),
@@ -3292,6 +3346,186 @@ pub fn update_global_config_verify_account_privileges<'me, 'info>(
     update_global_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN: usize = 2;
+#[derive(Copy, Clone, Debug)]
+pub struct AcceptGlobalConfigOwnershipAccounts<'me, 'info> {
+    pub pending_admin: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct AcceptGlobalConfigOwnershipKeys {
+    pub pending_admin: Pubkey,
+    pub global_config: Pubkey,
+}
+impl From<AcceptGlobalConfigOwnershipAccounts<'_, '_>>
+for AcceptGlobalConfigOwnershipKeys {
+    fn from(accounts: AcceptGlobalConfigOwnershipAccounts) -> Self {
+        Self {
+            pending_admin: *accounts.pending_admin.key,
+            global_config: *accounts.global_config.key,
+        }
+    }
+}
+impl From<AcceptGlobalConfigOwnershipKeys>
+for [AccountMeta; ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN] {
+    fn from(keys: AcceptGlobalConfigOwnershipKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pending_admin,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN]>
+for AcceptGlobalConfigOwnershipKeys {
+    fn from(pubkeys: [Pubkey; ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pending_admin: pubkeys[0],
+            global_config: pubkeys[1],
+        }
+    }
+}
+impl<'info> From<AcceptGlobalConfigOwnershipAccounts<'_, 'info>>
+for [AccountInfo<'info>; ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN] {
+    fn from(accounts: AcceptGlobalConfigOwnershipAccounts<'_, 'info>) -> Self {
+        [accounts.pending_admin.clone(), accounts.global_config.clone()]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN]>
+for AcceptGlobalConfigOwnershipAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            pending_admin: &arr[0],
+            global_config: &arr[1],
+        }
+    }
+}
+pub const ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_DISCM: [u8; 8usize] = [
+    209, 63, 231, 151, 188, 204, 0, 151,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct AcceptGlobalConfigOwnershipIxData;
+impl AcceptGlobalConfigOwnershipIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn accept_global_config_ownership_ix_with_program_id(
+    program_id: Pubkey,
+    keys: AcceptGlobalConfigOwnershipKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; ACCEPT_GLOBAL_CONFIG_OWNERSHIP_IX_ACCOUNTS_LEN] = keys
+        .into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: AcceptGlobalConfigOwnershipIxData.try_to_vec()?,
+    })
+}
+pub fn accept_global_config_ownership_ix(
+    keys: AcceptGlobalConfigOwnershipKeys,
+) -> std::io::Result<Instruction> {
+    accept_global_config_ownership_ix_with_program_id(YVAULTS_PROGRAM_ID, keys)
+}
+pub fn accept_global_config_ownership_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: AcceptGlobalConfigOwnershipAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: AcceptGlobalConfigOwnershipKeys = accounts.into();
+    let ix = accept_global_config_ownership_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn accept_global_config_ownership_invoke(
+    accounts: AcceptGlobalConfigOwnershipAccounts<'_, '_>,
+) -> ProgramResult {
+    accept_global_config_ownership_invoke_with_program_id(YVAULTS_PROGRAM_ID, accounts)
+}
+pub fn accept_global_config_ownership_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: AcceptGlobalConfigOwnershipAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: AcceptGlobalConfigOwnershipKeys = accounts.into();
+    let ix = accept_global_config_ownership_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn accept_global_config_ownership_invoke_signed(
+    accounts: AcceptGlobalConfigOwnershipAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    accept_global_config_ownership_invoke_signed_with_program_id(
+        YVAULTS_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn accept_global_config_ownership_verify_account_keys(
+    accounts: AcceptGlobalConfigOwnershipAccounts<'_, '_>,
+    keys: AcceptGlobalConfigOwnershipKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pending_admin.key, keys.pending_admin),
+        (*accounts.global_config.key, keys.global_config),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn accept_global_config_ownership_verify_writable_privileges<'me, 'info>(
+    accounts: AcceptGlobalConfigOwnershipAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.pending_admin, accounts.global_config] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn accept_global_config_ownership_verify_signer_privileges<'me, 'info>(
+    accounts: AcceptGlobalConfigOwnershipAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.pending_admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn accept_global_config_ownership_verify_account_privileges<'me, 'info>(
+    accounts: AcceptGlobalConfigOwnershipAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    accept_global_config_ownership_verify_writable_privileges(accounts)?;
+    accept_global_config_ownership_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const UPDATE_TREASURY_FEE_VAULT_IX_ACCOUNTS_LEN: usize = 9;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateTreasuryFeeVaultAccounts<'me, 'info> {
@@ -3824,6 +4058,235 @@ pub fn update_strategy_config_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     update_strategy_config_verify_writable_privileges(accounts)?;
     update_strategy_config_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN: usize = 4;
+#[derive(Copy, Clone, Debug)]
+pub struct SetRefTickIndexPriceAccounts<'me, 'info> {
+    pub actions_authority: &'me AccountInfo<'info>,
+    pub strategy: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct SetRefTickIndexPriceKeys {
+    pub actions_authority: Pubkey,
+    pub strategy: Pubkey,
+    pub global_config: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
+}
+impl From<SetRefTickIndexPriceAccounts<'_, '_>> for SetRefTickIndexPriceKeys {
+    fn from(accounts: SetRefTickIndexPriceAccounts) -> Self {
+        Self {
+            actions_authority: *accounts.actions_authority.key,
+            strategy: *accounts.strategy.key,
+            global_config: *accounts.global_config.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
+        }
+    }
+}
+impl From<SetRefTickIndexPriceKeys>
+for [AccountMeta; SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN] {
+    fn from(keys: SetRefTickIndexPriceKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.actions_authority,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.strategy,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN]>
+for SetRefTickIndexPriceKeys {
+    fn from(pubkeys: [Pubkey; SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            actions_authority: pubkeys[0],
+            strategy: pubkeys[1],
+            global_config: pubkeys[2],
+            instruction_sysvar_account: pubkeys[3],
+        }
+    }
+}
+impl<'info> From<SetRefTickIndexPriceAccounts<'_, 'info>>
+for [AccountInfo<'info>; SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: SetRefTickIndexPriceAccounts<'_, 'info>) -> Self {
+        [
+            accounts.actions_authority.clone(),
+            accounts.strategy.clone(),
+            accounts.global_config.clone(),
+            accounts.instruction_sysvar_account.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN]>
+for SetRefTickIndexPriceAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            actions_authority: &arr[0],
+            strategy: &arr[1],
+            global_config: &arr[2],
+            instruction_sysvar_account: &arr[3],
+        }
+    }
+}
+pub const SET_REF_TICK_INDEX_PRICE_IX_DISCM: [u8; 8usize] = [
+    18, 222, 143, 102, 211, 81, 246, 152,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SetRefTickIndexPriceIxArgs {
+    pub ref_tick_index_price: i32,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetRefTickIndexPriceIxData(pub SetRefTickIndexPriceIxArgs);
+impl From<SetRefTickIndexPriceIxArgs> for SetRefTickIndexPriceIxData {
+    fn from(args: SetRefTickIndexPriceIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl SetRefTickIndexPriceIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SET_REF_TICK_INDEX_PRICE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let ref_tick_index_price: i32 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(SetRefTickIndexPriceIxArgs {
+                ref_tick_index_price,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SET_REF_TICK_INDEX_PRICE_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.ref_tick_index_price, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn set_ref_tick_index_price_ix_with_program_id(
+    program_id: Pubkey,
+    keys: SetRefTickIndexPriceKeys,
+    args: SetRefTickIndexPriceIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; SET_REF_TICK_INDEX_PRICE_IX_ACCOUNTS_LEN] = keys.into();
+    let data: SetRefTickIndexPriceIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn set_ref_tick_index_price_ix(
+    keys: SetRefTickIndexPriceKeys,
+    args: SetRefTickIndexPriceIxArgs,
+) -> std::io::Result<Instruction> {
+    set_ref_tick_index_price_ix_with_program_id(YVAULTS_PROGRAM_ID, keys, args)
+}
+pub fn set_ref_tick_index_price_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: SetRefTickIndexPriceAccounts<'_, '_>,
+    args: SetRefTickIndexPriceIxArgs,
+) -> ProgramResult {
+    let keys: SetRefTickIndexPriceKeys = accounts.into();
+    let ix = set_ref_tick_index_price_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn set_ref_tick_index_price_invoke(
+    accounts: SetRefTickIndexPriceAccounts<'_, '_>,
+    args: SetRefTickIndexPriceIxArgs,
+) -> ProgramResult {
+    set_ref_tick_index_price_invoke_with_program_id(YVAULTS_PROGRAM_ID, accounts, args)
+}
+pub fn set_ref_tick_index_price_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: SetRefTickIndexPriceAccounts<'_, '_>,
+    args: SetRefTickIndexPriceIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: SetRefTickIndexPriceKeys = accounts.into();
+    let ix = set_ref_tick_index_price_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn set_ref_tick_index_price_invoke_signed(
+    accounts: SetRefTickIndexPriceAccounts<'_, '_>,
+    args: SetRefTickIndexPriceIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    set_ref_tick_index_price_invoke_signed_with_program_id(
+        YVAULTS_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn set_ref_tick_index_price_verify_account_keys(
+    accounts: SetRefTickIndexPriceAccounts<'_, '_>,
+    keys: SetRefTickIndexPriceKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.actions_authority.key, keys.actions_authority),
+        (*accounts.strategy.key, keys.strategy),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn set_ref_tick_index_price_verify_writable_privileges<'me, 'info>(
+    accounts: SetRefTickIndexPriceAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.strategy] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn set_ref_tick_index_price_verify_signer_privileges<'me, 'info>(
+    accounts: SetRefTickIndexPriceAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.actions_authority] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn set_ref_tick_index_price_verify_account_privileges<'me, 'info>(
+    accounts: SetRefTickIndexPriceAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    set_ref_tick_index_price_verify_writable_privileges(accounts)?;
+    set_ref_tick_index_price_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const UPDATE_REWARD_MAPPING_IX_ACCOUNTS_LEN: usize = 11;
@@ -4807,11 +5270,12 @@ pub fn open_liquidity_position_verify_account_privileges<'me, 'info>(
     open_liquidity_position_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const CLOSE_STRATEGY_IX_ACCOUNTS_LEN: usize = 33;
+pub const CLOSE_STRATEGY_IX_ACCOUNTS_LEN: usize = 34;
 #[derive(Copy, Clone, Debug)]
 pub struct CloseStrategyAccounts<'me, 'info> {
     pub admin_authority: &'me AccountInfo<'info>,
     pub strategy: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
     pub old_position_or_base_vault_authority: &'me AccountInfo<'info>,
     pub old_position_mint_or_base_vault_authority: &'me AccountInfo<'info>,
     pub old_position_token_account_or_base_vault_authority: &'me AccountInfo<'info>,
@@ -4848,6 +5312,7 @@ pub struct CloseStrategyAccounts<'me, 'info> {
 pub struct CloseStrategyKeys {
     pub admin_authority: Pubkey,
     pub strategy: Pubkey,
+    pub global_config: Pubkey,
     pub old_position_or_base_vault_authority: Pubkey,
     pub old_position_mint_or_base_vault_authority: Pubkey,
     pub old_position_token_account_or_base_vault_authority: Pubkey,
@@ -4885,6 +5350,7 @@ impl From<CloseStrategyAccounts<'_, '_>> for CloseStrategyKeys {
         Self {
             admin_authority: *accounts.admin_authority.key,
             strategy: *accounts.strategy.key,
+            global_config: *accounts.global_config.key,
             old_position_or_base_vault_authority: *accounts
                 .old_position_or_base_vault_authority
                 .key,
@@ -4941,6 +5407,11 @@ impl From<CloseStrategyKeys> for [AccountMeta; CLOSE_STRATEGY_IX_ACCOUNTS_LEN] {
                 pubkey: keys.strategy,
                 is_signer: false,
                 is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
             },
             AccountMeta {
                 pubkey: keys.old_position_or_base_vault_authority,
@@ -5105,37 +5576,38 @@ impl From<[Pubkey; CLOSE_STRATEGY_IX_ACCOUNTS_LEN]> for CloseStrategyKeys {
         Self {
             admin_authority: pubkeys[0],
             strategy: pubkeys[1],
-            old_position_or_base_vault_authority: pubkeys[2],
-            old_position_mint_or_base_vault_authority: pubkeys[3],
-            old_position_token_account_or_base_vault_authority: pubkeys[4],
-            old_tick_array_lower_or_base_vault_authority: pubkeys[5],
-            old_tick_array_upper_or_base_vault_authority: pubkeys[6],
-            pool: pubkeys[7],
-            token_a_vault: pubkeys[8],
-            token_b_vault: pubkeys[9],
-            user_token_a_ata: pubkeys[10],
-            user_token_b_ata: pubkeys[11],
-            token_a_mint: pubkeys[12],
-            token_b_mint: pubkeys[13],
-            reward0_vault: pubkeys[14],
-            reward1_vault: pubkeys[15],
-            reward2_vault: pubkeys[16],
-            kamino_reward0_vault: pubkeys[17],
-            kamino_reward1_vault: pubkeys[18],
-            kamino_reward2_vault: pubkeys[19],
-            user_reward0_ata: pubkeys[20],
-            user_reward1_ata: pubkeys[21],
-            user_reward2_ata: pubkeys[22],
-            user_kamino_reward0_ata: pubkeys[23],
-            user_kamino_reward1_ata: pubkeys[24],
-            user_kamino_reward2_ata: pubkeys[25],
-            base_vault_authority: pubkeys[26],
-            pool_program: pubkeys[27],
-            token_program: pubkeys[28],
-            token_a_token_program: pubkeys[29],
-            token_b_token_program: pubkeys[30],
-            system: pubkeys[31],
-            event_authority: pubkeys[32],
+            global_config: pubkeys[2],
+            old_position_or_base_vault_authority: pubkeys[3],
+            old_position_mint_or_base_vault_authority: pubkeys[4],
+            old_position_token_account_or_base_vault_authority: pubkeys[5],
+            old_tick_array_lower_or_base_vault_authority: pubkeys[6],
+            old_tick_array_upper_or_base_vault_authority: pubkeys[7],
+            pool: pubkeys[8],
+            token_a_vault: pubkeys[9],
+            token_b_vault: pubkeys[10],
+            user_token_a_ata: pubkeys[11],
+            user_token_b_ata: pubkeys[12],
+            token_a_mint: pubkeys[13],
+            token_b_mint: pubkeys[14],
+            reward0_vault: pubkeys[15],
+            reward1_vault: pubkeys[16],
+            reward2_vault: pubkeys[17],
+            kamino_reward0_vault: pubkeys[18],
+            kamino_reward1_vault: pubkeys[19],
+            kamino_reward2_vault: pubkeys[20],
+            user_reward0_ata: pubkeys[21],
+            user_reward1_ata: pubkeys[22],
+            user_reward2_ata: pubkeys[23],
+            user_kamino_reward0_ata: pubkeys[24],
+            user_kamino_reward1_ata: pubkeys[25],
+            user_kamino_reward2_ata: pubkeys[26],
+            base_vault_authority: pubkeys[27],
+            pool_program: pubkeys[28],
+            token_program: pubkeys[29],
+            token_a_token_program: pubkeys[30],
+            token_b_token_program: pubkeys[31],
+            system: pubkeys[32],
+            event_authority: pubkeys[33],
         }
     }
 }
@@ -5145,6 +5617,7 @@ for [AccountInfo<'info>; CLOSE_STRATEGY_IX_ACCOUNTS_LEN] {
         [
             accounts.admin_authority.clone(),
             accounts.strategy.clone(),
+            accounts.global_config.clone(),
             accounts.old_position_or_base_vault_authority.clone(),
             accounts.old_position_mint_or_base_vault_authority.clone(),
             accounts.old_position_token_account_or_base_vault_authority.clone(),
@@ -5185,37 +5658,38 @@ for CloseStrategyAccounts<'me, 'info> {
         Self {
             admin_authority: &arr[0],
             strategy: &arr[1],
-            old_position_or_base_vault_authority: &arr[2],
-            old_position_mint_or_base_vault_authority: &arr[3],
-            old_position_token_account_or_base_vault_authority: &arr[4],
-            old_tick_array_lower_or_base_vault_authority: &arr[5],
-            old_tick_array_upper_or_base_vault_authority: &arr[6],
-            pool: &arr[7],
-            token_a_vault: &arr[8],
-            token_b_vault: &arr[9],
-            user_token_a_ata: &arr[10],
-            user_token_b_ata: &arr[11],
-            token_a_mint: &arr[12],
-            token_b_mint: &arr[13],
-            reward0_vault: &arr[14],
-            reward1_vault: &arr[15],
-            reward2_vault: &arr[16],
-            kamino_reward0_vault: &arr[17],
-            kamino_reward1_vault: &arr[18],
-            kamino_reward2_vault: &arr[19],
-            user_reward0_ata: &arr[20],
-            user_reward1_ata: &arr[21],
-            user_reward2_ata: &arr[22],
-            user_kamino_reward0_ata: &arr[23],
-            user_kamino_reward1_ata: &arr[24],
-            user_kamino_reward2_ata: &arr[25],
-            base_vault_authority: &arr[26],
-            pool_program: &arr[27],
-            token_program: &arr[28],
-            token_a_token_program: &arr[29],
-            token_b_token_program: &arr[30],
-            system: &arr[31],
-            event_authority: &arr[32],
+            global_config: &arr[2],
+            old_position_or_base_vault_authority: &arr[3],
+            old_position_mint_or_base_vault_authority: &arr[4],
+            old_position_token_account_or_base_vault_authority: &arr[5],
+            old_tick_array_lower_or_base_vault_authority: &arr[6],
+            old_tick_array_upper_or_base_vault_authority: &arr[7],
+            pool: &arr[8],
+            token_a_vault: &arr[9],
+            token_b_vault: &arr[10],
+            user_token_a_ata: &arr[11],
+            user_token_b_ata: &arr[12],
+            token_a_mint: &arr[13],
+            token_b_mint: &arr[14],
+            reward0_vault: &arr[15],
+            reward1_vault: &arr[16],
+            reward2_vault: &arr[17],
+            kamino_reward0_vault: &arr[18],
+            kamino_reward1_vault: &arr[19],
+            kamino_reward2_vault: &arr[20],
+            user_reward0_ata: &arr[21],
+            user_reward1_ata: &arr[22],
+            user_reward2_ata: &arr[23],
+            user_kamino_reward0_ata: &arr[24],
+            user_kamino_reward1_ata: &arr[25],
+            user_kamino_reward2_ata: &arr[26],
+            base_vault_authority: &arr[27],
+            pool_program: &arr[28],
+            token_program: &arr[29],
+            token_a_token_program: &arr[30],
+            token_b_token_program: &arr[31],
+            system: &arr[32],
+            event_authority: &arr[33],
         }
     }
 }
@@ -5288,6 +5762,7 @@ pub fn close_strategy_verify_account_keys(
     for (actual, expected) in [
         (*accounts.admin_authority.key, keys.admin_authority),
         (*accounts.strategy.key, keys.strategy),
+        (*accounts.global_config.key, keys.global_config),
         (
             *accounts.old_position_or_base_vault_authority.key,
             keys.old_position_or_base_vault_authority,
@@ -8565,7 +9040,7 @@ pub fn collect_fees_and_rewards_verify_account_privileges<'me, 'info>(
 pub const SWAP_REWARDS_IX_ACCOUNTS_LEN: usize = 26;
 #[derive(Copy, Clone, Debug)]
 pub struct SwapRewardsAccounts<'me, 'info> {
-    pub user: &'me AccountInfo<'info>,
+    pub actions_authority: &'me AccountInfo<'info>,
     pub strategy: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
     pub pool: &'me AccountInfo<'info>,
@@ -8594,7 +9069,7 @@ pub struct SwapRewardsAccounts<'me, 'info> {
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SwapRewardsKeys {
-    pub user: Pubkey,
+    pub actions_authority: Pubkey,
     pub strategy: Pubkey,
     pub global_config: Pubkey,
     pub pool: Pubkey,
@@ -8624,7 +9099,7 @@ pub struct SwapRewardsKeys {
 impl From<SwapRewardsAccounts<'_, '_>> for SwapRewardsKeys {
     fn from(accounts: SwapRewardsAccounts) -> Self {
         Self {
-            user: *accounts.user.key,
+            actions_authority: *accounts.actions_authority.key,
             strategy: *accounts.strategy.key,
             global_config: *accounts.global_config.key,
             pool: *accounts.pool.key,
@@ -8657,7 +9132,7 @@ impl From<SwapRewardsKeys> for [AccountMeta; SWAP_REWARDS_IX_ACCOUNTS_LEN] {
     fn from(keys: SwapRewardsKeys) -> Self {
         [
             AccountMeta {
-                pubkey: keys.user,
+                pubkey: keys.actions_authority,
                 is_signer: true,
                 is_writable: true,
             },
@@ -8792,7 +9267,7 @@ impl From<SwapRewardsKeys> for [AccountMeta; SWAP_REWARDS_IX_ACCOUNTS_LEN] {
 impl From<[Pubkey; SWAP_REWARDS_IX_ACCOUNTS_LEN]> for SwapRewardsKeys {
     fn from(pubkeys: [Pubkey; SWAP_REWARDS_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            user: pubkeys[0],
+            actions_authority: pubkeys[0],
             strategy: pubkeys[1],
             global_config: pubkeys[2],
             pool: pubkeys[3],
@@ -8825,7 +9300,7 @@ impl<'info> From<SwapRewardsAccounts<'_, 'info>>
 for [AccountInfo<'info>; SWAP_REWARDS_IX_ACCOUNTS_LEN] {
     fn from(accounts: SwapRewardsAccounts<'_, 'info>) -> Self {
         [
-            accounts.user.clone(),
+            accounts.actions_authority.clone(),
             accounts.strategy.clone(),
             accounts.global_config.clone(),
             accounts.pool.clone(),
@@ -8858,7 +9333,7 @@ impl<'me, 'info> From<&'me [AccountInfo<'info>; SWAP_REWARDS_IX_ACCOUNTS_LEN]>
 for SwapRewardsAccounts<'me, 'info> {
     fn from(arr: &'me [AccountInfo<'info>; SWAP_REWARDS_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            user: &arr[0],
+            actions_authority: &arr[0],
             strategy: &arr[1],
             global_config: &arr[2],
             pool: &arr[3],
@@ -8997,7 +9472,7 @@ pub fn swap_rewards_verify_account_keys(
     keys: SwapRewardsKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
-        (*accounts.user.key, keys.user),
+        (*accounts.actions_authority.key, keys.actions_authority),
         (*accounts.strategy.key, keys.strategy),
         (*accounts.global_config.key, keys.global_config),
         (*accounts.pool.key, keys.pool),
@@ -9034,7 +9509,7 @@ pub fn swap_rewards_verify_writable_privileges<'me, 'info>(
     accounts: SwapRewardsAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     for should_be_writable in [
-        accounts.user,
+        accounts.actions_authority,
         accounts.strategy,
         accounts.token_a_vault,
         accounts.token_b_vault,
@@ -9055,7 +9530,7 @@ pub fn swap_rewards_verify_writable_privileges<'me, 'info>(
 pub fn swap_rewards_verify_signer_privileges<'me, 'info>(
     accounts: SwapRewardsAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.user] {
+    for should_be_signer in [accounts.actions_authority] {
         if !should_be_signer.is_signer {
             return Err((should_be_signer, ProgramError::MissingRequiredSignature));
         }
@@ -12549,11 +13024,12 @@ pub fn withdraw_from_topup_verify_account_privileges<'me, 'info>(
     withdraw_from_topup_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const CHANGE_POOL_IX_ACCOUNTS_LEN: usize = 8;
+pub const CHANGE_POOL_IX_ACCOUNTS_LEN: usize = 9;
 #[derive(Copy, Clone, Debug)]
 pub struct ChangePoolAccounts<'me, 'info> {
     pub admin_authority: &'me AccountInfo<'info>,
     pub strategy: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
     pub old_position: &'me AccountInfo<'info>,
     pub base_vault_authority: &'me AccountInfo<'info>,
     pub new_pool: &'me AccountInfo<'info>,
@@ -12565,6 +13041,7 @@ pub struct ChangePoolAccounts<'me, 'info> {
 pub struct ChangePoolKeys {
     pub admin_authority: Pubkey,
     pub strategy: Pubkey,
+    pub global_config: Pubkey,
     pub old_position: Pubkey,
     pub base_vault_authority: Pubkey,
     pub new_pool: Pubkey,
@@ -12577,6 +13054,7 @@ impl From<ChangePoolAccounts<'_, '_>> for ChangePoolKeys {
         Self {
             admin_authority: *accounts.admin_authority.key,
             strategy: *accounts.strategy.key,
+            global_config: *accounts.global_config.key,
             old_position: *accounts.old_position.key,
             base_vault_authority: *accounts.base_vault_authority.key,
             new_pool: *accounts.new_pool.key,
@@ -12604,6 +13082,11 @@ impl From<ChangePoolKeys> for [AccountMeta; CHANGE_POOL_IX_ACCOUNTS_LEN] {
                 pubkey: keys.strategy,
                 is_signer: false,
                 is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
             },
             AccountMeta {
                 pubkey: keys.old_position,
@@ -12643,12 +13126,13 @@ impl From<[Pubkey; CHANGE_POOL_IX_ACCOUNTS_LEN]> for ChangePoolKeys {
         Self {
             admin_authority: pubkeys[0],
             strategy: pubkeys[1],
-            old_position: pubkeys[2],
-            base_vault_authority: pubkeys[3],
-            new_pool: pubkeys[4],
-            strategy_reward_vault0_or_base_vault_authority: pubkeys[5],
-            strategy_reward_vault1_or_base_vault_authority: pubkeys[6],
-            strategy_reward_vault2_or_base_vault_authority: pubkeys[7],
+            global_config: pubkeys[2],
+            old_position: pubkeys[3],
+            base_vault_authority: pubkeys[4],
+            new_pool: pubkeys[5],
+            strategy_reward_vault0_or_base_vault_authority: pubkeys[6],
+            strategy_reward_vault1_or_base_vault_authority: pubkeys[7],
+            strategy_reward_vault2_or_base_vault_authority: pubkeys[8],
         }
     }
 }
@@ -12658,6 +13142,7 @@ for [AccountInfo<'info>; CHANGE_POOL_IX_ACCOUNTS_LEN] {
         [
             accounts.admin_authority.clone(),
             accounts.strategy.clone(),
+            accounts.global_config.clone(),
             accounts.old_position.clone(),
             accounts.base_vault_authority.clone(),
             accounts.new_pool.clone(),
@@ -12673,12 +13158,13 @@ for ChangePoolAccounts<'me, 'info> {
         Self {
             admin_authority: &arr[0],
             strategy: &arr[1],
-            old_position: &arr[2],
-            base_vault_authority: &arr[3],
-            new_pool: &arr[4],
-            strategy_reward_vault0_or_base_vault_authority: &arr[5],
-            strategy_reward_vault1_or_base_vault_authority: &arr[6],
-            strategy_reward_vault2_or_base_vault_authority: &arr[7],
+            global_config: &arr[2],
+            old_position: &arr[3],
+            base_vault_authority: &arr[4],
+            new_pool: &arr[5],
+            strategy_reward_vault0_or_base_vault_authority: &arr[6],
+            strategy_reward_vault1_or_base_vault_authority: &arr[7],
+            strategy_reward_vault2_or_base_vault_authority: &arr[8],
         }
     }
 }
@@ -12751,6 +13237,7 @@ pub fn change_pool_verify_account_keys(
     for (actual, expected) in [
         (*accounts.admin_authority.key, keys.admin_authority),
         (*accounts.strategy.key, keys.strategy),
+        (*accounts.global_config.key, keys.global_config),
         (*accounts.old_position.key, keys.old_position),
         (*accounts.base_vault_authority.key, keys.base_vault_authority),
         (*accounts.new_pool.key, keys.new_pool),
@@ -13617,22 +14104,25 @@ pub fn sign_terms_verify_account_privileges<'me, 'info>(
     sign_terms_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_STRATEGY_ADMIN_IX_ACCOUNTS_LEN: usize = 2;
+pub const UPDATE_STRATEGY_ADMIN_IX_ACCOUNTS_LEN: usize = 3;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateStrategyAdminAccounts<'me, 'info> {
     pub pending_admin: &'me AccountInfo<'info>,
     pub strategy: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UpdateStrategyAdminKeys {
     pub pending_admin: Pubkey,
     pub strategy: Pubkey,
+    pub global_config: Pubkey,
 }
 impl From<UpdateStrategyAdminAccounts<'_, '_>> for UpdateStrategyAdminKeys {
     fn from(accounts: UpdateStrategyAdminAccounts) -> Self {
         Self {
             pending_admin: *accounts.pending_admin.key,
             strategy: *accounts.strategy.key,
+            global_config: *accounts.global_config.key,
         }
     }
 }
@@ -13650,6 +14140,11 @@ for [AccountMeta; UPDATE_STRATEGY_ADMIN_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -13658,13 +14153,18 @@ impl From<[Pubkey; UPDATE_STRATEGY_ADMIN_IX_ACCOUNTS_LEN]> for UpdateStrategyAdm
         Self {
             pending_admin: pubkeys[0],
             strategy: pubkeys[1],
+            global_config: pubkeys[2],
         }
     }
 }
 impl<'info> From<UpdateStrategyAdminAccounts<'_, 'info>>
 for [AccountInfo<'info>; UPDATE_STRATEGY_ADMIN_IX_ACCOUNTS_LEN] {
     fn from(accounts: UpdateStrategyAdminAccounts<'_, 'info>) -> Self {
-        [accounts.pending_admin.clone(), accounts.strategy.clone()]
+        [
+            accounts.pending_admin.clone(),
+            accounts.strategy.clone(),
+            accounts.global_config.clone(),
+        ]
     }
 }
 impl<'me, 'info> From<&'me [AccountInfo<'info>; UPDATE_STRATEGY_ADMIN_IX_ACCOUNTS_LEN]>
@@ -13675,6 +14175,7 @@ for UpdateStrategyAdminAccounts<'me, 'info> {
         Self {
             pending_admin: &arr[0],
             strategy: &arr[1],
+            global_config: &arr[2],
         }
     }
 }
@@ -13757,6 +14258,7 @@ pub fn update_strategy_admin_verify_account_keys(
     for (actual, expected) in [
         (*accounts.pending_admin.key, keys.pending_admin),
         (*accounts.strategy.key, keys.strategy),
+        (*accounts.global_config.key, keys.global_config),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -14200,5 +14702,563 @@ pub fn deprecate_collateral_info_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     deprecate_collateral_info_verify_writable_privileges(accounts)?;
     deprecate_collateral_info_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct DeprecateStrategyAccounts<'me, 'info> {
+    pub admin_authority: &'me AccountInfo<'info>,
+    pub strategy: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DeprecateStrategyKeys {
+    pub admin_authority: Pubkey,
+    pub strategy: Pubkey,
+    pub global_config: Pubkey,
+}
+impl From<DeprecateStrategyAccounts<'_, '_>> for DeprecateStrategyKeys {
+    fn from(accounts: DeprecateStrategyAccounts) -> Self {
+        Self {
+            admin_authority: *accounts.admin_authority.key,
+            strategy: *accounts.strategy.key,
+            global_config: *accounts.global_config.key,
+        }
+    }
+}
+impl From<DeprecateStrategyKeys> for [AccountMeta; DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN] {
+    fn from(keys: DeprecateStrategyKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.admin_authority,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.strategy,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN]> for DeprecateStrategyKeys {
+    fn from(pubkeys: [Pubkey; DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            admin_authority: pubkeys[0],
+            strategy: pubkeys[1],
+            global_config: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<DeprecateStrategyAccounts<'_, 'info>>
+for [AccountInfo<'info>; DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN] {
+    fn from(accounts: DeprecateStrategyAccounts<'_, 'info>) -> Self {
+        [
+            accounts.admin_authority.clone(),
+            accounts.strategy.clone(),
+            accounts.global_config.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN]>
+for DeprecateStrategyAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            admin_authority: &arr[0],
+            strategy: &arr[1],
+            global_config: &arr[2],
+        }
+    }
+}
+pub const DEPRECATE_STRATEGY_IX_DISCM: [u8; 8usize] = [
+    73, 76, 95, 59, 38, 251, 117, 161,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct DeprecateStrategyIxData;
+impl DeprecateStrategyIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != DEPRECATE_STRATEGY_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&DEPRECATE_STRATEGY_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn deprecate_strategy_ix_with_program_id(
+    program_id: Pubkey,
+    keys: DeprecateStrategyKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; DEPRECATE_STRATEGY_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: DeprecateStrategyIxData.try_to_vec()?,
+    })
+}
+pub fn deprecate_strategy_ix(
+    keys: DeprecateStrategyKeys,
+) -> std::io::Result<Instruction> {
+    deprecate_strategy_ix_with_program_id(YVAULTS_PROGRAM_ID, keys)
+}
+pub fn deprecate_strategy_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: DeprecateStrategyAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: DeprecateStrategyKeys = accounts.into();
+    let ix = deprecate_strategy_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn deprecate_strategy_invoke(
+    accounts: DeprecateStrategyAccounts<'_, '_>,
+) -> ProgramResult {
+    deprecate_strategy_invoke_with_program_id(YVAULTS_PROGRAM_ID, accounts)
+}
+pub fn deprecate_strategy_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: DeprecateStrategyAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: DeprecateStrategyKeys = accounts.into();
+    let ix = deprecate_strategy_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn deprecate_strategy_invoke_signed(
+    accounts: DeprecateStrategyAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    deprecate_strategy_invoke_signed_with_program_id(YVAULTS_PROGRAM_ID, accounts, seeds)
+}
+pub fn deprecate_strategy_verify_account_keys(
+    accounts: DeprecateStrategyAccounts<'_, '_>,
+    keys: DeprecateStrategyKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.admin_authority.key, keys.admin_authority),
+        (*accounts.strategy.key, keys.strategy),
+        (*accounts.global_config.key, keys.global_config),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn deprecate_strategy_verify_writable_privileges<'me, 'info>(
+    accounts: DeprecateStrategyAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.strategy] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn deprecate_strategy_verify_signer_privileges<'me, 'info>(
+    accounts: DeprecateStrategyAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin_authority] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn deprecate_strategy_verify_account_privileges<'me, 'info>(
+    accounts: DeprecateStrategyAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    deprecate_strategy_verify_writable_privileges(accounts)?;
+    deprecate_strategy_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN: usize = 2;
+#[derive(Copy, Clone, Debug)]
+pub struct ResetStrategyPaddingAccounts<'me, 'info> {
+    pub authority: &'me AccountInfo<'info>,
+    pub strategy: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ResetStrategyPaddingKeys {
+    pub authority: Pubkey,
+    pub strategy: Pubkey,
+}
+impl From<ResetStrategyPaddingAccounts<'_, '_>> for ResetStrategyPaddingKeys {
+    fn from(accounts: ResetStrategyPaddingAccounts) -> Self {
+        Self {
+            authority: *accounts.authority.key,
+            strategy: *accounts.strategy.key,
+        }
+    }
+}
+impl From<ResetStrategyPaddingKeys>
+for [AccountMeta; RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN] {
+    fn from(keys: ResetStrategyPaddingKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.authority,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.strategy,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN]>
+for ResetStrategyPaddingKeys {
+    fn from(pubkeys: [Pubkey; RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            authority: pubkeys[0],
+            strategy: pubkeys[1],
+        }
+    }
+}
+impl<'info> From<ResetStrategyPaddingAccounts<'_, 'info>>
+for [AccountInfo<'info>; RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ResetStrategyPaddingAccounts<'_, 'info>) -> Self {
+        [accounts.authority.clone(), accounts.strategy.clone()]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN]>
+for ResetStrategyPaddingAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            authority: &arr[0],
+            strategy: &arr[1],
+        }
+    }
+}
+pub const RESET_STRATEGY_PADDING_IX_DISCM: [u8; 8usize] = [
+    168, 99, 222, 231, 25, 197, 174, 19,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct ResetStrategyPaddingIxData;
+impl ResetStrategyPaddingIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != RESET_STRATEGY_PADDING_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&RESET_STRATEGY_PADDING_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn reset_strategy_padding_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ResetStrategyPaddingKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; RESET_STRATEGY_PADDING_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: ResetStrategyPaddingIxData.try_to_vec()?,
+    })
+}
+pub fn reset_strategy_padding_ix(
+    keys: ResetStrategyPaddingKeys,
+) -> std::io::Result<Instruction> {
+    reset_strategy_padding_ix_with_program_id(YVAULTS_PROGRAM_ID, keys)
+}
+pub fn reset_strategy_padding_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ResetStrategyPaddingAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: ResetStrategyPaddingKeys = accounts.into();
+    let ix = reset_strategy_padding_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn reset_strategy_padding_invoke(
+    accounts: ResetStrategyPaddingAccounts<'_, '_>,
+) -> ProgramResult {
+    reset_strategy_padding_invoke_with_program_id(YVAULTS_PROGRAM_ID, accounts)
+}
+pub fn reset_strategy_padding_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ResetStrategyPaddingAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ResetStrategyPaddingKeys = accounts.into();
+    let ix = reset_strategy_padding_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn reset_strategy_padding_invoke_signed(
+    accounts: ResetStrategyPaddingAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    reset_strategy_padding_invoke_signed_with_program_id(
+        YVAULTS_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn reset_strategy_padding_verify_account_keys(
+    accounts: ResetStrategyPaddingAccounts<'_, '_>,
+    keys: ResetStrategyPaddingKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.authority.key, keys.authority),
+        (*accounts.strategy.key, keys.strategy),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn reset_strategy_padding_verify_writable_privileges<'me, 'info>(
+    accounts: ResetStrategyPaddingAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.strategy] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn reset_strategy_padding_verify_signer_privileges<'me, 'info>(
+    accounts: ResetStrategyPaddingAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.authority] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn reset_strategy_padding_verify_account_privileges<'me, 'info>(
+    accounts: ResetStrategyPaddingAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    reset_strategy_padding_verify_writable_privileges(accounts)?;
+    reset_strategy_padding_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN: usize = 7;
+#[derive(Copy, Clone, Debug)]
+pub struct GetKtokenPriceAccounts<'me, 'info> {
+    pub token_infos: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub position: &'me AccountInfo<'info>,
+    pub strategy: &'me AccountInfo<'info>,
+    pub scope_prices_a: &'me AccountInfo<'info>,
+    pub scope_prices_b: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct GetKtokenPriceKeys {
+    pub token_infos: Pubkey,
+    pub global_config: Pubkey,
+    pub pool: Pubkey,
+    pub position: Pubkey,
+    pub strategy: Pubkey,
+    pub scope_prices_a: Pubkey,
+    pub scope_prices_b: Pubkey,
+}
+impl From<GetKtokenPriceAccounts<'_, '_>> for GetKtokenPriceKeys {
+    fn from(accounts: GetKtokenPriceAccounts) -> Self {
+        Self {
+            token_infos: *accounts.token_infos.key,
+            global_config: *accounts.global_config.key,
+            pool: *accounts.pool.key,
+            position: *accounts.position.key,
+            strategy: *accounts.strategy.key,
+            scope_prices_a: *accounts.scope_prices_a.key,
+            scope_prices_b: *accounts.scope_prices_b.key,
+        }
+    }
+}
+impl From<GetKtokenPriceKeys> for [AccountMeta; GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN] {
+    fn from(keys: GetKtokenPriceKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.token_infos,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.position,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.strategy,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.scope_prices_a,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.scope_prices_b,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN]> for GetKtokenPriceKeys {
+    fn from(pubkeys: [Pubkey; GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            token_infos: pubkeys[0],
+            global_config: pubkeys[1],
+            pool: pubkeys[2],
+            position: pubkeys[3],
+            strategy: pubkeys[4],
+            scope_prices_a: pubkeys[5],
+            scope_prices_b: pubkeys[6],
+        }
+    }
+}
+impl<'info> From<GetKtokenPriceAccounts<'_, 'info>>
+for [AccountInfo<'info>; GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: GetKtokenPriceAccounts<'_, 'info>) -> Self {
+        [
+            accounts.token_infos.clone(),
+            accounts.global_config.clone(),
+            accounts.pool.clone(),
+            accounts.position.clone(),
+            accounts.strategy.clone(),
+            accounts.scope_prices_a.clone(),
+            accounts.scope_prices_b.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN]>
+for GetKtokenPriceAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            token_infos: &arr[0],
+            global_config: &arr[1],
+            pool: &arr[2],
+            position: &arr[3],
+            strategy: &arr[4],
+            scope_prices_a: &arr[5],
+            scope_prices_b: &arr[6],
+        }
+    }
+}
+pub const GET_KTOKEN_PRICE_IX_DISCM: [u8; 8usize] = [
+    215, 107, 174, 156, 212, 156, 22, 130,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct GetKtokenPriceIxData;
+impl GetKtokenPriceIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != GET_KTOKEN_PRICE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&GET_KTOKEN_PRICE_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn get_ktoken_price_ix_with_program_id(
+    program_id: Pubkey,
+    keys: GetKtokenPriceKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; GET_KTOKEN_PRICE_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: GetKtokenPriceIxData.try_to_vec()?,
+    })
+}
+pub fn get_ktoken_price_ix(keys: GetKtokenPriceKeys) -> std::io::Result<Instruction> {
+    get_ktoken_price_ix_with_program_id(YVAULTS_PROGRAM_ID, keys)
+}
+pub fn get_ktoken_price_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: GetKtokenPriceAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: GetKtokenPriceKeys = accounts.into();
+    let ix = get_ktoken_price_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn get_ktoken_price_invoke(
+    accounts: GetKtokenPriceAccounts<'_, '_>,
+) -> ProgramResult {
+    get_ktoken_price_invoke_with_program_id(YVAULTS_PROGRAM_ID, accounts)
+}
+pub fn get_ktoken_price_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: GetKtokenPriceAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: GetKtokenPriceKeys = accounts.into();
+    let ix = get_ktoken_price_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn get_ktoken_price_invoke_signed(
+    accounts: GetKtokenPriceAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    get_ktoken_price_invoke_signed_with_program_id(YVAULTS_PROGRAM_ID, accounts, seeds)
+}
+pub fn get_ktoken_price_verify_account_keys(
+    accounts: GetKtokenPriceAccounts<'_, '_>,
+    keys: GetKtokenPriceKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.token_infos.key, keys.token_infos),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.position.key, keys.position),
+        (*accounts.strategy.key, keys.strategy),
+        (*accounts.scope_prices_a.key, keys.scope_prices_a),
+        (*accounts.scope_prices_b.key, keys.scope_prices_b),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
     Ok(())
 }

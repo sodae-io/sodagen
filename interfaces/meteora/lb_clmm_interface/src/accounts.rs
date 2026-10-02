@@ -15,7 +15,7 @@ pub const BIN_ARRAY_ACCOUNT_DISCM: [u8; 8] = [92, 142, 92, 220, 5, 148, 70, 181]
 pub struct BinArray {
     pub index: i64,
     pub version: u8,
-    pub _padding_1: [u8; 7],
+    pub padding_1: [u8; 7],
     pub lb_pair: Pubkey,
     #[serde(with = "crate::big_array_serde")]
     pub bins: [Bin; 70],
@@ -25,7 +25,7 @@ impl BinArray {
         let mut reader: &[u8] = *__buf;
         let index: i64 = crate::borsh_de_or_default(&mut reader)?;
         let version: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         let lb_pair: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let bins = <[Bin; 70] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
@@ -34,7 +34,7 @@ impl BinArray {
         Ok(Self {
             index,
             version,
-            _padding_1,
+            padding_1,
             lb_pair,
             bins,
         })
@@ -42,7 +42,7 @@ impl BinArray {
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.index, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.version, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lb_pair, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bins, &mut writer)?;
         Ok(())
@@ -151,21 +151,21 @@ pub const CLAIM_FEE_OPERATOR_ACCOUNT_DISCM: [u8; 8] = [
 pub struct ClaimFeeOperator {
     pub operator: Pubkey,
     #[serde(with = "crate::big_array_serde")]
-    pub _padding: [u8; 128],
+    pub padding: [u8; 128],
 }
 impl ClaimFeeOperator {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let operator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let _padding = <[u8; 128] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding = <[u8; 128] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
-        Ok(Self { operator, _padding })
+        Ok(Self { operator, padding })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.operator, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
 }
@@ -284,23 +284,23 @@ pub struct LbPair {
     pub reserve_x: Pubkey,
     pub reserve_y: Pubkey,
     pub protocol_fee: ProtocolFee,
-    pub _padding_1: [u8; 32],
+    pub padding_1: [u8; 32],
     pub reward_infos: [RewardInfo; 2],
     pub oracle: Pubkey,
     pub bin_array_bitmap: [u64; 16],
     pub last_updated_at: i64,
-    pub _padding_2: [u8; 32],
+    pub padding_2: [u8; 32],
     pub pre_activation_swap_address: Pubkey,
     pub base_key: Pubkey,
     pub activation_point: u64,
     pub pre_activation_duration: u64,
-    pub _padding_3: [u8; 8],
-    pub _padding_4: u64,
+    pub padding_3: [u8; 8],
+    pub padding_4: u64,
     pub creator: Pubkey,
     pub token_mint_x_program_flag: u8,
     pub token_mint_y_program_flag: u8,
     pub version: u8,
-    pub _reserved: [u8; 21],
+    pub reserved: [u8; 21],
 }
 impl LbPair {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -334,25 +334,25 @@ impl LbPair {
         } else {
             <ProtocolFee>::deserialize(&mut reader)?
         };
-        let _padding_1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let reward_infos: [RewardInfo; 2] = crate::borsh_de_or_default(&mut reader)?;
         let oracle: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let bin_array_bitmap: [u64; 16] = crate::borsh_de_or_default(&mut reader)?;
         let last_updated_at: i64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_2: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_2: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let pre_activation_swap_address: Pubkey = crate::borsh_de_or_default(
             &mut reader,
         )?;
         let base_key: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let activation_point: u64 = crate::borsh_de_or_default(&mut reader)?;
         let pre_activation_duration: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_4: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_4: u64 = crate::borsh_de_or_default(&mut reader)?;
         let creator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let token_mint_x_program_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
         let token_mint_y_program_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
         let version: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved: [u8; 21] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved: [u8; 21] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             parameters,
@@ -372,23 +372,23 @@ impl LbPair {
             reserve_x,
             reserve_y,
             protocol_fee,
-            _padding_1,
+            padding_1,
             reward_infos,
             oracle,
             bin_array_bitmap,
             last_updated_at,
-            _padding_2,
+            padding_2,
             pre_activation_swap_address,
             base_key,
             activation_point,
             pre_activation_duration,
-            _padding_3,
-            _padding_4,
+            padding_3,
+            padding_4,
             creator,
             token_mint_x_program_flag,
             token_mint_y_program_flag,
             version,
-            _reserved,
+            reserved,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -412,12 +412,12 @@ impl LbPair {
         borsh::BorshSerialize::serialize(&self.reserve_x, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.reserve_y, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_fee, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.reward_infos, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.oracle, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bin_array_bitmap, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.last_updated_at, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_2, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.pre_activation_swap_address,
             &mut writer,
@@ -425,13 +425,13 @@ impl LbPair {
         borsh::BorshSerialize::serialize(&self.base_key, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.activation_point, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pre_activation_duration, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_3, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_4, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_3, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_4, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.creator, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_mint_x_program_flag, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_mint_y_program_flag, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.version, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved, &mut writer)?;
         Ok(())
     }
 }
@@ -473,7 +473,7 @@ pub struct LimitOrder {
     pub lb_pair: Pubkey,
     pub owner: Pubkey,
     pub bin_count: u16,
-    pub _padding_0: [u8; 14],
+    pub padding_0: [u8; 14],
     pub padding_1: [u64; 4],
 }
 impl LimitOrder {
@@ -482,14 +482,14 @@ impl LimitOrder {
         let lb_pair: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let bin_count: u16 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: [u8; 14] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 14] = crate::borsh_de_or_default(&mut reader)?;
         let padding_1: [u64; 4] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             lb_pair,
             owner,
             bin_count,
-            _padding_0,
+            padding_0,
             padding_1,
         })
     }
@@ -497,7 +497,7 @@ impl LimitOrder {
         borsh::BorshSerialize::serialize(&self.lb_pair, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.owner, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bin_count, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding_1, &mut writer)?;
         Ok(())
     }
@@ -666,12 +666,12 @@ pub struct PositionV2 {
     pub total_claimed_rewards: [u64; 2],
     pub operator: Pubkey,
     pub lock_release_point: u64,
-    pub _padding_0: u8,
+    pub padding_0: u8,
     pub fee_owner: Pubkey,
     pub version: u8,
     pub permissionless_operation_bits: u8,
     #[serde(with = "crate::big_array_serde")]
-    pub _reserved: [u8; 85],
+    pub reserved: [u8; 85],
 }
 impl PositionV2 {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -695,11 +695,11 @@ impl PositionV2 {
         let total_claimed_rewards: [u64; 2] = crate::borsh_de_or_default(&mut reader)?;
         let operator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let lock_release_point: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: u8 = crate::borsh_de_or_default(&mut reader)?;
         let fee_owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let version: u8 = crate::borsh_de_or_default(&mut reader)?;
         let permissionless_operation_bits: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved = <[u8; 85] as borsh::BorshDeserialize>::deserialize_reader(
+        let reserved = <[u8; 85] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
@@ -717,11 +717,11 @@ impl PositionV2 {
             total_claimed_rewards,
             operator,
             lock_release_point,
-            _padding_0,
+            padding_0,
             fee_owner,
             version,
             permissionless_operation_bits,
-            _reserved,
+            reserved,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -738,14 +738,14 @@ impl PositionV2 {
         borsh::BorshSerialize::serialize(&self.total_claimed_rewards, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.operator, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lock_release_point, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_owner, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.version, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.permissionless_operation_bits,
             &mut writer,
         )?;
-        borsh::BorshSerialize::serialize(&self._reserved, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved, &mut writer)?;
         Ok(())
     }
 }
@@ -979,21 +979,21 @@ pub const TOKEN_BADGE_ACCOUNT_DISCM: [u8; 8] = [116, 219, 204, 229, 249, 116, 25
 pub struct TokenBadge {
     pub token_mint: Pubkey,
     #[serde(with = "crate::big_array_serde")]
-    pub _padding: [u8; 128],
+    pub padding: [u8; 128],
 }
 impl TokenBadge {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let token_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let _padding = <[u8; 128] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding = <[u8; 128] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
-        Ok(Self { token_mint, _padding })
+        Ok(Self { token_mint, padding })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.token_mint, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
 }

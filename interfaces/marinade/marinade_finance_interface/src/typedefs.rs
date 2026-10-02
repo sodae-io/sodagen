@@ -805,3 +805,14 @@ pub enum StakeStatus {
     Active,
     Deactivating,
 }
+impl TryFrom<u8> for StakeStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Unknown),
+            1u8 => Ok(Self::Active),
+            2u8 => Ok(Self::Deactivating),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}

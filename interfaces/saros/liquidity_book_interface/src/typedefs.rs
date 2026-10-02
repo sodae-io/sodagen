@@ -74,6 +74,16 @@ pub enum ConfigAvailability {
     Closed,
     Open,
 }
+impl TryFrom<u8> for ConfigAvailability {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Closed),
+            1u8 => Ok(Self::Open),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -88,6 +98,16 @@ pub enum ConfigStatus {
     #[default]
     Inactive,
     Active,
+}
+impl TryFrom<u8> for ConfigStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Inactive),
+            1u8 => Ok(Self::Active),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -104,7 +124,7 @@ pub struct DynamicFeeParameters {
     pub volatility_accumulator: u32,
     pub volatility_reference: u32,
     pub id_reference: u32,
-    pub _space: [u8; 4],
+    pub space: [u8; 4],
 }
 impl DynamicFeeParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -113,14 +133,14 @@ impl DynamicFeeParameters {
         let volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
         let volatility_reference: u32 = crate::borsh_de_or_default(&mut reader)?;
         let id_reference: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let _space: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let space: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             time_last_updated,
             volatility_accumulator,
             volatility_reference,
             id_reference,
-            _space,
+            space,
         })
     }
 }
@@ -138,6 +158,16 @@ pub enum QuoteAssetBadgeStatus {
     #[default]
     Disabled,
     Enabled,
+}
+impl TryFrom<u8> for QuoteAssetBadgeStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Disabled),
+            1u8 => Ok(Self::Enabled),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -157,7 +187,7 @@ pub struct StaticFeeParameters {
     pub variable_fee_control: u32,
     pub max_volatility_accumulator: u32,
     pub protocol_share: u16,
-    pub _space: [u8; 2],
+    pub space: [u8; 2],
 }
 impl StaticFeeParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -169,7 +199,7 @@ impl StaticFeeParameters {
         let variable_fee_control: u32 = crate::borsh_de_or_default(&mut reader)?;
         let max_volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
         let protocol_share: u16 = crate::borsh_de_or_default(&mut reader)?;
-        let _space: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let space: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             base_factor,
@@ -179,7 +209,7 @@ impl StaticFeeParameters {
             variable_fee_control,
             max_volatility_accumulator,
             protocol_share,
-            _space,
+            space,
         })
     }
 }
@@ -197,4 +227,14 @@ pub enum SwapType {
     #[default]
     ExactInput,
     ExactOutput,
+}
+impl TryFrom<u8> for SwapType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::ExactInput),
+            1u8 => Ok(Self::ExactOutput),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

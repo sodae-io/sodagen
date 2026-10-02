@@ -19,9 +19,8 @@ pub struct Config {
     pub pool_creator_authority: Pubkey,
     pub activation_type: u8,
     pub partner_fee_numerator: u64,
-    pub fee_curve: FeeCurveInfoFromDuration,
     #[serde(with = "crate::big_array_serde")]
-    pub padding: [u8; 182],
+    pub padding: [u8; 219],
 }
 impl Config {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -36,12 +35,7 @@ impl Config {
         let pool_creator_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let activation_type: u8 = crate::borsh_de_or_default(&mut reader)?;
         let partner_fee_numerator: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let fee_curve = if reader.is_empty() {
-            Default::default()
-        } else {
-            <FeeCurveInfoFromDuration>::deserialize(&mut reader)?
-        };
-        let padding = <[u8; 182] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding = <[u8; 219] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
@@ -52,7 +46,6 @@ impl Config {
             pool_creator_authority,
             activation_type,
             partner_fee_numerator,
-            fee_curve,
             padding,
         })
     }
@@ -63,7 +56,6 @@ impl Config {
         borsh::BorshSerialize::serialize(&self.pool_creator_authority, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.activation_type, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.partner_fee_numerator, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.fee_curve, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
@@ -112,7 +104,6 @@ pub struct LockEscrow {
     pub unclaimed_fee_pending: u64,
     pub a_fee: u64,
     pub b_fee: u64,
-    pub padding: [u8; 7],
 }
 impl LockEscrow {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -126,7 +117,6 @@ impl LockEscrow {
         let unclaimed_fee_pending: u64 = crate::borsh_de_or_default(&mut reader)?;
         let a_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let b_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let padding: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pool,
@@ -138,7 +128,6 @@ impl LockEscrow {
             unclaimed_fee_pending,
             a_fee,
             b_fee,
-            padding,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -151,7 +140,6 @@ impl LockEscrow {
         borsh::BorshSerialize::serialize(&self.unclaimed_fee_pending, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.a_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.b_fee, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
 }
@@ -170,6 +158,65 @@ impl LockEscrowAccount {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&LOCK_ESCROW_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const OPERATOR_ACCOUNT_DISCM: [u8; 8] = [219, 31, 188, 145, 69, 139, 204, 117];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct Operator {
+    pub whitelisted_address: Pubkey,
+    pub permission: u128,
+    pub padding: [u64; 2],
+}
+impl Operator {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let whitelisted_address: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let permission: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 2] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            whitelisted_address,
+            permission,
+            padding,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.whitelisted_address, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.permission, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct OperatorAccount(pub Operator);
+impl OperatorAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != OPERATOR_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(Operator::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&OPERATOR_ACCOUNT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -209,11 +256,8 @@ pub struct Pool {
     pub total_locked_lp: u64,
     pub bootstrapping: Bootstrapping,
     pub partner_info: PartnerInfo,
-    pub fee_curve: FeeCurveInfo,
-    pub is_update_fee_completed: bool,
     pub padding: Padding,
     pub curve_type: CurveType,
-    pub padding1: [u8; 19],
 }
 impl Pool {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -249,19 +293,12 @@ impl Pool {
         } else {
             <PartnerInfo>::deserialize(&mut reader)?
         };
-        let fee_curve = if reader.is_empty() {
-            Default::default()
-        } else {
-            <FeeCurveInfo>::deserialize(&mut reader)?
-        };
-        let is_update_fee_completed: bool = crate::borsh_de_or_default(&mut reader)?;
         let padding = if reader.is_empty() {
             Default::default()
         } else {
             <Padding>::deserialize(&mut reader)?
         };
         let curve_type: CurveType = crate::borsh_de_or_default(&mut reader)?;
-        let padding1: [u8; 19] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             lp_mint,
@@ -283,11 +320,8 @@ impl Pool {
             total_locked_lp,
             bootstrapping,
             partner_info,
-            fee_curve,
-            is_update_fee_completed,
             padding,
             curve_type,
-            padding1,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -310,11 +344,8 @@ impl Pool {
         borsh::BorshSerialize::serialize(&self.total_locked_lp, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bootstrapping, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.partner_info, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.fee_curve, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.is_update_fee_completed, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.curve_type, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.padding1, &mut writer)?;
         Ok(())
     }
 }
@@ -333,6 +364,109 @@ impl PoolAccount {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&POOL_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const VAULT_ACCOUNT_DISCM: [u8; 8] = [211, 8, 232, 43, 2, 152, 117, 119];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct Vault {
+    pub enabled: u8,
+    pub bumps: VaultBumps,
+    pub total_amount: u64,
+    pub token_vault: Pubkey,
+    pub fee_vault: Pubkey,
+    pub token_mint: Pubkey,
+    pub lp_mint: Pubkey,
+    pub strategies: [Pubkey; 30],
+    pub base: Pubkey,
+    pub admin: Pubkey,
+    pub operator: Pubkey,
+    pub locked_profit_tracker: LockedProfitTracker,
+}
+impl Vault {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let enabled: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let bumps = if reader.is_empty() {
+            Default::default()
+        } else {
+            <VaultBumps>::deserialize(&mut reader)?
+        };
+        let total_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let token_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let fee_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let token_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let lp_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let strategies: [Pubkey; 30] = crate::borsh_de_or_default(&mut reader)?;
+        let base: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let operator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let locked_profit_tracker = if reader.is_empty() {
+            Default::default()
+        } else {
+            <LockedProfitTracker>::deserialize(&mut reader)?
+        };
+        *__buf = reader;
+        Ok(Self {
+            enabled,
+            bumps,
+            total_amount,
+            token_vault,
+            fee_vault,
+            token_mint,
+            lp_mint,
+            strategies,
+            base,
+            admin,
+            operator,
+            locked_profit_tracker,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.enabled, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.bumps, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.total_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_vault, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.fee_vault, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.lp_mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.strategies, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.base, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.admin, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.operator, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.locked_profit_tracker, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct VaultAccount(pub Vault);
+impl VaultAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != VAULT_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(Vault::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&VAULT_ACCOUNT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

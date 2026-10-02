@@ -1,6 +1,32 @@
 use borsh::{BorshDeserialize, BorshSerialize};
 #[allow(unused_imports)]
 use crate::*;
+use solana_pubkey::Pubkey;
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub enum AccountsType {
+    #[default]
+    TransferHookBase,
+    TransferHookBaseReferral,
+}
+impl TryFrom<u8> for AccountsType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::TransferHookBase),
+            1u8 => Ok(Self::TransferHookBaseReferral),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -71,6 +97,53 @@ impl BaseFeeParameters {
             second_factor,
             third_factor,
             base_fee_mode,
+        })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct Config {
+    pub pool_fees: PoolFees,
+    pub activation_duration: u64,
+    pub vault_config_key: Pubkey,
+    pub pool_creator_authority: Pubkey,
+    pub activation_type: u8,
+    pub partner_fee_numerator: u64,
+    #[serde(with = "crate::big_array_serde")]
+    pub padding: [u8; 219],
+}
+impl Config {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool_fees = if reader.is_empty() {
+            Default::default()
+        } else {
+            <PoolFees>::deserialize(&mut reader)?
+        };
+        let activation_duration: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let vault_config_key: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let pool_creator_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let activation_type: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let partner_fee_numerator: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding = <[u8; 219] as borsh::BorshDeserialize>::deserialize_reader(
+            &mut reader,
+        )?;
+        *__buf = reader;
+        Ok(Self {
+            pool_fees,
+            activation_duration,
+            vault_config_key,
+            pool_creator_authority,
+            activation_type,
+            partner_fee_numerator,
+            padding,
         })
     }
 }
@@ -461,7 +534,7 @@ impl LiquidityDistributionParameters {
 pub struct LiquidityVestingInfo {
     pub is_initialized: u8,
     pub vesting_percentage: u8,
-    pub _padding: [u8; 2],
+    pub padding: [u8; 2],
     pub bps_per_period: u16,
     pub number_of_periods: u16,
     pub frequency: u32,
@@ -472,7 +545,7 @@ impl LiquidityVestingInfo {
         let mut reader: &[u8] = *__buf;
         let is_initialized: u8 = crate::borsh_de_or_default(&mut reader)?;
         let vesting_percentage: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
         let bps_per_period: u16 = crate::borsh_de_or_default(&mut reader)?;
         let number_of_periods: u16 = crate::borsh_de_or_default(&mut reader)?;
         let frequency: u32 = crate::borsh_de_or_default(&mut reader)?;
@@ -483,7 +556,7 @@ impl LiquidityVestingInfo {
         Ok(Self {
             is_initialized,
             vesting_percentage,
-            _padding,
+            padding,
             bps_per_period,
             number_of_periods,
             frequency,
@@ -538,13 +611,60 @@ impl LiquidityVestingInfoParams {
     serde::Serialize,
     serde::Deserialize
 )]
+pub struct LockEscrow {
+    pub pool: Pubkey,
+    pub owner: Pubkey,
+    pub escrow_vault: Pubkey,
+    pub bump: u8,
+    pub total_locked_amount: u64,
+    pub lp_per_token: u128,
+    pub unclaimed_fee_pending: u64,
+    pub a_fee: u64,
+    pub b_fee: u64,
+}
+impl LockEscrow {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let escrow_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let total_locked_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let lp_per_token: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let unclaimed_fee_pending: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let a_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let b_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            pool,
+            owner,
+            escrow_vault,
+            bump,
+            total_locked_amount,
+            lp_per_token,
+            unclaimed_fee_pending,
+            a_fee,
+            b_fee,
+        })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub struct LockedVestingConfig {
     pub amount_per_period: u64,
     pub cliff_duration_from_migration_time: u64,
     pub frequency: u64,
     pub number_of_period: u64,
     pub cliff_unlock_amount: u64,
-    pub _padding: u64,
+    pub padding: u64,
 }
 impl LockedVestingConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -556,7 +676,7 @@ impl LockedVestingConfig {
         let frequency: u64 = crate::borsh_de_or_default(&mut reader)?;
         let number_of_period: u64 = crate::borsh_de_or_default(&mut reader)?;
         let cliff_unlock_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             amount_per_period,
@@ -564,7 +684,7 @@ impl LockedVestingConfig {
             frequency,
             number_of_period,
             cliff_unlock_amount,
-            _padding,
+            padding,
         })
     }
 }
@@ -830,6 +950,168 @@ impl PoolMetrics {
     serde::Serialize,
     serde::Deserialize
 )]
+pub struct PoolState {
+    pub volatility_tracker: VolatilityTracker,
+    pub config: Pubkey,
+    pub creator: Pubkey,
+    pub base_mint: Pubkey,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub base_reserve: u64,
+    pub quote_reserve: u64,
+    pub protocol_base_fee: u64,
+    pub protocol_quote_fee: u64,
+    pub partner_base_fee: u64,
+    pub partner_quote_fee: u64,
+    pub sqrt_price: u128,
+    pub activation_point: u64,
+    pub pool_type: u8,
+    pub is_migrated: u8,
+    pub is_partner_withdraw_surplus: u8,
+    pub is_protocol_withdraw_surplus: u8,
+    pub migration_progress: u8,
+    pub is_withdraw_leftover: u8,
+    pub is_creator_withdraw_surplus: u8,
+    pub migration_fee_withdraw_status: u8,
+    pub metrics: PoolMetrics,
+    pub finish_curve_timestamp: u64,
+    pub creator_base_fee: u64,
+    pub creator_quote_fee: u64,
+    pub legacy_creation_fee_bits: u8,
+    pub creation_fee_bits: u8,
+    pub has_swap: u8,
+    pub padding_0: [u8; 5],
+    pub protocol_liquidity_migration_fee_bps: u16,
+    pub padding_1: [u8; 6],
+    pub protocol_migration_base_fee_amount: u64,
+    pub protocol_migration_quote_fee_amount: u64,
+    pub padding_2: [u64; 3],
+}
+impl PoolState {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let volatility_tracker = if reader.is_empty() {
+            Default::default()
+        } else {
+            <VolatilityTracker>::deserialize(&mut reader)?
+        };
+        let config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let creator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let base_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let base_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let quote_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let base_reserve: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let quote_reserve: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let protocol_base_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let protocol_quote_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let partner_base_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let partner_quote_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let sqrt_price: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let activation_point: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let pool_type: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let is_migrated: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let is_partner_withdraw_surplus: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let is_protocol_withdraw_surplus: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let migration_progress: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let is_withdraw_leftover: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let is_creator_withdraw_surplus: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let migration_fee_withdraw_status: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let metrics = if reader.is_empty() {
+            Default::default()
+        } else {
+            <PoolMetrics>::deserialize(&mut reader)?
+        };
+        let finish_curve_timestamp: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let creator_base_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let creator_quote_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let legacy_creation_fee_bits: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let creation_fee_bits: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let has_swap: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let protocol_liquidity_migration_fee_bps: u16 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let padding_1: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let protocol_migration_base_fee_amount: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let protocol_migration_quote_fee_amount: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let padding_2: [u64; 3] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            volatility_tracker,
+            config,
+            creator,
+            base_mint,
+            base_vault,
+            quote_vault,
+            base_reserve,
+            quote_reserve,
+            protocol_base_fee,
+            protocol_quote_fee,
+            partner_base_fee,
+            partner_quote_fee,
+            sqrt_price,
+            activation_point,
+            pool_type,
+            is_migrated,
+            is_partner_withdraw_surplus,
+            is_protocol_withdraw_surplus,
+            migration_progress,
+            is_withdraw_leftover,
+            is_creator_withdraw_surplus,
+            migration_fee_withdraw_status,
+            metrics,
+            finish_curve_timestamp,
+            creator_base_fee,
+            creator_quote_fee,
+            legacy_creation_fee_bits,
+            creation_fee_bits,
+            has_swap,
+            padding_0,
+            protocol_liquidity_migration_fee_bps,
+            padding_1,
+            protocol_migration_base_fee_amount,
+            protocol_migration_quote_fee_amount,
+            padding_2,
+        })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct RemainingAccountsSlice {
+    pub accounts_type: AccountsType,
+    pub length: u8,
+}
+impl RemainingAccountsSlice {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let accounts_type: AccountsType = crate::borsh_de_or_default(&mut reader)?;
+        let length: u8 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { accounts_type, length })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub struct SwapParameters {
     pub amount_in: u64,
     pub minimum_amount_out: u64,
@@ -981,6 +1263,29 @@ impl TokenSupplyParams {
             pre_migration_token_supply,
             post_migration_token_supply,
         })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct TransferHookAccountsInfo {
+    pub slices: Vec<RemainingAccountsSlice>,
+}
+impl TransferHookAccountsInfo {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let slices: Vec<RemainingAccountsSlice> = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        *__buf = reader;
+        Ok(Self { slices })
     }
 }
 #[derive(

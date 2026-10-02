@@ -72,6 +72,71 @@ impl AdminSetCoinCreatorEventEvent {
         Ok(data)
     }
 }
+pub const ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_EVENT_EVENT_DISCM: [u8; 8] = [
+    191, 198, 127, 188, 109, 174, 9, 105,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct AdminSetCoinCreatorFeeEditableEvent {
+    pub timestamp: i64,
+    pub admin_set_coin_creator_authority: Pubkey,
+    pub base_mint: Pubkey,
+    pub pool: Pubkey,
+}
+impl AdminSetCoinCreatorFeeEditableEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
+        let admin_set_coin_creator_authority: Pubkey = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let base_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            timestamp,
+            admin_set_coin_creator_authority,
+            base_mint,
+            pool,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.timestamp, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.admin_set_coin_creator_authority,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.base_mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pool, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct AdminSetCoinCreatorFeeEditableEventEvent(
+    pub AdminSetCoinCreatorFeeEditableEvent,
+);
+impl AdminSetCoinCreatorFeeEditableEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = AdminSetCoinCreatorFeeEditableEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&ADMIN_SET_COIN_CREATOR_FEE_EDITABLE_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const ADMIN_UPDATE_TOKEN_INCENTIVES_EVENT_EVENT_DISCM: [u8; 8] = [
     147, 250, 108, 120, 247, 29, 67, 222,
 ];
@@ -271,6 +336,7 @@ pub struct BuyEvent {
     pub buyback_fee: u64,
     pub virtual_quote_reserves: i128,
     pub can_boost: bool,
+    pub base_supply: u64,
 }
 impl BuyEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -315,6 +381,7 @@ impl BuyEvent {
         let buyback_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let virtual_quote_reserves: i128 = crate::borsh_de_or_default(&mut reader)?;
         let can_boost: bool = crate::borsh_de_or_default(&mut reader)?;
+        let base_supply: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             timestamp,
@@ -353,6 +420,7 @@ impl BuyEvent {
             buyback_fee,
             virtual_quote_reserves,
             can_boost,
+            base_supply,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -401,6 +469,7 @@ impl BuyEvent {
         borsh::BorshSerialize::serialize(&self.buyback_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.virtual_quote_reserves, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.can_boost, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.base_supply, &mut writer)?;
         Ok(())
     }
 }
@@ -793,6 +862,8 @@ pub struct CreatePoolEvent {
     pub user_quote_token_account: Pubkey,
     pub coin_creator: Pubkey,
     pub is_mayhem_mode: bool,
+    pub creator_fee_bps: u64,
+    pub can_edit_creator_fee: bool,
 }
 impl CreatePoolEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -818,6 +889,8 @@ impl CreatePoolEvent {
         let user_quote_token_account: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let coin_creator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let is_mayhem_mode: bool = crate::borsh_de_or_default(&mut reader)?;
+        let creator_fee_bps: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let can_edit_creator_fee: bool = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             timestamp,
@@ -841,6 +914,8 @@ impl CreatePoolEvent {
             user_quote_token_account,
             coin_creator,
             is_mayhem_mode,
+            creator_fee_bps,
+            can_edit_creator_fee,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -865,6 +940,8 @@ impl CreatePoolEvent {
         borsh::BorshSerialize::serialize(&self.user_quote_token_account, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.coin_creator, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.is_mayhem_mode, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.creator_fee_bps, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.can_edit_creator_fee, &mut writer)?;
         Ok(())
     }
 }
@@ -1395,6 +1472,7 @@ pub struct SellEvent {
     pub buyback_fee: u64,
     pub virtual_quote_reserves: i128,
     pub can_boost: bool,
+    pub base_supply: u64,
 }
 impl SellEvent {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1434,6 +1512,7 @@ impl SellEvent {
         let buyback_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let virtual_quote_reserves: i128 = crate::borsh_de_or_default(&mut reader)?;
         let can_boost: bool = crate::borsh_de_or_default(&mut reader)?;
+        let base_supply: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             timestamp,
@@ -1465,6 +1544,7 @@ impl SellEvent {
             buyback_fee,
             virtual_quote_reserves,
             can_boost,
+            base_supply,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1506,6 +1586,7 @@ impl SellEvent {
         borsh::BorshSerialize::serialize(&self.buyback_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.virtual_quote_reserves, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.can_boost, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.base_supply, &mut writer)?;
         Ok(())
     }
 }
@@ -1646,6 +1727,72 @@ impl SetBoostAuthorityEventEvent {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&SET_BOOST_AUTHORITY_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const SET_COIN_CREATOR_FEE_BPS_EVENT_EVENT_DISCM: [u8; 8] = [
+    230, 138, 241, 158, 28, 232, 228, 211,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SetCoinCreatorFeeBpsEvent {
+    pub timestamp: i64,
+    pub authority: Pubkey,
+    pub base_mint: Pubkey,
+    pub pool: Pubkey,
+    pub old_creator_fee_bps: u64,
+    pub new_creator_fee_bps: u64,
+}
+impl SetCoinCreatorFeeBpsEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
+        let authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let base_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let old_creator_fee_bps: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let new_creator_fee_bps: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            timestamp,
+            authority,
+            base_mint,
+            pool,
+            old_creator_fee_bps,
+            new_creator_fee_bps,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.timestamp, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.authority, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.base_mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.old_creator_fee_bps, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.new_creator_fee_bps, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetCoinCreatorFeeBpsEventEvent(pub SetCoinCreatorFeeBpsEvent);
+impl SetCoinCreatorFeeBpsEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SET_COIN_CREATOR_FEE_BPS_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = SetCoinCreatorFeeBpsEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SET_COIN_CREATOR_FEE_BPS_EVENT_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -1823,6 +1970,69 @@ impl UpdateAdminEventEvent {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&UPDATE_ADMIN_EVENT_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const UPDATE_CREATOR_FEE_CONFIG_EVENT_EVENT_DISCM: [u8; 8] = [
+    152, 198, 124, 124, 106, 246, 127, 191,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct UpdateCreatorFeeConfigEvent {
+    pub timestamp: i64,
+    pub admin: Pubkey,
+    pub creator_fee_configurable: bool,
+    pub max_configurable_creator_fee_bps: u64,
+}
+impl UpdateCreatorFeeConfigEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
+        let admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let creator_fee_configurable: bool = crate::borsh_de_or_default(&mut reader)?;
+        let max_configurable_creator_fee_bps: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        *__buf = reader;
+        Ok(Self {
+            timestamp,
+            admin,
+            creator_fee_configurable,
+            max_configurable_creator_fee_bps,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.timestamp, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.admin, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.creator_fee_configurable, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.max_configurable_creator_fee_bps,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateCreatorFeeConfigEventEvent(pub UpdateCreatorFeeConfigEvent);
+impl UpdateCreatorFeeConfigEventEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != UPDATE_CREATOR_FEE_CONFIG_EVENT_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = UpdateCreatorFeeConfigEvent::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&UPDATE_CREATOR_FEE_CONFIG_EVENT_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

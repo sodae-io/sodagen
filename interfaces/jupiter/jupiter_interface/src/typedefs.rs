@@ -70,6 +70,23 @@ pub enum AccountsType {
     SupplementalTickArraysOne,
     SupplementalTickArraysTwo,
 }
+impl TryFrom<u8> for AccountsType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::TransferHookA),
+            1u8 => Ok(Self::TransferHookB),
+            2u8 => Ok(Self::TransferHookReward),
+            3u8 => Ok(Self::TransferHookInput),
+            4u8 => Ok(Self::TransferHookIntermediate),
+            5u8 => Ok(Self::TransferHookOutput),
+            6u8 => Ok(Self::SupplementalTickArrays),
+            7u8 => Ok(Self::SupplementalTickArraysOne),
+            8u8 => Ok(Self::SupplementalTickArraysTwo),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -90,6 +107,22 @@ pub enum DefiTunaAccountsType {
     SupplementalTickArrays,
     SupplementalTickArraysOne,
     SupplementalTickArraysTwo,
+}
+impl TryFrom<u8> for DefiTunaAccountsType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::TransferHookA),
+            1u8 => Ok(Self::TransferHookB),
+            2u8 => Ok(Self::TransferHookInput),
+            3u8 => Ok(Self::TransferHookIntermediate),
+            4u8 => Ok(Self::TransferHookOutput),
+            5u8 => Ok(Self::SupplementalTickArrays),
+            6u8 => Ok(Self::SupplementalTickArraysOne),
+            7u8 => Ok(Self::SupplementalTickArraysTwo),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -169,6 +202,41 @@ pub enum Side {
     #[default]
     Bid,
     Ask,
+}
+impl TryFrom<u8> for Side {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Bid),
+            1u8 => Ok(Self::Ask),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub enum BisonFiPredictSide {
+    #[default]
+    Yes,
+    No,
+}
+impl TryFrom<u8> for BisonFiPredictSide {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Yes),
+            1u8 => Ok(Self::No),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -317,6 +385,84 @@ pub enum Swap {
     XOrca,
     Quantum { side: Side },
     WhaleStreetV2 { side: Side, auth_amount_in: u64, auth: u64 },
+    Riptide { amount_is_token_a: bool },
+    RunnerRodeo,
+    TaurusFi { is_base_in: bool },
+    Omnipair,
+    MSwap,
+    Hylo { swap_type: HyloSwapType },
+    VoltrDeposit,
+    VoltrWithdraw,
+    SanctumSv2 {
+        src_lst_value_calc_accs: u8,
+        dst_lst_value_calc_accs: u8,
+        src_lst_index: u32,
+        dst_lst_index: u32,
+    },
+    LemmingsFi { is_base_in: bool },
+    ScaleVmmBuy,
+    ScaleVmmSell,
+    ScaleAmmBuy,
+    ScaleAmmSell,
+    BisonFiV2 { a_to_b: bool },
+    Trends,
+    HumaDeposit,
+    HumaInstantWithdraw,
+    Kipseli { is_base_to_quote: bool },
+    DynamicV2 {
+        candidate_swaps: Vec<CandidateSwapWithBps>,
+        max_split_quote_calls: u8,
+        max_split_candidates: u8,
+    },
+    PumpSwapBuyV3WithCashbackClaim,
+    PumpSwapSellV3WithCashbackClaim,
+    PumpWrappedBuyV4WithCashbackClaim,
+    PumpWrappedSellV4WithCashbackClaim,
+    GoonFiV3 { is_bid: bool },
+    PumpWrappedBuyV5 { claim_cashback: bool },
+    PumpWrappedSellV5 { claim_cashback: bool },
+    ZeroFiSwapV2,
+    BisonFiPredict { side: BisonFiPredictSide, is_buy: bool },
+    ByrealDynamicV3,
+    Flux { swap_id: u64, base_to_quote: bool },
+    VaultLiquidSellLst,
+    VaultLiquidBuyLst { lst_amount: u64 },
+    KipseliV2 { is_base_to_quote: bool },
+    Deriverse { side: Side, instr_id: u32 },
+    Hadron { is_x: bool },
+    BinaryFi,
+    Metric { zero_for_one: bool },
+    JupiterLendDexSwap { swap0to1: bool },
+    Gatorswap { base_to_quote: bool },
+    Flint { is_global: bool, taker_buy: bool },
+    Denali { base_to_quote: bool },
+    PerenaStarV2Deposit,
+    PerenaStarV2WithdrawFromExternal { external_liquidity_source: u8 },
+    SanctumSols { swap_type: SanctumSolsSwapType },
+}
+#[derive(
+    Clone,
+    Debug,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct CandidateSwapWithBps {
+    pub candidate_swap: CandidateSwap,
+    pub bps: u32,
+}
+impl CandidateSwapWithBps {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let candidate_swap = <CandidateSwap as borsh::BorshDeserialize>::deserialize_reader(
+            &mut reader,
+        )?;
+        let bps: u32 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { candidate_swap, bps })
+    }
 }
 #[derive(
     Clone,
@@ -331,6 +477,79 @@ pub enum CandidateSwap {
     HumidiFi { swap_id: u64, is_base_to_quote: bool },
     TesseraV { side: Side },
     HumidiFiV2 { swap_id: u64, is_base_to_quote: bool },
+    RaydiumV2,
+    RaydiumClmm,
+    Whirlpool { a_to_b: bool },
+    ZeroFi,
+    BisonFiV2 { a_to_b: bool },
+    GoonFiV2 { is_bid: bool },
+    GoonFiV3 { is_bid: bool },
+    WhirlpoolV2 { a_to_b: bool, remaining_accounts_info: Option<RemainingAccountsInfo> },
+    ZeroFiSwapV2,
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub enum SanctumSolsSwapType {
+    #[default]
+    Mint,
+    Claim,
+    ClaimHolding,
+}
+impl TryFrom<u8> for SanctumSolsSwapType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Mint),
+            1u8 => Ok(Self::Claim),
+            2u8 => Ok(Self::ClaimHolding),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub enum HyloSwapType {
+    #[default]
+    MintStable,
+    RedeemStable,
+    MintLever,
+    RedeemLever,
+    SwapStableToLever,
+    SwapLeverToStable,
+    StabilityPoolDeposit,
+    StabilityPoolWithdraw,
+}
+impl TryFrom<u8> for HyloSwapType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::MintStable),
+            1u8 => Ok(Self::RedeemStable),
+            2u8 => Ok(Self::MintLever),
+            3u8 => Ok(Self::RedeemLever),
+            4u8 => Ok(Self::SwapStableToLever),
+            5u8 => Ok(Self::SwapLeverToStable),
+            6u8 => Ok(Self::StabilityPoolDeposit),
+            7u8 => Ok(Self::StabilityPoolWithdraw),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -347,6 +566,7 @@ pub struct SwapEventV2 {
     pub input_amount: u64,
     pub output_mint: Pubkey,
     pub output_amount: u64,
+    pub amm: Pubkey,
 }
 impl SwapEventV2 {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -355,12 +575,14 @@ impl SwapEventV2 {
         let input_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
         let output_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let output_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let amm: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             input_mint,
             input_amount,
             output_mint,
             output_amount,
+            amm,
         })
     }
 }

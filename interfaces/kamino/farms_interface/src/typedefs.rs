@@ -40,6 +40,39 @@ pub enum FarmConfigOption {
     UpdateDelegatedAuthority,
     UpdateIsHarvestingPermissionless,
 }
+impl TryFrom<u8> for FarmConfigOption {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateRewardRps),
+            1u8 => Ok(Self::UpdateRewardMinClaimDuration),
+            2u8 => Ok(Self::WithdrawAuthority),
+            3u8 => Ok(Self::DepositWarmupPeriod),
+            4u8 => Ok(Self::WithdrawCooldownPeriod),
+            5u8 => Ok(Self::RewardType),
+            6u8 => Ok(Self::RpsDecimals),
+            7u8 => Ok(Self::LockingMode),
+            8u8 => Ok(Self::LockingStartTimestamp),
+            9u8 => Ok(Self::LockingDuration),
+            10u8 => Ok(Self::LockingEarlyWithdrawalPenaltyBps),
+            11u8 => Ok(Self::DepositCapAmount),
+            12u8 => Ok(Self::SlashedAmountSpillAddress),
+            13u8 => Ok(Self::ScopePricesAccount),
+            14u8 => Ok(Self::ScopeOraclePriceId),
+            15u8 => Ok(Self::ScopeOracleMaxAge),
+            16u8 => Ok(Self::UpdateRewardScheduleCurvePoints),
+            17u8 => Ok(Self::UpdatePendingFarmAdmin),
+            18u8 => Ok(Self::UpdateStrategyId),
+            19u8 => Ok(Self::UpdateDelegatedRpsAdmin),
+            20u8 => Ok(Self::UpdateVaultId),
+            21u8 => Ok(Self::UpdateExtraDelegatedAuthority),
+            22u8 => Ok(Self::UpdateIsRewardUserOnceEnabled),
+            23u8 => Ok(Self::UpdateDelegatedAuthority),
+            24u8 => Ok(Self::UpdateIsHarvestingPermissionless),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -54,6 +87,16 @@ pub enum GlobalConfigOption {
     #[default]
     SetPendingGlobalAdmin,
     SetTreasuryFeeBps,
+}
+impl TryFrom<u8> for GlobalConfigOption {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::SetPendingGlobalAdmin),
+            1u8 => Ok(Self::SetTreasuryFeeBps),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -70,6 +113,17 @@ pub enum LockingMode {
     None,
     Continuous,
     WithExpiry,
+}
+impl TryFrom<u8> for LockingMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::Continuous),
+            2u8 => Ok(Self::WithExpiry),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -205,6 +259,16 @@ pub enum RewardType {
     Proportional,
     Constant,
 }
+impl TryFrom<u8> for RewardType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Proportional),
+            1u8 => Ok(Self::Constant),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -219,6 +283,16 @@ pub enum TimeUnit {
     #[default]
     Seconds,
     Slots,
+}
+impl TryFrom<u8> for TimeUnit {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Seconds),
+            1u8 => Ok(Self::Slots),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

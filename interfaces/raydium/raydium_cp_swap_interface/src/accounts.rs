@@ -111,7 +111,8 @@ pub struct ObservationState {
     pub pool_id: Pubkey,
     #[serde(with = "crate::big_array_serde")]
     pub observations: [Observation; 100],
-    pub padding: [u64; 4],
+    pub last_update_timestamp: u64,
+    pub padding: [u64; 3],
 }
 impl ObservationState {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -122,13 +123,15 @@ impl ObservationState {
         let observations = <[Observation; 100] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
-        let padding: [u64; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let last_update_timestamp: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 3] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             initialized,
             observation_index,
             pool_id,
             observations,
+            last_update_timestamp,
             padding,
         })
     }
@@ -137,6 +140,7 @@ impl ObservationState {
         borsh::BorshSerialize::serialize(&self.observation_index, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pool_id, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.observations, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.last_update_timestamp, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
@@ -367,6 +371,63 @@ impl PoolStateAccount {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&POOL_STATE_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const SUPPORT_MINT_ASSOCIATED_ACCOUNT_DISCM: [u8; 8] = [
+    134, 40, 183, 79, 12, 112, 162, 53,
+];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct SupportMintAssociated {
+    pub bump: u8,
+    pub mint: Pubkey,
+    pub padding: [u64; 8],
+}
+impl SupportMintAssociated {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { bump, mint, padding })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.bump, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct SupportMintAssociatedAccount(pub SupportMintAssociated);
+impl SupportMintAssociatedAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SUPPORT_MINT_ASSOCIATED_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(SupportMintAssociated::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SUPPORT_MINT_ASSOCIATED_ACCOUNT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

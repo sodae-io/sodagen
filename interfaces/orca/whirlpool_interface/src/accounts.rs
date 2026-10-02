@@ -106,136 +106,65 @@ impl AdaptiveFeeTierAccount {
         Ok(data)
     }
 }
-pub const WHIRLPOOLS_CONFIG_ACCOUNT_DISCM: [u8; 8] = [
-    157, 20, 49, 224, 217, 87, 193, 254,
+pub const DYNAMIC_TICK_ARRAY_ACCOUNT_DISCM: [u8; 8] = [
+    17, 216, 246, 142, 225, 199, 218, 56,
 ];
 #[derive(
     Clone,
     Debug,
-    Default,
     BorshDeserialize,
     BorshSerialize,
     PartialEq,
     serde::Serialize,
     serde::Deserialize
 )]
-pub struct WhirlpoolsConfig {
-    pub fee_authority: Pubkey,
-    pub collect_protocol_fees_authority: Pubkey,
-    pub reward_emissions_super_authority: Pubkey,
-    pub default_protocol_fee_rate: u16,
+pub struct DynamicTickArray {
+    pub start_tick_index: i32,
+    pub whirlpool: Pubkey,
+    pub tick_bitmap: u128,
+    #[serde(with = "crate::big_array_serde")]
+    pub ticks: [DynamicTick; 88],
 }
-impl WhirlpoolsConfig {
+impl DynamicTickArray {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
-        let fee_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let collect_protocol_fees_authority: Pubkey = crate::borsh_de_or_default(
+        let start_tick_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let whirlpool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let tick_bitmap: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let ticks = <[DynamicTick; 88] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
-        let reward_emissions_super_authority: Pubkey = crate::borsh_de_or_default(
-            &mut reader,
-        )?;
-        let default_protocol_fee_rate: u16 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
-            fee_authority,
-            collect_protocol_fees_authority,
-            reward_emissions_super_authority,
-            default_protocol_fee_rate,
+            start_tick_index,
+            whirlpool,
+            tick_bitmap,
+            ticks,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        borsh::BorshSerialize::serialize(&self.fee_authority, &mut writer)?;
-        borsh::BorshSerialize::serialize(
-            &self.collect_protocol_fees_authority,
-            &mut writer,
-        )?;
-        borsh::BorshSerialize::serialize(
-            &self.reward_emissions_super_authority,
-            &mut writer,
-        )?;
-        borsh::BorshSerialize::serialize(&self.default_protocol_fee_rate, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.start_tick_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.whirlpool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tick_bitmap, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.ticks, &mut writer)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct WhirlpoolsConfigAccount(pub WhirlpoolsConfig);
-impl WhirlpoolsConfigAccount {
+pub struct DynamicTickArrayAccount(pub DynamicTickArray);
+impl DynamicTickArrayAccount {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         use std::io::Read;
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != WHIRLPOOLS_CONFIG_ACCOUNT_DISCM {
+        if maybe_discm != DYNAMIC_TICK_ARRAY_ACCOUNT_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        Ok(Self(WhirlpoolsConfig::deserialize(&mut reader)?))
+        Ok(Self(DynamicTickArray::deserialize(&mut reader)?))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&WHIRLPOOLS_CONFIG_ACCOUNT_DISCM)?;
-        self.0.serialize(&mut writer)
-    }
-    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
-        let mut data = Vec::new();
-        self.serialize(&mut data)?;
-        Ok(data)
-    }
-}
-pub const WHIRLPOOLS_CONFIG_EXTENSION_ACCOUNT_DISCM: [u8; 8] = [
-    2, 99, 215, 163, 240, 26, 153, 58,
-];
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    BorshDeserialize,
-    BorshSerialize,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize
-)]
-pub struct WhirlpoolsConfigExtension {
-    pub whirlpools_config: Pubkey,
-    pub config_extension_authority: Pubkey,
-    pub token_badge_authority: Pubkey,
-}
-impl WhirlpoolsConfigExtension {
-    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
-        let mut reader: &[u8] = *__buf;
-        let whirlpools_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let config_extension_authority: Pubkey = crate::borsh_de_or_default(
-            &mut reader,
-        )?;
-        let token_badge_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        *__buf = reader;
-        Ok(Self {
-            whirlpools_config,
-            config_extension_authority,
-            token_badge_authority,
-        })
-    }
-    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        borsh::BorshSerialize::serialize(&self.whirlpools_config, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.config_extension_authority, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.token_badge_authority, &mut writer)?;
-        Ok(())
-    }
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct WhirlpoolsConfigExtensionAccount(pub WhirlpoolsConfigExtension);
-impl WhirlpoolsConfigExtensionAccount {
-    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
-        use std::io::Read;
-        let mut reader = buf;
-        let mut maybe_discm = [0u8; 8];
-        reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != WHIRLPOOLS_CONFIG_EXTENSION_ACCOUNT_DISCM {
-            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
-        }
-        Ok(Self(WhirlpoolsConfigExtension::deserialize(&mut reader)?))
-    }
-    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&WHIRLPOOLS_CONFIG_EXTENSION_ACCOUNT_DISCM)?;
+        writer.write_all(&DYNAMIC_TICK_ARRAY_ACCOUNT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -666,21 +595,30 @@ pub const TOKEN_BADGE_ACCOUNT_DISCM: [u8; 8] = [116, 219, 204, 229, 249, 116, 25
 pub struct TokenBadge {
     pub whirlpools_config: Pubkey,
     pub token_mint: Pubkey,
+    pub attribute_require_non_transferable_position: bool,
 }
 impl TokenBadge {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let whirlpools_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let token_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let attribute_require_non_transferable_position: bool = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         *__buf = reader;
         Ok(Self {
             whirlpools_config,
             token_mint,
+            attribute_require_non_transferable_position,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.whirlpools_config, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.attribute_require_non_transferable_position,
+            &mut writer,
+        )?;
         Ok(())
     }
 }
@@ -829,6 +767,148 @@ impl WhirlpoolAccount {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&WHIRLPOOL_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const WHIRLPOOLS_CONFIG_ACCOUNT_DISCM: [u8; 8] = [
+    157, 20, 49, 224, 217, 87, 193, 254,
+];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct WhirlpoolsConfig {
+    pub fee_authority: Pubkey,
+    pub collect_protocol_fees_authority: Pubkey,
+    pub reward_emissions_super_authority: Pubkey,
+    pub default_protocol_fee_rate: u16,
+    pub feature_flags: u16,
+}
+impl WhirlpoolsConfig {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let fee_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let collect_protocol_fees_authority: Pubkey = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let reward_emissions_super_authority: Pubkey = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let default_protocol_fee_rate: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let feature_flags: u16 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            fee_authority,
+            collect_protocol_fees_authority,
+            reward_emissions_super_authority,
+            default_protocol_fee_rate,
+            feature_flags,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.fee_authority, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.collect_protocol_fees_authority,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.reward_emissions_super_authority,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.default_protocol_fee_rate, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.feature_flags, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct WhirlpoolsConfigAccount(pub WhirlpoolsConfig);
+impl WhirlpoolsConfigAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != WHIRLPOOLS_CONFIG_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(WhirlpoolsConfig::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&WHIRLPOOLS_CONFIG_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const WHIRLPOOLS_CONFIG_EXTENSION_ACCOUNT_DISCM: [u8; 8] = [
+    2, 99, 215, 163, 240, 26, 153, 58,
+];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct WhirlpoolsConfigExtension {
+    pub whirlpools_config: Pubkey,
+    pub config_extension_authority: Pubkey,
+    pub token_badge_authority: Pubkey,
+}
+impl WhirlpoolsConfigExtension {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let whirlpools_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let config_extension_authority: Pubkey = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let token_badge_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            whirlpools_config,
+            config_extension_authority,
+            token_badge_authority,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.whirlpools_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.config_extension_authority, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_badge_authority, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct WhirlpoolsConfigExtensionAccount(pub WhirlpoolsConfigExtension);
+impl WhirlpoolsConfigExtensionAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != WHIRLPOOLS_CONFIG_EXTENSION_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(WhirlpoolsConfigExtension::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&WHIRLPOOLS_CONFIG_EXTENSION_ACCOUNT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

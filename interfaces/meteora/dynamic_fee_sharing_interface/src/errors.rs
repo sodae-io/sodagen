@@ -22,6 +22,8 @@ pub enum DynamicFeeSharingError {
     InvalidSigner = 6008,
     #[error("Invalid action")]
     InvalidAction = 6009,
+    #[error("Invalid parameters")]
+    InvalidParameters = 6010,
 }
 impl From<DynamicFeeSharingError> for ProgramError {
     fn from(e: DynamicFeeSharingError) -> Self {

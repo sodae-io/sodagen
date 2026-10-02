@@ -9,20 +9,28 @@ use crate::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum DynamicBondingCurveProgramIx {
     ClaimCreatorTradingFee(ClaimCreatorTradingFeeIxArgs),
+    ClaimCreatorTradingFee2(ClaimCreatorTradingFee2IxArgs),
     ClaimPartnerPoolCreationFee,
-    ClaimProtocolFee(ClaimProtocolFeeIxArgs),
+    ClaimProtocolFee2(ClaimProtocolFee2IxArgs),
     ClaimProtocolPoolCreationFee,
     ClaimTradingFee(ClaimTradingFeeIxArgs),
+    ClaimTradingFee2(ClaimTradingFee2IxArgs),
     CloseClaimProtocolFeeOperator,
     CloseOperatorAccount,
+    CloseTokenBadge,
     CreateConfig(CreateConfigIxArgs),
+    CreateConfigWithTransferHook(CreateConfigWithTransferHookIxArgs),
     CreateLocker,
     CreateOperatorAccount(CreateOperatorAccountIxArgs),
     CreatePartnerMetadata(CreatePartnerMetadataIxArgs),
+    CreateTokenBadge,
     CreateVirtualPoolMetadata(CreateVirtualPoolMetadataIxArgs),
     CreatorWithdrawSurplus,
     InitializeVirtualPoolWithSplToken(InitializeVirtualPoolWithSplTokenIxArgs),
     InitializeVirtualPoolWithToken2022(InitializeVirtualPoolWithToken2022IxArgs),
+    InitializeVirtualPoolWithToken2022TransferHook(
+        InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+    ),
     MigrateMeteoraDamm,
     MigrateMeteoraDammClaimLpToken,
     MigrateMeteoraDammLockLpToken,
@@ -32,9 +40,11 @@ pub enum DynamicBondingCurveProgramIx {
     PartnerWithdrawSurplus,
     Swap(SwapIxArgs),
     Swap2(Swap2IxArgs),
+    Swap2WithTransferHook(Swap2WithTransferHookIxArgs),
     TransferPoolCreator,
     WithdrawLeftover,
     WithdrawMigrationFee(WithdrawMigrationFeeIxArgs),
+    ClaimProtocolFee(ClaimProtocolFeeIxArgs),
     ZapProtocolFee(ZapProtocolFeeIxArgs),
 }
 impl DynamicBondingCurveProgramIx {
@@ -50,17 +60,32 @@ impl DynamicBondingCurveProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&CLAIM_CREATOR_TRADING_FEE2_IX_DISCM) {
+            let mut reader = &buf[CLAIM_CREATOR_TRADING_FEE2_IX_DISCM.len()..];
+            let max_base_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let max_quote_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let transfer_hook_accounts_info = if reader.is_empty() {
+                Default::default()
+            } else {
+                <TransferHookAccountsInfo>::deserialize(&mut reader)?
+            };
+            return Ok(
+                Self::ClaimCreatorTradingFee2(ClaimCreatorTradingFee2IxArgs {
+                    max_base_amount,
+                    max_quote_amount,
+                    transfer_hook_accounts_info,
+                }),
+            );
+        }
         if buf.starts_with(&CLAIM_PARTNER_POOL_CREATION_FEE_IX_DISCM) {
             return Ok(Self::ClaimPartnerPoolCreationFee);
         }
-        if buf.starts_with(&CLAIM_PROTOCOL_FEE_IX_DISCM) {
-            let mut reader = &buf[CLAIM_PROTOCOL_FEE_IX_DISCM.len()..];
-            let max_base_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
-            let max_quote_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        if buf.starts_with(&CLAIM_PROTOCOL_FEE2_IX_DISCM) {
+            let mut reader = &buf[CLAIM_PROTOCOL_FEE2_IX_DISCM.len()..];
+            let max_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(
-                Self::ClaimProtocolFee(ClaimProtocolFeeIxArgs {
-                    max_base_amount,
-                    max_quote_amount,
+                Self::ClaimProtocolFee2(ClaimProtocolFee2IxArgs {
+                    max_amount,
                 }),
             );
         }
@@ -78,11 +103,31 @@ impl DynamicBondingCurveProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&CLAIM_TRADING_FEE2_IX_DISCM) {
+            let mut reader = &buf[CLAIM_TRADING_FEE2_IX_DISCM.len()..];
+            let max_amount_a: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let max_amount_b: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let transfer_hook_accounts_info = if reader.is_empty() {
+                Default::default()
+            } else {
+                <TransferHookAccountsInfo>::deserialize(&mut reader)?
+            };
+            return Ok(
+                Self::ClaimTradingFee2(ClaimTradingFee2IxArgs {
+                    max_amount_a,
+                    max_amount_b,
+                    transfer_hook_accounts_info,
+                }),
+            );
+        }
         if buf.starts_with(&CLOSE_CLAIM_PROTOCOL_FEE_OPERATOR_IX_DISCM) {
             return Ok(Self::CloseClaimProtocolFeeOperator);
         }
         if buf.starts_with(&CLOSE_OPERATOR_ACCOUNT_IX_DISCM) {
             return Ok(Self::CloseOperatorAccount);
+        }
+        if buf.starts_with(&CLOSE_TOKEN_BADGE_IX_DISCM) {
+            return Ok(Self::CloseTokenBadge);
         }
         if buf.starts_with(&CREATE_CONFIG_IX_DISCM) {
             let mut reader = &buf[CREATE_CONFIG_IX_DISCM.len()..];
@@ -93,6 +138,19 @@ impl DynamicBondingCurveProgramIx {
             };
             return Ok(
                 Self::CreateConfig(CreateConfigIxArgs {
+                    config_parameters,
+                }),
+            );
+        }
+        if buf.starts_with(&CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_DISCM) {
+            let mut reader = &buf[CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_DISCM.len()..];
+            let config_parameters = if reader.is_empty() {
+                Default::default()
+            } else {
+                <ConfigParameters>::deserialize(&mut reader)?
+            };
+            return Ok(
+                Self::CreateConfigWithTransferHook(CreateConfigWithTransferHookIxArgs {
                     config_parameters,
                 }),
             );
@@ -117,6 +175,9 @@ impl DynamicBondingCurveProgramIx {
                     metadata,
                 }),
             );
+        }
+        if buf.starts_with(&CREATE_TOKEN_BADGE_IX_DISCM) {
+            return Ok(Self::CreateTokenBadge);
         }
         if buf.starts_with(&CREATE_VIRTUAL_POOL_METADATA_IX_DISCM) {
             let mut reader = &buf[CREATE_VIRTUAL_POOL_METADATA_IX_DISCM.len()..];
@@ -160,6 +221,22 @@ impl DynamicBondingCurveProgramIx {
                 }),
             );
         }
+        if buf
+            .starts_with(&INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_DISCM)
+        {
+            let mut reader = &buf[INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_DISCM
+                .len()..];
+            let params = if reader.is_empty() {
+                Default::default()
+            } else {
+                <InitializePoolParameters>::deserialize(&mut reader)?
+            };
+            return Ok(
+                Self::InitializeVirtualPoolWithToken2022TransferHook(InitializeVirtualPoolWithToken2022TransferHookIxArgs {
+                    params,
+                }),
+            );
+        }
         if buf.starts_with(&MIGRATE_METEORA_DAMM_IX_DISCM) {
             return Ok(Self::MigrateMeteoraDamm);
         }
@@ -199,6 +276,25 @@ impl DynamicBondingCurveProgramIx {
             };
             return Ok(Self::Swap2(Swap2IxArgs { params }));
         }
+        if buf.starts_with(&SWAP2_WITH_TRANSFER_HOOK_IX_DISCM) {
+            let mut reader = &buf[SWAP2_WITH_TRANSFER_HOOK_IX_DISCM.len()..];
+            let params = if reader.is_empty() {
+                Default::default()
+            } else {
+                <SwapParameters2>::deserialize(&mut reader)?
+            };
+            let transfer_hook_accounts_info = if reader.is_empty() {
+                Default::default()
+            } else {
+                <TransferHookAccountsInfo>::deserialize(&mut reader)?
+            };
+            return Ok(
+                Self::Swap2WithTransferHook(Swap2WithTransferHookIxArgs {
+                    params,
+                    transfer_hook_accounts_info,
+                }),
+            );
+        }
         if buf.starts_with(&TRANSFER_POOL_CREATOR_IX_DISCM) {
             return Ok(Self::TransferPoolCreator);
         }
@@ -209,6 +305,17 @@ impl DynamicBondingCurveProgramIx {
             let mut reader = &buf[WITHDRAW_MIGRATION_FEE_IX_DISCM.len()..];
             let flag: u8 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(Self::WithdrawMigrationFee(WithdrawMigrationFeeIxArgs { flag }));
+        }
+        if buf.starts_with(&CLAIM_PROTOCOL_FEE_IX_DISCM) {
+            let mut reader = &buf[CLAIM_PROTOCOL_FEE_IX_DISCM.len()..];
+            let max_base_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let max_quote_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::ClaimProtocolFee(ClaimProtocolFeeIxArgs {
+                    max_base_amount,
+                    max_quote_amount,
+                }),
+            );
         }
         if buf.starts_with(&ZAP_PROTOCOL_FEE_IX_DISCM) {
             let mut reader = &buf[ZAP_PROTOCOL_FEE_IX_DISCM.len()..];
@@ -225,13 +332,22 @@ impl DynamicBondingCurveProgramIx {
                 borsh::BorshSerialize::serialize(&args.max_quote_amount, &mut writer)?;
                 Ok(())
             }
+            Self::ClaimCreatorTradingFee2(args) => {
+                writer.write_all(&CLAIM_CREATOR_TRADING_FEE2_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.max_base_amount, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.max_quote_amount, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.transfer_hook_accounts_info,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
             Self::ClaimPartnerPoolCreationFee => {
                 writer.write_all(&CLAIM_PARTNER_POOL_CREATION_FEE_IX_DISCM)
             }
-            Self::ClaimProtocolFee(args) => {
-                writer.write_all(&CLAIM_PROTOCOL_FEE_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args.max_base_amount, &mut writer)?;
-                borsh::BorshSerialize::serialize(&args.max_quote_amount, &mut writer)?;
+            Self::ClaimProtocolFee2(args) => {
+                writer.write_all(&CLAIM_PROTOCOL_FEE2_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.max_amount, &mut writer)?;
                 Ok(())
             }
             Self::ClaimProtocolPoolCreationFee => {
@@ -243,14 +359,30 @@ impl DynamicBondingCurveProgramIx {
                 borsh::BorshSerialize::serialize(&args.max_amount_b, &mut writer)?;
                 Ok(())
             }
+            Self::ClaimTradingFee2(args) => {
+                writer.write_all(&CLAIM_TRADING_FEE2_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.max_amount_a, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.max_amount_b, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.transfer_hook_accounts_info,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
             Self::CloseClaimProtocolFeeOperator => {
                 writer.write_all(&CLOSE_CLAIM_PROTOCOL_FEE_OPERATOR_IX_DISCM)
             }
             Self::CloseOperatorAccount => {
                 writer.write_all(&CLOSE_OPERATOR_ACCOUNT_IX_DISCM)
             }
+            Self::CloseTokenBadge => writer.write_all(&CLOSE_TOKEN_BADGE_IX_DISCM),
             Self::CreateConfig(args) => {
                 writer.write_all(&CREATE_CONFIG_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.config_parameters, &mut writer)?;
+                Ok(())
+            }
+            Self::CreateConfigWithTransferHook(args) => {
+                writer.write_all(&CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.config_parameters, &mut writer)?;
                 Ok(())
             }
@@ -265,6 +397,7 @@ impl DynamicBondingCurveProgramIx {
                 borsh::BorshSerialize::serialize(&args.metadata, &mut writer)?;
                 Ok(())
             }
+            Self::CreateTokenBadge => writer.write_all(&CREATE_TOKEN_BADGE_IX_DISCM),
             Self::CreateVirtualPoolMetadata(args) => {
                 writer.write_all(&CREATE_VIRTUAL_POOL_METADATA_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.metadata, &mut writer)?;
@@ -280,6 +413,14 @@ impl DynamicBondingCurveProgramIx {
             }
             Self::InitializeVirtualPoolWithToken2022(args) => {
                 writer.write_all(&INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.params, &mut writer)?;
+                Ok(())
+            }
+            Self::InitializeVirtualPoolWithToken2022TransferHook(args) => {
+                writer
+                    .write_all(
+                        &INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_DISCM,
+                    )?;
                 borsh::BorshSerialize::serialize(&args.params, &mut writer)?;
                 Ok(())
             }
@@ -310,6 +451,15 @@ impl DynamicBondingCurveProgramIx {
                 borsh::BorshSerialize::serialize(&args.params, &mut writer)?;
                 Ok(())
             }
+            Self::Swap2WithTransferHook(args) => {
+                writer.write_all(&SWAP2_WITH_TRANSFER_HOOK_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.params, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.transfer_hook_accounts_info,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
             Self::TransferPoolCreator => {
                 writer.write_all(&TRANSFER_POOL_CREATOR_IX_DISCM)
             }
@@ -317,6 +467,12 @@ impl DynamicBondingCurveProgramIx {
             Self::WithdrawMigrationFee(args) => {
                 writer.write_all(&WITHDRAW_MIGRATION_FEE_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.flag, &mut writer)?;
+                Ok(())
+            }
+            Self::ClaimProtocolFee(args) => {
+                writer.write_all(&CLAIM_PROTOCOL_FEE_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.max_base_amount, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.max_quote_amount, &mut writer)?;
                 Ok(())
             }
             Self::ZapProtocolFee(args) => {
@@ -702,6 +858,372 @@ pub fn claim_creator_trading_fee_verify_account_privileges<'me, 'info>(
     claim_creator_trading_fee_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN: usize = 13;
+#[derive(Copy, Clone, Debug)]
+pub struct ClaimCreatorTradingFee2Accounts<'me, 'info> {
+    pub pool_authority: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub token_a_account: &'me AccountInfo<'info>,
+    pub token_b_account: &'me AccountInfo<'info>,
+    pub base_vault: &'me AccountInfo<'info>,
+    pub quote_vault: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub creator: &'me AccountInfo<'info>,
+    pub token_base_program: &'me AccountInfo<'info>,
+    pub token_quote_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ClaimCreatorTradingFee2Keys {
+    pub pool_authority: Pubkey,
+    pub pool: Pubkey,
+    pub token_a_account: Pubkey,
+    pub token_b_account: Pubkey,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub creator: Pubkey,
+    pub token_base_program: Pubkey,
+    pub token_quote_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<ClaimCreatorTradingFee2Accounts<'_, '_>> for ClaimCreatorTradingFee2Keys {
+    fn from(accounts: ClaimCreatorTradingFee2Accounts) -> Self {
+        Self {
+            pool_authority: *accounts.pool_authority.key,
+            pool: *accounts.pool.key,
+            token_a_account: *accounts.token_a_account.key,
+            token_b_account: *accounts.token_b_account.key,
+            base_vault: *accounts.base_vault.key,
+            quote_vault: *accounts.quote_vault.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            creator: *accounts.creator.key,
+            token_base_program: *accounts.token_base_program.key,
+            token_quote_program: *accounts.token_quote_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<ClaimCreatorTradingFee2Keys>
+for [AccountMeta; CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClaimCreatorTradingFee2Keys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pool_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_a_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_b_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.creator,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_base_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_quote_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN]>
+for ClaimCreatorTradingFee2Keys {
+    fn from(pubkeys: [Pubkey; CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool_authority: pubkeys[0],
+            pool: pubkeys[1],
+            token_a_account: pubkeys[2],
+            token_b_account: pubkeys[3],
+            base_vault: pubkeys[4],
+            quote_vault: pubkeys[5],
+            base_mint: pubkeys[6],
+            quote_mint: pubkeys[7],
+            creator: pubkeys[8],
+            token_base_program: pubkeys[9],
+            token_quote_program: pubkeys[10],
+            event_authority: pubkeys[11],
+            program: pubkeys[12],
+        }
+    }
+}
+impl<'info> From<ClaimCreatorTradingFee2Accounts<'_, 'info>>
+for [AccountInfo<'info>; CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClaimCreatorTradingFee2Accounts<'_, 'info>) -> Self {
+        [
+            accounts.pool_authority.clone(),
+            accounts.pool.clone(),
+            accounts.token_a_account.clone(),
+            accounts.token_b_account.clone(),
+            accounts.base_vault.clone(),
+            accounts.quote_vault.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.creator.clone(),
+            accounts.token_base_program.clone(),
+            accounts.token_quote_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN]>
+for ClaimCreatorTradingFee2Accounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            pool_authority: &arr[0],
+            pool: &arr[1],
+            token_a_account: &arr[2],
+            token_b_account: &arr[3],
+            base_vault: &arr[4],
+            quote_vault: &arr[5],
+            base_mint: &arr[6],
+            quote_mint: &arr[7],
+            creator: &arr[8],
+            token_base_program: &arr[9],
+            token_quote_program: &arr[10],
+            event_authority: &arr[11],
+            program: &arr[12],
+        }
+    }
+}
+pub const CLAIM_CREATOR_TRADING_FEE2_IX_DISCM: [u8; 8usize] = [
+    238, 247, 213, 94, 110, 145, 88, 142,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ClaimCreatorTradingFee2IxArgs {
+    pub max_base_amount: u64,
+    pub max_quote_amount: u64,
+    pub transfer_hook_accounts_info: TransferHookAccountsInfo,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClaimCreatorTradingFee2IxData(pub ClaimCreatorTradingFee2IxArgs);
+impl From<ClaimCreatorTradingFee2IxArgs> for ClaimCreatorTradingFee2IxData {
+    fn from(args: ClaimCreatorTradingFee2IxArgs) -> Self {
+        Self(args)
+    }
+}
+impl ClaimCreatorTradingFee2IxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLAIM_CREATOR_TRADING_FEE2_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let max_base_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let max_quote_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let transfer_hook_accounts_info = if reader.is_empty() {
+            Default::default()
+        } else {
+            <TransferHookAccountsInfo>::deserialize(&mut reader)?
+        };
+        Ok(
+            Self(ClaimCreatorTradingFee2IxArgs {
+                max_base_amount,
+                max_quote_amount,
+                transfer_hook_accounts_info,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLAIM_CREATOR_TRADING_FEE2_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.max_base_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.max_quote_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.transfer_hook_accounts_info,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn claim_creator_trading_fee2_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ClaimCreatorTradingFee2Keys,
+    args: ClaimCreatorTradingFee2IxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLAIM_CREATOR_TRADING_FEE2_IX_ACCOUNTS_LEN] = keys.into();
+    let data: ClaimCreatorTradingFee2IxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn claim_creator_trading_fee2_ix(
+    keys: ClaimCreatorTradingFee2Keys,
+    args: ClaimCreatorTradingFee2IxArgs,
+) -> std::io::Result<Instruction> {
+    claim_creator_trading_fee2_ix_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        keys,
+        args,
+    )
+}
+pub fn claim_creator_trading_fee2_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimCreatorTradingFee2Accounts<'_, '_>,
+    args: ClaimCreatorTradingFee2IxArgs,
+) -> ProgramResult {
+    let keys: ClaimCreatorTradingFee2Keys = accounts.into();
+    let ix = claim_creator_trading_fee2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn claim_creator_trading_fee2_invoke(
+    accounts: ClaimCreatorTradingFee2Accounts<'_, '_>,
+    args: ClaimCreatorTradingFee2IxArgs,
+) -> ProgramResult {
+    claim_creator_trading_fee2_invoke_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn claim_creator_trading_fee2_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimCreatorTradingFee2Accounts<'_, '_>,
+    args: ClaimCreatorTradingFee2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ClaimCreatorTradingFee2Keys = accounts.into();
+    let ix = claim_creator_trading_fee2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn claim_creator_trading_fee2_invoke_signed(
+    accounts: ClaimCreatorTradingFee2Accounts<'_, '_>,
+    args: ClaimCreatorTradingFee2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    claim_creator_trading_fee2_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn claim_creator_trading_fee2_verify_account_keys(
+    accounts: ClaimCreatorTradingFee2Accounts<'_, '_>,
+    keys: ClaimCreatorTradingFee2Keys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pool_authority.key, keys.pool_authority),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.token_a_account.key, keys.token_a_account),
+        (*accounts.token_b_account.key, keys.token_b_account),
+        (*accounts.base_vault.key, keys.base_vault),
+        (*accounts.quote_vault.key, keys.quote_vault),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.creator.key, keys.creator),
+        (*accounts.token_base_program.key, keys.token_base_program),
+        (*accounts.token_quote_program.key, keys.token_quote_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn claim_creator_trading_fee2_verify_writable_privileges<'me, 'info>(
+    accounts: ClaimCreatorTradingFee2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.pool,
+        accounts.token_a_account,
+        accounts.token_b_account,
+        accounts.base_vault,
+        accounts.quote_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn claim_creator_trading_fee2_verify_signer_privileges<'me, 'info>(
+    accounts: ClaimCreatorTradingFee2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.creator] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn claim_creator_trading_fee2_verify_account_privileges<'me, 'info>(
+    accounts: ClaimCreatorTradingFee2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    claim_creator_trading_fee2_verify_writable_privileges(accounts)?;
+    claim_creator_trading_fee2_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CLAIM_PARTNER_POOL_CREATION_FEE_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
 pub struct ClaimPartnerPoolCreationFeeAccounts<'me, 'info> {
@@ -939,69 +1461,77 @@ pub fn claim_partner_pool_creation_fee_verify_account_privileges<'me, 'info>(
     claim_partner_pool_creation_fee_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN: usize = 15;
+pub const CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN: usize = 11;
 #[derive(Copy, Clone, Debug)]
-pub struct ClaimProtocolFeeAccounts<'me, 'info> {
-    pub pool_authority: &'me AccountInfo<'info>,
+pub struct ClaimProtocolFee2Accounts<'me, 'info> {
+    pub receiver_token_account: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub token_base_program: &'me AccountInfo<'info>,
+    pub token_quote_program: &'me AccountInfo<'info>,
     pub config: &'me AccountInfo<'info>,
     pub pool: &'me AccountInfo<'info>,
     pub base_vault: &'me AccountInfo<'info>,
     pub quote_vault: &'me AccountInfo<'info>,
-    pub base_mint: &'me AccountInfo<'info>,
-    pub quote_mint: &'me AccountInfo<'info>,
-    pub token_base_account: &'me AccountInfo<'info>,
-    pub token_quote_account: &'me AccountInfo<'info>,
-    pub operator: &'me AccountInfo<'info>,
+    pub pool_authority: &'me AccountInfo<'info>,
     pub signer: &'me AccountInfo<'info>,
-    pub token_base_program: &'me AccountInfo<'info>,
-    pub token_quote_program: &'me AccountInfo<'info>,
-    pub event_authority: &'me AccountInfo<'info>,
-    pub program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ClaimProtocolFeeKeys {
-    pub pool_authority: Pubkey,
+pub struct ClaimProtocolFee2Keys {
+    pub receiver_token_account: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub token_base_program: Pubkey,
+    pub token_quote_program: Pubkey,
     pub config: Pubkey,
     pub pool: Pubkey,
     pub base_vault: Pubkey,
     pub quote_vault: Pubkey,
-    pub base_mint: Pubkey,
-    pub quote_mint: Pubkey,
-    pub token_base_account: Pubkey,
-    pub token_quote_account: Pubkey,
-    pub operator: Pubkey,
+    pub pool_authority: Pubkey,
     pub signer: Pubkey,
-    pub token_base_program: Pubkey,
-    pub token_quote_program: Pubkey,
-    pub event_authority: Pubkey,
-    pub program: Pubkey,
 }
-impl From<ClaimProtocolFeeAccounts<'_, '_>> for ClaimProtocolFeeKeys {
-    fn from(accounts: ClaimProtocolFeeAccounts) -> Self {
+impl From<ClaimProtocolFee2Accounts<'_, '_>> for ClaimProtocolFee2Keys {
+    fn from(accounts: ClaimProtocolFee2Accounts) -> Self {
         Self {
-            pool_authority: *accounts.pool_authority.key,
+            receiver_token_account: *accounts.receiver_token_account.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            token_base_program: *accounts.token_base_program.key,
+            token_quote_program: *accounts.token_quote_program.key,
             config: *accounts.config.key,
             pool: *accounts.pool.key,
             base_vault: *accounts.base_vault.key,
             quote_vault: *accounts.quote_vault.key,
-            base_mint: *accounts.base_mint.key,
-            quote_mint: *accounts.quote_mint.key,
-            token_base_account: *accounts.token_base_account.key,
-            token_quote_account: *accounts.token_quote_account.key,
-            operator: *accounts.operator.key,
+            pool_authority: *accounts.pool_authority.key,
             signer: *accounts.signer.key,
-            token_base_program: *accounts.token_base_program.key,
-            token_quote_program: *accounts.token_quote_program.key,
-            event_authority: *accounts.event_authority.key,
-            program: *accounts.program.key,
         }
     }
 }
-impl From<ClaimProtocolFeeKeys> for [AccountMeta; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN] {
-    fn from(keys: ClaimProtocolFeeKeys) -> Self {
+impl From<ClaimProtocolFee2Keys> for [AccountMeta; CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClaimProtocolFee2Keys) -> Self {
         [
             AccountMeta {
-                pubkey: keys.pool_authority,
+                pubkey: keys.receiver_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_base_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_quote_program,
                 is_signer: false,
                 is_writable: false,
             },
@@ -1026,27 +1556,7 @@ impl From<ClaimProtocolFeeKeys> for [AccountMeta; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.base_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.quote_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_base_account,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.token_quote_account,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.operator,
+                pubkey: keys.pool_authority,
                 is_signer: false,
                 is_writable: false,
             },
@@ -1055,130 +1565,96 @@ impl From<ClaimProtocolFeeKeys> for [AccountMeta; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS
                 is_signer: true,
                 is_writable: false,
             },
-            AccountMeta {
-                pubkey: keys.token_base_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_quote_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.event_authority,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.program,
-                is_signer: false,
-                is_writable: false,
-            },
         ]
     }
 }
-impl From<[Pubkey; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]> for ClaimProtocolFeeKeys {
-    fn from(pubkeys: [Pubkey; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]) -> Self {
+impl From<[Pubkey; CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN]> for ClaimProtocolFee2Keys {
+    fn from(pubkeys: [Pubkey; CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            pool_authority: pubkeys[0],
-            config: pubkeys[1],
-            pool: pubkeys[2],
-            base_vault: pubkeys[3],
-            quote_vault: pubkeys[4],
-            base_mint: pubkeys[5],
-            quote_mint: pubkeys[6],
-            token_base_account: pubkeys[7],
-            token_quote_account: pubkeys[8],
-            operator: pubkeys[9],
+            receiver_token_account: pubkeys[0],
+            base_mint: pubkeys[1],
+            quote_mint: pubkeys[2],
+            token_base_program: pubkeys[3],
+            token_quote_program: pubkeys[4],
+            config: pubkeys[5],
+            pool: pubkeys[6],
+            base_vault: pubkeys[7],
+            quote_vault: pubkeys[8],
+            pool_authority: pubkeys[9],
             signer: pubkeys[10],
-            token_base_program: pubkeys[11],
-            token_quote_program: pubkeys[12],
-            event_authority: pubkeys[13],
-            program: pubkeys[14],
         }
     }
 }
-impl<'info> From<ClaimProtocolFeeAccounts<'_, 'info>>
-for [AccountInfo<'info>; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN] {
-    fn from(accounts: ClaimProtocolFeeAccounts<'_, 'info>) -> Self {
+impl<'info> From<ClaimProtocolFee2Accounts<'_, 'info>>
+for [AccountInfo<'info>; CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClaimProtocolFee2Accounts<'_, 'info>) -> Self {
         [
-            accounts.pool_authority.clone(),
+            accounts.receiver_token_account.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.token_base_program.clone(),
+            accounts.token_quote_program.clone(),
             accounts.config.clone(),
             accounts.pool.clone(),
             accounts.base_vault.clone(),
             accounts.quote_vault.clone(),
-            accounts.base_mint.clone(),
-            accounts.quote_mint.clone(),
-            accounts.token_base_account.clone(),
-            accounts.token_quote_account.clone(),
-            accounts.operator.clone(),
+            accounts.pool_authority.clone(),
             accounts.signer.clone(),
-            accounts.token_base_program.clone(),
-            accounts.token_quote_program.clone(),
-            accounts.event_authority.clone(),
-            accounts.program.clone(),
         ]
     }
 }
-impl<'me, 'info> From<&'me [AccountInfo<'info>; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]>
-for ClaimProtocolFeeAccounts<'me, 'info> {
-    fn from(arr: &'me [AccountInfo<'info>; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]) -> Self {
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN]>
+for ClaimProtocolFee2Accounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN],
+    ) -> Self {
         Self {
-            pool_authority: &arr[0],
-            config: &arr[1],
-            pool: &arr[2],
-            base_vault: &arr[3],
-            quote_vault: &arr[4],
-            base_mint: &arr[5],
-            quote_mint: &arr[6],
-            token_base_account: &arr[7],
-            token_quote_account: &arr[8],
-            operator: &arr[9],
+            receiver_token_account: &arr[0],
+            base_mint: &arr[1],
+            quote_mint: &arr[2],
+            token_base_program: &arr[3],
+            token_quote_program: &arr[4],
+            config: &arr[5],
+            pool: &arr[6],
+            base_vault: &arr[7],
+            quote_vault: &arr[8],
+            pool_authority: &arr[9],
             signer: &arr[10],
-            token_base_program: &arr[11],
-            token_quote_program: &arr[12],
-            event_authority: &arr[13],
-            program: &arr[14],
         }
     }
 }
-pub const CLAIM_PROTOCOL_FEE_IX_DISCM: [u8; 8usize] = [
-    165, 228, 133, 48, 99, 249, 255, 33,
+pub const CLAIM_PROTOCOL_FEE2_IX_DISCM: [u8; 8usize] = [
+    235, 194, 54, 69, 65, 10, 236, 112,
 ];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct ClaimProtocolFeeIxArgs {
-    pub max_base_amount: u64,
-    pub max_quote_amount: u64,
+pub struct ClaimProtocolFee2IxArgs {
+    pub max_amount: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct ClaimProtocolFeeIxData(pub ClaimProtocolFeeIxArgs);
-impl From<ClaimProtocolFeeIxArgs> for ClaimProtocolFeeIxData {
-    fn from(args: ClaimProtocolFeeIxArgs) -> Self {
+pub struct ClaimProtocolFee2IxData(pub ClaimProtocolFee2IxArgs);
+impl From<ClaimProtocolFee2IxArgs> for ClaimProtocolFee2IxData {
+    fn from(args: ClaimProtocolFee2IxArgs) -> Self {
         Self(args)
     }
 }
-impl ClaimProtocolFeeIxData {
+impl ClaimProtocolFee2IxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8usize];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != CLAIM_PROTOCOL_FEE_IX_DISCM {
+        if maybe_discm != CLAIM_PROTOCOL_FEE2_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let max_base_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let max_quote_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let max_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
         Ok(
-            Self(ClaimProtocolFeeIxArgs {
-                max_base_amount,
-                max_quote_amount,
+            Self(ClaimProtocolFee2IxArgs {
+                max_amount,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&CLAIM_PROTOCOL_FEE_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0.max_base_amount, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.max_quote_amount, &mut writer)?;
+        writer.write_all(&CLAIM_PROTOCOL_FEE2_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.max_amount, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -1187,86 +1663,82 @@ impl ClaimProtocolFeeIxData {
         Ok(data)
     }
 }
-pub fn claim_protocol_fee_ix_with_program_id(
+pub fn claim_protocol_fee2_ix_with_program_id(
     program_id: Pubkey,
-    keys: ClaimProtocolFeeKeys,
-    args: ClaimProtocolFeeIxArgs,
+    keys: ClaimProtocolFee2Keys,
+    args: ClaimProtocolFee2IxArgs,
 ) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN] = keys.into();
-    let data: ClaimProtocolFeeIxData = args.into();
+    let metas: [AccountMeta; CLAIM_PROTOCOL_FEE2_IX_ACCOUNTS_LEN] = keys.into();
+    let data: ClaimProtocolFee2IxData = args.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
         data: data.try_to_vec()?,
     })
 }
-pub fn claim_protocol_fee_ix(
-    keys: ClaimProtocolFeeKeys,
-    args: ClaimProtocolFeeIxArgs,
+pub fn claim_protocol_fee2_ix(
+    keys: ClaimProtocolFee2Keys,
+    args: ClaimProtocolFee2IxArgs,
 ) -> std::io::Result<Instruction> {
-    claim_protocol_fee_ix_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, keys, args)
+    claim_protocol_fee2_ix_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, keys, args)
 }
-pub fn claim_protocol_fee_invoke_with_program_id(
+pub fn claim_protocol_fee2_invoke_with_program_id(
     program_id: Pubkey,
-    accounts: ClaimProtocolFeeAccounts<'_, '_>,
-    args: ClaimProtocolFeeIxArgs,
+    accounts: ClaimProtocolFee2Accounts<'_, '_>,
+    args: ClaimProtocolFee2IxArgs,
 ) -> ProgramResult {
-    let keys: ClaimProtocolFeeKeys = accounts.into();
-    let ix = claim_protocol_fee_ix_with_program_id(program_id, keys, args)?;
+    let keys: ClaimProtocolFee2Keys = accounts.into();
+    let ix = claim_protocol_fee2_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn claim_protocol_fee_invoke(
-    accounts: ClaimProtocolFeeAccounts<'_, '_>,
-    args: ClaimProtocolFeeIxArgs,
+pub fn claim_protocol_fee2_invoke(
+    accounts: ClaimProtocolFee2Accounts<'_, '_>,
+    args: ClaimProtocolFee2IxArgs,
 ) -> ProgramResult {
-    claim_protocol_fee_invoke_with_program_id(
+    claim_protocol_fee2_invoke_with_program_id(
         DYNAMIC_BONDING_CURVE_PROGRAM_ID,
         accounts,
         args,
     )
 }
-pub fn claim_protocol_fee_invoke_signed_with_program_id(
+pub fn claim_protocol_fee2_invoke_signed_with_program_id(
     program_id: Pubkey,
-    accounts: ClaimProtocolFeeAccounts<'_, '_>,
-    args: ClaimProtocolFeeIxArgs,
+    accounts: ClaimProtocolFee2Accounts<'_, '_>,
+    args: ClaimProtocolFee2IxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let keys: ClaimProtocolFeeKeys = accounts.into();
-    let ix = claim_protocol_fee_ix_with_program_id(program_id, keys, args)?;
+    let keys: ClaimProtocolFee2Keys = accounts.into();
+    let ix = claim_protocol_fee2_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
-pub fn claim_protocol_fee_invoke_signed(
-    accounts: ClaimProtocolFeeAccounts<'_, '_>,
-    args: ClaimProtocolFeeIxArgs,
+pub fn claim_protocol_fee2_invoke_signed(
+    accounts: ClaimProtocolFee2Accounts<'_, '_>,
+    args: ClaimProtocolFee2IxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    claim_protocol_fee_invoke_signed_with_program_id(
+    claim_protocol_fee2_invoke_signed_with_program_id(
         DYNAMIC_BONDING_CURVE_PROGRAM_ID,
         accounts,
         args,
         seeds,
     )
 }
-pub fn claim_protocol_fee_verify_account_keys(
-    accounts: ClaimProtocolFeeAccounts<'_, '_>,
-    keys: ClaimProtocolFeeKeys,
+pub fn claim_protocol_fee2_verify_account_keys(
+    accounts: ClaimProtocolFee2Accounts<'_, '_>,
+    keys: ClaimProtocolFee2Keys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
-        (*accounts.pool_authority.key, keys.pool_authority),
+        (*accounts.receiver_token_account.key, keys.receiver_token_account),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.token_base_program.key, keys.token_base_program),
+        (*accounts.token_quote_program.key, keys.token_quote_program),
         (*accounts.config.key, keys.config),
         (*accounts.pool.key, keys.pool),
         (*accounts.base_vault.key, keys.base_vault),
         (*accounts.quote_vault.key, keys.quote_vault),
-        (*accounts.base_mint.key, keys.base_mint),
-        (*accounts.quote_mint.key, keys.quote_mint),
-        (*accounts.token_base_account.key, keys.token_base_account),
-        (*accounts.token_quote_account.key, keys.token_quote_account),
-        (*accounts.operator.key, keys.operator),
+        (*accounts.pool_authority.key, keys.pool_authority),
         (*accounts.signer.key, keys.signer),
-        (*accounts.token_base_program.key, keys.token_base_program),
-        (*accounts.token_quote_program.key, keys.token_quote_program),
-        (*accounts.event_authority.key, keys.event_authority),
-        (*accounts.program.key, keys.program),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -1274,15 +1746,14 @@ pub fn claim_protocol_fee_verify_account_keys(
     }
     Ok(())
 }
-pub fn claim_protocol_fee_verify_writable_privileges<'me, 'info>(
-    accounts: ClaimProtocolFeeAccounts<'me, 'info>,
+pub fn claim_protocol_fee2_verify_writable_privileges<'me, 'info>(
+    accounts: ClaimProtocolFee2Accounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     for should_be_writable in [
+        accounts.receiver_token_account,
         accounts.pool,
         accounts.base_vault,
         accounts.quote_vault,
-        accounts.token_base_account,
-        accounts.token_quote_account,
     ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
@@ -1290,8 +1761,8 @@ pub fn claim_protocol_fee_verify_writable_privileges<'me, 'info>(
     }
     Ok(())
 }
-pub fn claim_protocol_fee_verify_signer_privileges<'me, 'info>(
-    accounts: ClaimProtocolFeeAccounts<'me, 'info>,
+pub fn claim_protocol_fee2_verify_signer_privileges<'me, 'info>(
+    accounts: ClaimProtocolFee2Accounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     for should_be_signer in [accounts.signer] {
         if !should_be_signer.is_signer {
@@ -1300,11 +1771,11 @@ pub fn claim_protocol_fee_verify_signer_privileges<'me, 'info>(
     }
     Ok(())
 }
-pub fn claim_protocol_fee_verify_account_privileges<'me, 'info>(
-    accounts: ClaimProtocolFeeAccounts<'me, 'info>,
+pub fn claim_protocol_fee2_verify_account_privileges<'me, 'info>(
+    accounts: ClaimProtocolFee2Accounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    claim_protocol_fee_verify_writable_privileges(accounts)?;
-    claim_protocol_fee_verify_signer_privileges(accounts)?;
+    claim_protocol_fee2_verify_writable_privileges(accounts)?;
+    claim_protocol_fee2_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const CLAIM_PROTOCOL_POOL_CREATION_FEE_IX_ACCOUNTS_LEN: usize = 7;
@@ -1912,6 +2383,371 @@ pub fn claim_trading_fee_verify_account_privileges<'me, 'info>(
     claim_trading_fee_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN: usize = 14;
+#[derive(Copy, Clone, Debug)]
+pub struct ClaimTradingFee2Accounts<'me, 'info> {
+    pub pool_authority: &'me AccountInfo<'info>,
+    pub config: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub token_a_account: &'me AccountInfo<'info>,
+    pub token_b_account: &'me AccountInfo<'info>,
+    pub base_vault: &'me AccountInfo<'info>,
+    pub quote_vault: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub fee_claimer: &'me AccountInfo<'info>,
+    pub token_base_program: &'me AccountInfo<'info>,
+    pub token_quote_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ClaimTradingFee2Keys {
+    pub pool_authority: Pubkey,
+    pub config: Pubkey,
+    pub pool: Pubkey,
+    pub token_a_account: Pubkey,
+    pub token_b_account: Pubkey,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub fee_claimer: Pubkey,
+    pub token_base_program: Pubkey,
+    pub token_quote_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<ClaimTradingFee2Accounts<'_, '_>> for ClaimTradingFee2Keys {
+    fn from(accounts: ClaimTradingFee2Accounts) -> Self {
+        Self {
+            pool_authority: *accounts.pool_authority.key,
+            config: *accounts.config.key,
+            pool: *accounts.pool.key,
+            token_a_account: *accounts.token_a_account.key,
+            token_b_account: *accounts.token_b_account.key,
+            base_vault: *accounts.base_vault.key,
+            quote_vault: *accounts.quote_vault.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            fee_claimer: *accounts.fee_claimer.key,
+            token_base_program: *accounts.token_base_program.key,
+            token_quote_program: *accounts.token_quote_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<ClaimTradingFee2Keys> for [AccountMeta; CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClaimTradingFee2Keys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pool_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_a_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_b_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.fee_claimer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_base_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_quote_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN]> for ClaimTradingFee2Keys {
+    fn from(pubkeys: [Pubkey; CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool_authority: pubkeys[0],
+            config: pubkeys[1],
+            pool: pubkeys[2],
+            token_a_account: pubkeys[3],
+            token_b_account: pubkeys[4],
+            base_vault: pubkeys[5],
+            quote_vault: pubkeys[6],
+            base_mint: pubkeys[7],
+            quote_mint: pubkeys[8],
+            fee_claimer: pubkeys[9],
+            token_base_program: pubkeys[10],
+            token_quote_program: pubkeys[11],
+            event_authority: pubkeys[12],
+            program: pubkeys[13],
+        }
+    }
+}
+impl<'info> From<ClaimTradingFee2Accounts<'_, 'info>>
+for [AccountInfo<'info>; CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClaimTradingFee2Accounts<'_, 'info>) -> Self {
+        [
+            accounts.pool_authority.clone(),
+            accounts.config.clone(),
+            accounts.pool.clone(),
+            accounts.token_a_account.clone(),
+            accounts.token_b_account.clone(),
+            accounts.base_vault.clone(),
+            accounts.quote_vault.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.fee_claimer.clone(),
+            accounts.token_base_program.clone(),
+            accounts.token_quote_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN]>
+for ClaimTradingFee2Accounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool_authority: &arr[0],
+            config: &arr[1],
+            pool: &arr[2],
+            token_a_account: &arr[3],
+            token_b_account: &arr[4],
+            base_vault: &arr[5],
+            quote_vault: &arr[6],
+            base_mint: &arr[7],
+            quote_mint: &arr[8],
+            fee_claimer: &arr[9],
+            token_base_program: &arr[10],
+            token_quote_program: &arr[11],
+            event_authority: &arr[12],
+            program: &arr[13],
+        }
+    }
+}
+pub const CLAIM_TRADING_FEE2_IX_DISCM: [u8; 8usize] = [84, 191, 71, 50, 9, 162, 55, 193];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ClaimTradingFee2IxArgs {
+    pub max_amount_a: u64,
+    pub max_amount_b: u64,
+    pub transfer_hook_accounts_info: TransferHookAccountsInfo,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClaimTradingFee2IxData(pub ClaimTradingFee2IxArgs);
+impl From<ClaimTradingFee2IxArgs> for ClaimTradingFee2IxData {
+    fn from(args: ClaimTradingFee2IxArgs) -> Self {
+        Self(args)
+    }
+}
+impl ClaimTradingFee2IxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLAIM_TRADING_FEE2_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let max_amount_a: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let max_amount_b: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let transfer_hook_accounts_info = if reader.is_empty() {
+            Default::default()
+        } else {
+            <TransferHookAccountsInfo>::deserialize(&mut reader)?
+        };
+        Ok(
+            Self(ClaimTradingFee2IxArgs {
+                max_amount_a,
+                max_amount_b,
+                transfer_hook_accounts_info,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLAIM_TRADING_FEE2_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.max_amount_a, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.max_amount_b, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.transfer_hook_accounts_info,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn claim_trading_fee2_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ClaimTradingFee2Keys,
+    args: ClaimTradingFee2IxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLAIM_TRADING_FEE2_IX_ACCOUNTS_LEN] = keys.into();
+    let data: ClaimTradingFee2IxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn claim_trading_fee2_ix(
+    keys: ClaimTradingFee2Keys,
+    args: ClaimTradingFee2IxArgs,
+) -> std::io::Result<Instruction> {
+    claim_trading_fee2_ix_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, keys, args)
+}
+pub fn claim_trading_fee2_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimTradingFee2Accounts<'_, '_>,
+    args: ClaimTradingFee2IxArgs,
+) -> ProgramResult {
+    let keys: ClaimTradingFee2Keys = accounts.into();
+    let ix = claim_trading_fee2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn claim_trading_fee2_invoke(
+    accounts: ClaimTradingFee2Accounts<'_, '_>,
+    args: ClaimTradingFee2IxArgs,
+) -> ProgramResult {
+    claim_trading_fee2_invoke_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn claim_trading_fee2_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimTradingFee2Accounts<'_, '_>,
+    args: ClaimTradingFee2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ClaimTradingFee2Keys = accounts.into();
+    let ix = claim_trading_fee2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn claim_trading_fee2_invoke_signed(
+    accounts: ClaimTradingFee2Accounts<'_, '_>,
+    args: ClaimTradingFee2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    claim_trading_fee2_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn claim_trading_fee2_verify_account_keys(
+    accounts: ClaimTradingFee2Accounts<'_, '_>,
+    keys: ClaimTradingFee2Keys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pool_authority.key, keys.pool_authority),
+        (*accounts.config.key, keys.config),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.token_a_account.key, keys.token_a_account),
+        (*accounts.token_b_account.key, keys.token_b_account),
+        (*accounts.base_vault.key, keys.base_vault),
+        (*accounts.quote_vault.key, keys.quote_vault),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.fee_claimer.key, keys.fee_claimer),
+        (*accounts.token_base_program.key, keys.token_base_program),
+        (*accounts.token_quote_program.key, keys.token_quote_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn claim_trading_fee2_verify_writable_privileges<'me, 'info>(
+    accounts: ClaimTradingFee2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.pool,
+        accounts.token_a_account,
+        accounts.token_b_account,
+        accounts.base_vault,
+        accounts.quote_vault,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn claim_trading_fee2_verify_signer_privileges<'me, 'info>(
+    accounts: ClaimTradingFee2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.fee_claimer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn claim_trading_fee2_verify_account_privileges<'me, 'info>(
+    accounts: ClaimTradingFee2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    claim_trading_fee2_verify_writable_privileges(accounts)?;
+    claim_trading_fee2_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CLOSE_CLAIM_PROTOCOL_FEE_OPERATOR_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
 pub struct CloseClaimProtocolFeeOperatorAccounts<'me, 'info> {
@@ -2332,6 +3168,226 @@ pub fn close_operator_account_verify_account_privileges<'me, 'info>(
     close_operator_account_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN: usize = 6;
+#[derive(Copy, Clone, Debug)]
+pub struct CloseTokenBadgeAccounts<'me, 'info> {
+    pub token_badge: &'me AccountInfo<'info>,
+    pub operator: &'me AccountInfo<'info>,
+    pub signer: &'me AccountInfo<'info>,
+    pub rent_receiver: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CloseTokenBadgeKeys {
+    pub token_badge: Pubkey,
+    pub operator: Pubkey,
+    pub signer: Pubkey,
+    pub rent_receiver: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<CloseTokenBadgeAccounts<'_, '_>> for CloseTokenBadgeKeys {
+    fn from(accounts: CloseTokenBadgeAccounts) -> Self {
+        Self {
+            token_badge: *accounts.token_badge.key,
+            operator: *accounts.operator.key,
+            signer: *accounts.signer.key,
+            rent_receiver: *accounts.rent_receiver.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<CloseTokenBadgeKeys> for [AccountMeta; CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN] {
+    fn from(keys: CloseTokenBadgeKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.token_badge,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.operator,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.signer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.rent_receiver,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN]> for CloseTokenBadgeKeys {
+    fn from(pubkeys: [Pubkey; CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            token_badge: pubkeys[0],
+            operator: pubkeys[1],
+            signer: pubkeys[2],
+            rent_receiver: pubkeys[3],
+            event_authority: pubkeys[4],
+            program: pubkeys[5],
+        }
+    }
+}
+impl<'info> From<CloseTokenBadgeAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CloseTokenBadgeAccounts<'_, 'info>) -> Self {
+        [
+            accounts.token_badge.clone(),
+            accounts.operator.clone(),
+            accounts.signer.clone(),
+            accounts.rent_receiver.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN]>
+for CloseTokenBadgeAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            token_badge: &arr[0],
+            operator: &arr[1],
+            signer: &arr[2],
+            rent_receiver: &arr[3],
+            event_authority: &arr[4],
+            program: &arr[5],
+        }
+    }
+}
+pub const CLOSE_TOKEN_BADGE_IX_DISCM: [u8; 8usize] = [
+    108, 146, 86, 110, 179, 254, 10, 104,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CloseTokenBadgeIxData;
+impl CloseTokenBadgeIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLOSE_TOKEN_BADGE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLOSE_TOKEN_BADGE_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn close_token_badge_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CloseTokenBadgeKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLOSE_TOKEN_BADGE_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CloseTokenBadgeIxData.try_to_vec()?,
+    })
+}
+pub fn close_token_badge_ix(keys: CloseTokenBadgeKeys) -> std::io::Result<Instruction> {
+    close_token_badge_ix_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, keys)
+}
+pub fn close_token_badge_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseTokenBadgeAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CloseTokenBadgeKeys = accounts.into();
+    let ix = close_token_badge_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn close_token_badge_invoke(
+    accounts: CloseTokenBadgeAccounts<'_, '_>,
+) -> ProgramResult {
+    close_token_badge_invoke_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, accounts)
+}
+pub fn close_token_badge_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseTokenBadgeAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CloseTokenBadgeKeys = accounts.into();
+    let ix = close_token_badge_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn close_token_badge_invoke_signed(
+    accounts: CloseTokenBadgeAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    close_token_badge_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn close_token_badge_verify_account_keys(
+    accounts: CloseTokenBadgeAccounts<'_, '_>,
+    keys: CloseTokenBadgeKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.token_badge.key, keys.token_badge),
+        (*accounts.operator.key, keys.operator),
+        (*accounts.signer.key, keys.signer),
+        (*accounts.rent_receiver.key, keys.rent_receiver),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn close_token_badge_verify_writable_privileges<'me, 'info>(
+    accounts: CloseTokenBadgeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.token_badge, accounts.rent_receiver] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn close_token_badge_verify_signer_privileges<'me, 'info>(
+    accounts: CloseTokenBadgeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.signer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn close_token_badge_verify_account_privileges<'me, 'info>(
+    accounts: CloseTokenBadgeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    close_token_badge_verify_writable_privileges(accounts)?;
+    close_token_badge_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CREATE_CONFIG_IX_ACCOUNTS_LEN: usize = 8;
 #[derive(Copy, Clone, Debug)]
 pub struct CreateConfigAccounts<'me, 'info> {
@@ -2606,6 +3662,319 @@ pub fn create_config_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     create_config_verify_writable_privileges(accounts)?;
     create_config_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN: usize = 9;
+#[derive(Copy, Clone, Debug)]
+pub struct CreateConfigWithTransferHookAccounts<'me, 'info> {
+    pub config: &'me AccountInfo<'info>,
+    pub fee_claimer: &'me AccountInfo<'info>,
+    pub leftover_receiver: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub transfer_hook_program: &'me AccountInfo<'info>,
+    pub payer: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CreateConfigWithTransferHookKeys {
+    pub config: Pubkey,
+    pub fee_claimer: Pubkey,
+    pub leftover_receiver: Pubkey,
+    pub quote_mint: Pubkey,
+    pub transfer_hook_program: Pubkey,
+    pub payer: Pubkey,
+    pub system_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<CreateConfigWithTransferHookAccounts<'_, '_>>
+for CreateConfigWithTransferHookKeys {
+    fn from(accounts: CreateConfigWithTransferHookAccounts) -> Self {
+        Self {
+            config: *accounts.config.key,
+            fee_claimer: *accounts.fee_claimer.key,
+            leftover_receiver: *accounts.leftover_receiver.key,
+            quote_mint: *accounts.quote_mint.key,
+            transfer_hook_program: *accounts.transfer_hook_program.key,
+            payer: *accounts.payer.key,
+            system_program: *accounts.system_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<CreateConfigWithTransferHookKeys>
+for [AccountMeta; CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreateConfigWithTransferHookKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.config,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.fee_claimer,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.leftover_receiver,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.transfer_hook_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN]>
+for CreateConfigWithTransferHookKeys {
+    fn from(
+        pubkeys: [Pubkey; CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            config: pubkeys[0],
+            fee_claimer: pubkeys[1],
+            leftover_receiver: pubkeys[2],
+            quote_mint: pubkeys[3],
+            transfer_hook_program: pubkeys[4],
+            payer: pubkeys[5],
+            system_program: pubkeys[6],
+            event_authority: pubkeys[7],
+            program: pubkeys[8],
+        }
+    }
+}
+impl<'info> From<CreateConfigWithTransferHookAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreateConfigWithTransferHookAccounts<'_, 'info>) -> Self {
+        [
+            accounts.config.clone(),
+            accounts.fee_claimer.clone(),
+            accounts.leftover_receiver.clone(),
+            accounts.quote_mint.clone(),
+            accounts.transfer_hook_program.clone(),
+            accounts.payer.clone(),
+            accounts.system_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN]>
+for CreateConfigWithTransferHookAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            config: &arr[0],
+            fee_claimer: &arr[1],
+            leftover_receiver: &arr[2],
+            quote_mint: &arr[3],
+            transfer_hook_program: &arr[4],
+            payer: &arr[5],
+            system_program: &arr[6],
+            event_authority: &arr[7],
+            program: &arr[8],
+        }
+    }
+}
+pub const CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_DISCM: [u8; 8usize] = [
+    216, 37, 1, 57, 88, 226, 25, 41,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CreateConfigWithTransferHookIxArgs {
+    pub config_parameters: ConfigParameters,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreateConfigWithTransferHookIxData(pub CreateConfigWithTransferHookIxArgs);
+impl From<CreateConfigWithTransferHookIxArgs> for CreateConfigWithTransferHookIxData {
+    fn from(args: CreateConfigWithTransferHookIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl CreateConfigWithTransferHookIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let config_parameters = if reader.is_empty() {
+            Default::default()
+        } else {
+            <ConfigParameters>::deserialize(&mut reader)?
+        };
+        Ok(
+            Self(CreateConfigWithTransferHookIxArgs {
+                config_parameters,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.config_parameters, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn create_config_with_transfer_hook_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CreateConfigWithTransferHookKeys,
+    args: CreateConfigWithTransferHookIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CREATE_CONFIG_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN] = keys
+        .into();
+    let data: CreateConfigWithTransferHookIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn create_config_with_transfer_hook_ix(
+    keys: CreateConfigWithTransferHookKeys,
+    args: CreateConfigWithTransferHookIxArgs,
+) -> std::io::Result<Instruction> {
+    create_config_with_transfer_hook_ix_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        keys,
+        args,
+    )
+}
+pub fn create_config_with_transfer_hook_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateConfigWithTransferHookAccounts<'_, '_>,
+    args: CreateConfigWithTransferHookIxArgs,
+) -> ProgramResult {
+    let keys: CreateConfigWithTransferHookKeys = accounts.into();
+    let ix = create_config_with_transfer_hook_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn create_config_with_transfer_hook_invoke(
+    accounts: CreateConfigWithTransferHookAccounts<'_, '_>,
+    args: CreateConfigWithTransferHookIxArgs,
+) -> ProgramResult {
+    create_config_with_transfer_hook_invoke_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn create_config_with_transfer_hook_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateConfigWithTransferHookAccounts<'_, '_>,
+    args: CreateConfigWithTransferHookIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CreateConfigWithTransferHookKeys = accounts.into();
+    let ix = create_config_with_transfer_hook_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn create_config_with_transfer_hook_invoke_signed(
+    accounts: CreateConfigWithTransferHookAccounts<'_, '_>,
+    args: CreateConfigWithTransferHookIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    create_config_with_transfer_hook_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn create_config_with_transfer_hook_verify_account_keys(
+    accounts: CreateConfigWithTransferHookAccounts<'_, '_>,
+    keys: CreateConfigWithTransferHookKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.config.key, keys.config),
+        (*accounts.fee_claimer.key, keys.fee_claimer),
+        (*accounts.leftover_receiver.key, keys.leftover_receiver),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.transfer_hook_program.key, keys.transfer_hook_program),
+        (*accounts.payer.key, keys.payer),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn create_config_with_transfer_hook_verify_writable_privileges<'me, 'info>(
+    accounts: CreateConfigWithTransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.config, accounts.payer] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn create_config_with_transfer_hook_verify_signer_privileges<'me, 'info>(
+    accounts: CreateConfigWithTransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.config, accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn create_config_with_transfer_hook_verify_account_privileges<'me, 'info>(
+    accounts: CreateConfigWithTransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    create_config_with_transfer_hook_verify_writable_privileges(accounts)?;
+    create_config_with_transfer_hook_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const CREATE_LOCKER_IX_ACCOUNTS_LEN: usize = 14;
@@ -3457,6 +4826,252 @@ pub fn create_partner_metadata_verify_account_privileges<'me, 'info>(
     create_partner_metadata_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN: usize = 8;
+#[derive(Copy, Clone, Debug)]
+pub struct CreateTokenBadgeAccounts<'me, 'info> {
+    pub token_badge: &'me AccountInfo<'info>,
+    pub token_mint: &'me AccountInfo<'info>,
+    pub operator: &'me AccountInfo<'info>,
+    pub signer: &'me AccountInfo<'info>,
+    pub payer: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CreateTokenBadgeKeys {
+    pub token_badge: Pubkey,
+    pub token_mint: Pubkey,
+    pub operator: Pubkey,
+    pub signer: Pubkey,
+    pub payer: Pubkey,
+    pub system_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<CreateTokenBadgeAccounts<'_, '_>> for CreateTokenBadgeKeys {
+    fn from(accounts: CreateTokenBadgeAccounts) -> Self {
+        Self {
+            token_badge: *accounts.token_badge.key,
+            token_mint: *accounts.token_mint.key,
+            operator: *accounts.operator.key,
+            signer: *accounts.signer.key,
+            payer: *accounts.payer.key,
+            system_program: *accounts.system_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<CreateTokenBadgeKeys> for [AccountMeta; CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreateTokenBadgeKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.token_badge,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.operator,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.signer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN]> for CreateTokenBadgeKeys {
+    fn from(pubkeys: [Pubkey; CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            token_badge: pubkeys[0],
+            token_mint: pubkeys[1],
+            operator: pubkeys[2],
+            signer: pubkeys[3],
+            payer: pubkeys[4],
+            system_program: pubkeys[5],
+            event_authority: pubkeys[6],
+            program: pubkeys[7],
+        }
+    }
+}
+impl<'info> From<CreateTokenBadgeAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreateTokenBadgeAccounts<'_, 'info>) -> Self {
+        [
+            accounts.token_badge.clone(),
+            accounts.token_mint.clone(),
+            accounts.operator.clone(),
+            accounts.signer.clone(),
+            accounts.payer.clone(),
+            accounts.system_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN]>
+for CreateTokenBadgeAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            token_badge: &arr[0],
+            token_mint: &arr[1],
+            operator: &arr[2],
+            signer: &arr[3],
+            payer: &arr[4],
+            system_program: &arr[5],
+            event_authority: &arr[6],
+            program: &arr[7],
+        }
+    }
+}
+pub const CREATE_TOKEN_BADGE_IX_DISCM: [u8; 8usize] = [
+    88, 206, 0, 91, 60, 175, 151, 118,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreateTokenBadgeIxData;
+impl CreateTokenBadgeIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_TOKEN_BADGE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_TOKEN_BADGE_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn create_token_badge_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CreateTokenBadgeKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CREATE_TOKEN_BADGE_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CreateTokenBadgeIxData.try_to_vec()?,
+    })
+}
+pub fn create_token_badge_ix(
+    keys: CreateTokenBadgeKeys,
+) -> std::io::Result<Instruction> {
+    create_token_badge_ix_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, keys)
+}
+pub fn create_token_badge_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateTokenBadgeAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CreateTokenBadgeKeys = accounts.into();
+    let ix = create_token_badge_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn create_token_badge_invoke(
+    accounts: CreateTokenBadgeAccounts<'_, '_>,
+) -> ProgramResult {
+    create_token_badge_invoke_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, accounts)
+}
+pub fn create_token_badge_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CreateTokenBadgeAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CreateTokenBadgeKeys = accounts.into();
+    let ix = create_token_badge_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn create_token_badge_invoke_signed(
+    accounts: CreateTokenBadgeAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    create_token_badge_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn create_token_badge_verify_account_keys(
+    accounts: CreateTokenBadgeAccounts<'_, '_>,
+    keys: CreateTokenBadgeKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.token_badge.key, keys.token_badge),
+        (*accounts.token_mint.key, keys.token_mint),
+        (*accounts.operator.key, keys.operator),
+        (*accounts.signer.key, keys.signer),
+        (*accounts.payer.key, keys.payer),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn create_token_badge_verify_writable_privileges<'me, 'info>(
+    accounts: CreateTokenBadgeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.token_badge, accounts.payer] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn create_token_badge_verify_signer_privileges<'me, 'info>(
+    accounts: CreateTokenBadgeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.signer, accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn create_token_badge_verify_account_privileges<'me, 'info>(
+    accounts: CreateTokenBadgeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    create_token_badge_verify_writable_privileges(accounts)?;
+    create_token_badge_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CREATE_VIRTUAL_POOL_METADATA_IX_ACCOUNTS_LEN: usize = 7;
 #[derive(Copy, Clone, Debug)]
 pub struct CreateVirtualPoolMetadataAccounts<'me, 'info> {
@@ -3498,7 +5113,7 @@ for [AccountMeta; CREATE_VIRTUAL_POOL_METADATA_IX_ACCOUNTS_LEN] {
             AccountMeta {
                 pubkey: keys.virtual_pool,
                 is_signer: false,
-                is_writable: true,
+                is_writable: false,
             },
             AccountMeta {
                 pubkey: keys.virtual_pool_metadata,
@@ -3706,11 +5321,7 @@ pub fn create_virtual_pool_metadata_verify_account_keys(
 pub fn create_virtual_pool_metadata_verify_writable_privileges<'me, 'info>(
     accounts: CreateVirtualPoolMetadataAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [
-        accounts.virtual_pool,
-        accounts.virtual_pool_metadata,
-        accounts.payer,
-    ] {
+    for should_be_writable in [accounts.virtual_pool_metadata, accounts.payer] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
         }
@@ -4809,6 +6420,423 @@ pub fn initialize_virtual_pool_with_token2022_verify_account_privileges<'me, 'in
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     initialize_virtual_pool_with_token2022_verify_writable_privileges(accounts)?;
     initialize_virtual_pool_with_token2022_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN: usize = 15;
+#[derive(Copy, Clone, Debug)]
+pub struct InitializeVirtualPoolWithToken2022TransferHookAccounts<'me, 'info> {
+    pub config: &'me AccountInfo<'info>,
+    pub pool_authority: &'me AccountInfo<'info>,
+    pub creator: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub base_vault: &'me AccountInfo<'info>,
+    pub quote_vault: &'me AccountInfo<'info>,
+    pub transfer_hook_program: &'me AccountInfo<'info>,
+    pub payer: &'me AccountInfo<'info>,
+    pub token_quote_program: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct InitializeVirtualPoolWithToken2022TransferHookKeys {
+    pub config: Pubkey,
+    pub pool_authority: Pubkey,
+    pub creator: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub pool: Pubkey,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub transfer_hook_program: Pubkey,
+    pub payer: Pubkey,
+    pub token_quote_program: Pubkey,
+    pub token_program: Pubkey,
+    pub system_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, '_>>
+for InitializeVirtualPoolWithToken2022TransferHookKeys {
+    fn from(accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts) -> Self {
+        Self {
+            config: *accounts.config.key,
+            pool_authority: *accounts.pool_authority.key,
+            creator: *accounts.creator.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            pool: *accounts.pool.key,
+            base_vault: *accounts.base_vault.key,
+            quote_vault: *accounts.quote_vault.key,
+            transfer_hook_program: *accounts.transfer_hook_program.key,
+            payer: *accounts.payer.key,
+            token_quote_program: *accounts.token_quote_program.key,
+            token_program: *accounts.token_program.key,
+            system_program: *accounts.system_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<InitializeVirtualPoolWithToken2022TransferHookKeys>
+for [AccountMeta; INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN] {
+    fn from(keys: InitializeVirtualPoolWithToken2022TransferHookKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.creator,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.transfer_hook_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_quote_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN]>
+for InitializeVirtualPoolWithToken2022TransferHookKeys {
+    fn from(
+        pubkeys: [Pubkey; INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            config: pubkeys[0],
+            pool_authority: pubkeys[1],
+            creator: pubkeys[2],
+            base_mint: pubkeys[3],
+            quote_mint: pubkeys[4],
+            pool: pubkeys[5],
+            base_vault: pubkeys[6],
+            quote_vault: pubkeys[7],
+            transfer_hook_program: pubkeys[8],
+            payer: pubkeys[9],
+            token_quote_program: pubkeys[10],
+            token_program: pubkeys[11],
+            system_program: pubkeys[12],
+            event_authority: pubkeys[13],
+            program: pubkeys[14],
+        }
+    }
+}
+impl<'info> From<InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, 'info>>
+for [AccountInfo<
+    'info,
+>; INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN] {
+    fn from(
+        accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, 'info>,
+    ) -> Self {
+        [
+            accounts.config.clone(),
+            accounts.pool_authority.clone(),
+            accounts.creator.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.pool.clone(),
+            accounts.base_vault.clone(),
+            accounts.quote_vault.clone(),
+            accounts.transfer_hook_program.clone(),
+            accounts.payer.clone(),
+            accounts.token_quote_program.clone(),
+            accounts.token_program.clone(),
+            accounts.system_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<
+    &'me [AccountInfo<
+        'info,
+    >; INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN],
+> for InitializeVirtualPoolWithToken2022TransferHookAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<
+            'info,
+        >; INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            config: &arr[0],
+            pool_authority: &arr[1],
+            creator: &arr[2],
+            base_mint: &arr[3],
+            quote_mint: &arr[4],
+            pool: &arr[5],
+            base_vault: &arr[6],
+            quote_vault: &arr[7],
+            transfer_hook_program: &arr[8],
+            payer: &arr[9],
+            token_quote_program: &arr[10],
+            token_program: &arr[11],
+            system_program: &arr[12],
+            event_authority: &arr[13],
+            program: &arr[14],
+        }
+    }
+}
+pub const INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_DISCM: [u8; 8usize] = [
+    182, 13, 233, 177, 42, 145, 135, 2,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct InitializeVirtualPoolWithToken2022TransferHookIxArgs {
+    pub params: InitializePoolParameters,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializeVirtualPoolWithToken2022TransferHookIxData(
+    pub InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+);
+impl From<InitializeVirtualPoolWithToken2022TransferHookIxArgs>
+for InitializeVirtualPoolWithToken2022TransferHookIxData {
+    fn from(args: InitializeVirtualPoolWithToken2022TransferHookIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl InitializeVirtualPoolWithToken2022TransferHookIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let params = if reader.is_empty() {
+            Default::default()
+        } else {
+            <InitializePoolParameters>::deserialize(&mut reader)?
+        };
+        Ok(
+            Self(InitializeVirtualPoolWithToken2022TransferHookIxArgs {
+                params,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer
+            .write_all(&INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.params, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_ix_with_program_id(
+    program_id: Pubkey,
+    keys: InitializeVirtualPoolWithToken2022TransferHookKeys,
+    args: InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; INITIALIZE_VIRTUAL_POOL_WITH_TOKEN2022_TRANSFER_HOOK_IX_ACCOUNTS_LEN] = keys
+        .into();
+    let data: InitializeVirtualPoolWithToken2022TransferHookIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_ix(
+    keys: InitializeVirtualPoolWithToken2022TransferHookKeys,
+    args: InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+) -> std::io::Result<Instruction> {
+    initialize_virtual_pool_with_token2022_transfer_hook_ix_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        keys,
+        args,
+    )
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, '_>,
+    args: InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+) -> ProgramResult {
+    let keys: InitializeVirtualPoolWithToken2022TransferHookKeys = accounts.into();
+    let ix = initialize_virtual_pool_with_token2022_transfer_hook_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_invoke(
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, '_>,
+    args: InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+) -> ProgramResult {
+    initialize_virtual_pool_with_token2022_transfer_hook_invoke_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, '_>,
+    args: InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: InitializeVirtualPoolWithToken2022TransferHookKeys = accounts.into();
+    let ix = initialize_virtual_pool_with_token2022_transfer_hook_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_invoke_signed(
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, '_>,
+    args: InitializeVirtualPoolWithToken2022TransferHookIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    initialize_virtual_pool_with_token2022_transfer_hook_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_verify_account_keys(
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'_, '_>,
+    keys: InitializeVirtualPoolWithToken2022TransferHookKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.config.key, keys.config),
+        (*accounts.pool_authority.key, keys.pool_authority),
+        (*accounts.creator.key, keys.creator),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.base_vault.key, keys.base_vault),
+        (*accounts.quote_vault.key, keys.quote_vault),
+        (*accounts.transfer_hook_program.key, keys.transfer_hook_program),
+        (*accounts.payer.key, keys.payer),
+        (*accounts.token_quote_program.key, keys.token_quote_program),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_verify_writable_privileges<
+    'me,
+    'info,
+>(
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.base_mint,
+        accounts.pool,
+        accounts.base_vault,
+        accounts.quote_vault,
+        accounts.payer,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_verify_signer_privileges<
+    'me,
+    'info,
+>(
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.creator, accounts.base_mint, accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn initialize_virtual_pool_with_token2022_transfer_hook_verify_account_privileges<
+    'me,
+    'info,
+>(
+    accounts: InitializeVirtualPoolWithToken2022TransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    initialize_virtual_pool_with_token2022_transfer_hook_verify_writable_privileges(
+        accounts,
+    )?;
+    initialize_virtual_pool_with_token2022_transfer_hook_verify_signer_privileges(
+        accounts,
+    )?;
     Ok(())
 }
 pub const MIGRATE_METEORA_DAMM_IX_ACCOUNTS_LEN: usize = 31;
@@ -7957,6 +9985,398 @@ pub fn swap2_verify_account_privileges<'me, 'info>(
     swap2_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN: usize = 15;
+#[derive(Copy, Clone, Debug)]
+pub struct Swap2WithTransferHookAccounts<'me, 'info> {
+    pub pool_authority: &'me AccountInfo<'info>,
+    pub config: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub input_token_account: &'me AccountInfo<'info>,
+    pub output_token_account: &'me AccountInfo<'info>,
+    pub base_vault: &'me AccountInfo<'info>,
+    pub quote_vault: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub payer: &'me AccountInfo<'info>,
+    pub token_base_program: &'me AccountInfo<'info>,
+    pub token_quote_program: &'me AccountInfo<'info>,
+    pub referral_token_account: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct Swap2WithTransferHookKeys {
+    pub pool_authority: Pubkey,
+    pub config: Pubkey,
+    pub pool: Pubkey,
+    pub input_token_account: Pubkey,
+    pub output_token_account: Pubkey,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub payer: Pubkey,
+    pub token_base_program: Pubkey,
+    pub token_quote_program: Pubkey,
+    pub referral_token_account: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<Swap2WithTransferHookAccounts<'_, '_>> for Swap2WithTransferHookKeys {
+    fn from(accounts: Swap2WithTransferHookAccounts) -> Self {
+        Self {
+            pool_authority: *accounts.pool_authority.key,
+            config: *accounts.config.key,
+            pool: *accounts.pool.key,
+            input_token_account: *accounts.input_token_account.key,
+            output_token_account: *accounts.output_token_account.key,
+            base_vault: *accounts.base_vault.key,
+            quote_vault: *accounts.quote_vault.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            payer: *accounts.payer.key,
+            token_base_program: *accounts.token_base_program.key,
+            token_quote_program: *accounts.token_quote_program.key,
+            referral_token_account: *accounts.referral_token_account.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<Swap2WithTransferHookKeys>
+for [AccountMeta; SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN] {
+    fn from(keys: Swap2WithTransferHookKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pool_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.input_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.output_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_base_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_quote_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.referral_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN]>
+for Swap2WithTransferHookKeys {
+    fn from(pubkeys: [Pubkey; SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool_authority: pubkeys[0],
+            config: pubkeys[1],
+            pool: pubkeys[2],
+            input_token_account: pubkeys[3],
+            output_token_account: pubkeys[4],
+            base_vault: pubkeys[5],
+            quote_vault: pubkeys[6],
+            base_mint: pubkeys[7],
+            quote_mint: pubkeys[8],
+            payer: pubkeys[9],
+            token_base_program: pubkeys[10],
+            token_quote_program: pubkeys[11],
+            referral_token_account: pubkeys[12],
+            event_authority: pubkeys[13],
+            program: pubkeys[14],
+        }
+    }
+}
+impl<'info> From<Swap2WithTransferHookAccounts<'_, 'info>>
+for [AccountInfo<'info>; SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN] {
+    fn from(accounts: Swap2WithTransferHookAccounts<'_, 'info>) -> Self {
+        [
+            accounts.pool_authority.clone(),
+            accounts.config.clone(),
+            accounts.pool.clone(),
+            accounts.input_token_account.clone(),
+            accounts.output_token_account.clone(),
+            accounts.base_vault.clone(),
+            accounts.quote_vault.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.payer.clone(),
+            accounts.token_base_program.clone(),
+            accounts.token_quote_program.clone(),
+            accounts.referral_token_account.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN]>
+for Swap2WithTransferHookAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            pool_authority: &arr[0],
+            config: &arr[1],
+            pool: &arr[2],
+            input_token_account: &arr[3],
+            output_token_account: &arr[4],
+            base_vault: &arr[5],
+            quote_vault: &arr[6],
+            base_mint: &arr[7],
+            quote_mint: &arr[8],
+            payer: &arr[9],
+            token_base_program: &arr[10],
+            token_quote_program: &arr[11],
+            referral_token_account: &arr[12],
+            event_authority: &arr[13],
+            program: &arr[14],
+        }
+    }
+}
+pub const SWAP2_WITH_TRANSFER_HOOK_IX_DISCM: [u8; 8usize] = [
+    183, 93, 153, 40, 24, 230, 194, 151,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Swap2WithTransferHookIxArgs {
+    pub params: SwapParameters2,
+    pub transfer_hook_accounts_info: TransferHookAccountsInfo,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct Swap2WithTransferHookIxData(pub Swap2WithTransferHookIxArgs);
+impl From<Swap2WithTransferHookIxArgs> for Swap2WithTransferHookIxData {
+    fn from(args: Swap2WithTransferHookIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl Swap2WithTransferHookIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SWAP2_WITH_TRANSFER_HOOK_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let params = if reader.is_empty() {
+            Default::default()
+        } else {
+            <SwapParameters2>::deserialize(&mut reader)?
+        };
+        let transfer_hook_accounts_info = if reader.is_empty() {
+            Default::default()
+        } else {
+            <TransferHookAccountsInfo>::deserialize(&mut reader)?
+        };
+        Ok(
+            Self(Swap2WithTransferHookIxArgs {
+                params,
+                transfer_hook_accounts_info,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SWAP2_WITH_TRANSFER_HOOK_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.params, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.transfer_hook_accounts_info,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn swap2_with_transfer_hook_ix_with_program_id(
+    program_id: Pubkey,
+    keys: Swap2WithTransferHookKeys,
+    args: Swap2WithTransferHookIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; SWAP2_WITH_TRANSFER_HOOK_IX_ACCOUNTS_LEN] = keys.into();
+    let data: Swap2WithTransferHookIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn swap2_with_transfer_hook_ix(
+    keys: Swap2WithTransferHookKeys,
+    args: Swap2WithTransferHookIxArgs,
+) -> std::io::Result<Instruction> {
+    swap2_with_transfer_hook_ix_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        keys,
+        args,
+    )
+}
+pub fn swap2_with_transfer_hook_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: Swap2WithTransferHookAccounts<'_, '_>,
+    args: Swap2WithTransferHookIxArgs,
+) -> ProgramResult {
+    let keys: Swap2WithTransferHookKeys = accounts.into();
+    let ix = swap2_with_transfer_hook_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn swap2_with_transfer_hook_invoke(
+    accounts: Swap2WithTransferHookAccounts<'_, '_>,
+    args: Swap2WithTransferHookIxArgs,
+) -> ProgramResult {
+    swap2_with_transfer_hook_invoke_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn swap2_with_transfer_hook_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: Swap2WithTransferHookAccounts<'_, '_>,
+    args: Swap2WithTransferHookIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: Swap2WithTransferHookKeys = accounts.into();
+    let ix = swap2_with_transfer_hook_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn swap2_with_transfer_hook_invoke_signed(
+    accounts: Swap2WithTransferHookAccounts<'_, '_>,
+    args: Swap2WithTransferHookIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    swap2_with_transfer_hook_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn swap2_with_transfer_hook_verify_account_keys(
+    accounts: Swap2WithTransferHookAccounts<'_, '_>,
+    keys: Swap2WithTransferHookKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pool_authority.key, keys.pool_authority),
+        (*accounts.config.key, keys.config),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.input_token_account.key, keys.input_token_account),
+        (*accounts.output_token_account.key, keys.output_token_account),
+        (*accounts.base_vault.key, keys.base_vault),
+        (*accounts.quote_vault.key, keys.quote_vault),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.payer.key, keys.payer),
+        (*accounts.token_base_program.key, keys.token_base_program),
+        (*accounts.token_quote_program.key, keys.token_quote_program),
+        (*accounts.referral_token_account.key, keys.referral_token_account),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn swap2_with_transfer_hook_verify_writable_privileges<'me, 'info>(
+    accounts: Swap2WithTransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.pool,
+        accounts.input_token_account,
+        accounts.output_token_account,
+        accounts.base_vault,
+        accounts.quote_vault,
+        accounts.base_mint,
+        accounts.referral_token_account,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn swap2_with_transfer_hook_verify_signer_privileges<'me, 'info>(
+    accounts: Swap2WithTransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn swap2_with_transfer_hook_verify_account_privileges<'me, 'info>(
+    accounts: Swap2WithTransferHookAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    swap2_with_transfer_hook_verify_writable_privileges(accounts)?;
+    swap2_with_transfer_hook_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const TRANSFER_POOL_CREATOR_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
 pub struct TransferPoolCreatorAccounts<'me, 'info> {
@@ -8750,6 +11170,374 @@ pub fn withdraw_migration_fee_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     withdraw_migration_fee_verify_writable_privileges(accounts)?;
     withdraw_migration_fee_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN: usize = 15;
+#[derive(Copy, Clone, Debug)]
+pub struct ClaimProtocolFeeAccounts<'me, 'info> {
+    pub pool_authority: &'me AccountInfo<'info>,
+    pub config: &'me AccountInfo<'info>,
+    pub pool: &'me AccountInfo<'info>,
+    pub base_vault: &'me AccountInfo<'info>,
+    pub quote_vault: &'me AccountInfo<'info>,
+    pub base_mint: &'me AccountInfo<'info>,
+    pub quote_mint: &'me AccountInfo<'info>,
+    pub token_base_account: &'me AccountInfo<'info>,
+    pub token_quote_account: &'me AccountInfo<'info>,
+    pub operator: &'me AccountInfo<'info>,
+    pub signer: &'me AccountInfo<'info>,
+    pub token_base_program: &'me AccountInfo<'info>,
+    pub token_quote_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ClaimProtocolFeeKeys {
+    pub pool_authority: Pubkey,
+    pub config: Pubkey,
+    pub pool: Pubkey,
+    pub base_vault: Pubkey,
+    pub quote_vault: Pubkey,
+    pub base_mint: Pubkey,
+    pub quote_mint: Pubkey,
+    pub token_base_account: Pubkey,
+    pub token_quote_account: Pubkey,
+    pub operator: Pubkey,
+    pub signer: Pubkey,
+    pub token_base_program: Pubkey,
+    pub token_quote_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<ClaimProtocolFeeAccounts<'_, '_>> for ClaimProtocolFeeKeys {
+    fn from(accounts: ClaimProtocolFeeAccounts) -> Self {
+        Self {
+            pool_authority: *accounts.pool_authority.key,
+            config: *accounts.config.key,
+            pool: *accounts.pool.key,
+            base_vault: *accounts.base_vault.key,
+            quote_vault: *accounts.quote_vault.key,
+            base_mint: *accounts.base_mint.key,
+            quote_mint: *accounts.quote_mint.key,
+            token_base_account: *accounts.token_base_account.key,
+            token_quote_account: *accounts.token_quote_account.key,
+            operator: *accounts.operator.key,
+            signer: *accounts.signer.key,
+            token_base_program: *accounts.token_base_program.key,
+            token_quote_program: *accounts.token_quote_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<ClaimProtocolFeeKeys> for [AccountMeta; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClaimProtocolFeeKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.pool_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.quote_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.base_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.quote_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_base_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_quote_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.operator,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.signer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_base_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_quote_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]> for ClaimProtocolFeeKeys {
+    fn from(pubkeys: [Pubkey; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool_authority: pubkeys[0],
+            config: pubkeys[1],
+            pool: pubkeys[2],
+            base_vault: pubkeys[3],
+            quote_vault: pubkeys[4],
+            base_mint: pubkeys[5],
+            quote_mint: pubkeys[6],
+            token_base_account: pubkeys[7],
+            token_quote_account: pubkeys[8],
+            operator: pubkeys[9],
+            signer: pubkeys[10],
+            token_base_program: pubkeys[11],
+            token_quote_program: pubkeys[12],
+            event_authority: pubkeys[13],
+            program: pubkeys[14],
+        }
+    }
+}
+impl<'info> From<ClaimProtocolFeeAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClaimProtocolFeeAccounts<'_, 'info>) -> Self {
+        [
+            accounts.pool_authority.clone(),
+            accounts.config.clone(),
+            accounts.pool.clone(),
+            accounts.base_vault.clone(),
+            accounts.quote_vault.clone(),
+            accounts.base_mint.clone(),
+            accounts.quote_mint.clone(),
+            accounts.token_base_account.clone(),
+            accounts.token_quote_account.clone(),
+            accounts.operator.clone(),
+            accounts.signer.clone(),
+            accounts.token_base_program.clone(),
+            accounts.token_quote_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]>
+for ClaimProtocolFeeAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            pool_authority: &arr[0],
+            config: &arr[1],
+            pool: &arr[2],
+            base_vault: &arr[3],
+            quote_vault: &arr[4],
+            base_mint: &arr[5],
+            quote_mint: &arr[6],
+            token_base_account: &arr[7],
+            token_quote_account: &arr[8],
+            operator: &arr[9],
+            signer: &arr[10],
+            token_base_program: &arr[11],
+            token_quote_program: &arr[12],
+            event_authority: &arr[13],
+            program: &arr[14],
+        }
+    }
+}
+pub const CLAIM_PROTOCOL_FEE_IX_DISCM: [u8; 8usize] = [
+    165, 228, 133, 48, 99, 249, 255, 33,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct ClaimProtocolFeeIxArgs {
+    pub max_base_amount: u64,
+    pub max_quote_amount: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClaimProtocolFeeIxData(pub ClaimProtocolFeeIxArgs);
+impl From<ClaimProtocolFeeIxArgs> for ClaimProtocolFeeIxData {
+    fn from(args: ClaimProtocolFeeIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl ClaimProtocolFeeIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLAIM_PROTOCOL_FEE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let max_base_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let max_quote_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(ClaimProtocolFeeIxArgs {
+                max_base_amount,
+                max_quote_amount,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLAIM_PROTOCOL_FEE_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.max_base_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.max_quote_amount, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn claim_protocol_fee_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ClaimProtocolFeeKeys,
+    args: ClaimProtocolFeeIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLAIM_PROTOCOL_FEE_IX_ACCOUNTS_LEN] = keys.into();
+    let data: ClaimProtocolFeeIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn claim_protocol_fee_ix(
+    keys: ClaimProtocolFeeKeys,
+    args: ClaimProtocolFeeIxArgs,
+) -> std::io::Result<Instruction> {
+    claim_protocol_fee_ix_with_program_id(DYNAMIC_BONDING_CURVE_PROGRAM_ID, keys, args)
+}
+pub fn claim_protocol_fee_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimProtocolFeeAccounts<'_, '_>,
+    args: ClaimProtocolFeeIxArgs,
+) -> ProgramResult {
+    let keys: ClaimProtocolFeeKeys = accounts.into();
+    let ix = claim_protocol_fee_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn claim_protocol_fee_invoke(
+    accounts: ClaimProtocolFeeAccounts<'_, '_>,
+    args: ClaimProtocolFeeIxArgs,
+) -> ProgramResult {
+    claim_protocol_fee_invoke_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn claim_protocol_fee_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimProtocolFeeAccounts<'_, '_>,
+    args: ClaimProtocolFeeIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ClaimProtocolFeeKeys = accounts.into();
+    let ix = claim_protocol_fee_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn claim_protocol_fee_invoke_signed(
+    accounts: ClaimProtocolFeeAccounts<'_, '_>,
+    args: ClaimProtocolFeeIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    claim_protocol_fee_invoke_signed_with_program_id(
+        DYNAMIC_BONDING_CURVE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn claim_protocol_fee_verify_account_keys(
+    accounts: ClaimProtocolFeeAccounts<'_, '_>,
+    keys: ClaimProtocolFeeKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.pool_authority.key, keys.pool_authority),
+        (*accounts.config.key, keys.config),
+        (*accounts.pool.key, keys.pool),
+        (*accounts.base_vault.key, keys.base_vault),
+        (*accounts.quote_vault.key, keys.quote_vault),
+        (*accounts.base_mint.key, keys.base_mint),
+        (*accounts.quote_mint.key, keys.quote_mint),
+        (*accounts.token_base_account.key, keys.token_base_account),
+        (*accounts.token_quote_account.key, keys.token_quote_account),
+        (*accounts.operator.key, keys.operator),
+        (*accounts.signer.key, keys.signer),
+        (*accounts.token_base_program.key, keys.token_base_program),
+        (*accounts.token_quote_program.key, keys.token_quote_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn claim_protocol_fee_verify_writable_privileges<'me, 'info>(
+    accounts: ClaimProtocolFeeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.pool,
+        accounts.base_vault,
+        accounts.quote_vault,
+        accounts.token_base_account,
+        accounts.token_quote_account,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn claim_protocol_fee_verify_signer_privileges<'me, 'info>(
+    accounts: ClaimProtocolFeeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.signer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn claim_protocol_fee_verify_account_privileges<'me, 'info>(
+    accounts: ClaimProtocolFeeAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    claim_protocol_fee_verify_writable_privileges(accounts)?;
+    claim_protocol_fee_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const ZAP_PROTOCOL_FEE_IX_ACCOUNTS_LEN: usize = 10;

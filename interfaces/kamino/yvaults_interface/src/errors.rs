@@ -14,11 +14,11 @@ pub enum YvaultsError {
     VaultBalanceDoesNotMatchTokenA = 6004,
     #[error("[DEPRECATED] Vault balance does not match for token B")]
     VaultBalanceDoesNotMatchTokenB = 6005,
-    #[error("[DEPRECATED] Shares issued amount does not match")]
+    #[error("Shares issued amount does not match")]
     SharesIssuedAmountDoesNotMatch = 6006,
     #[error("Key is not present in global config")]
     GlobalConfigKeyError = 6007,
-    #[error("[DEPRECATED] System is in emergency mode")]
+    #[error("System is in emergency mode")]
     SystemInEmergencyMode = 6008,
     #[error("Global deposit is currently blocked")]
     GlobalDepositBlocked = 6009,
@@ -132,8 +132,8 @@ pub enum YvaultsError {
     LowerTickNotMultipleOfTickSpacing = 6063,
     #[error("Upper tick is not a multiple of tick spacing")]
     UpperTickNotMultipleOfTickSpacing = 6064,
-    #[error("Cannot change admin authority")]
-    CannotChangeAdminAuthority = 6065,
+    #[error("Cannot directly change admin authority")]
+    CannotDirectlyChangeAdminAuthority = 6065,
     #[error("Cannot resize with smaller new size")]
     CannotResizeAccount = 6066,
     #[error("Scope chain update failed")]
@@ -225,7 +225,7 @@ pub enum YvaultsError {
     #[error("Permissionless rebalancing is disabled")]
     PermissionlessRebalancingDisabled = 6107,
     #[error("Only the owner of the strategy can manually rebalance it")]
-    ManualRebalanceInvalidOwner = 6108,
+    DeprecatedManualRebalanceInvalidOwner = 6108,
     #[error("Invalid rebalance type for the strategy")]
     InvalidRebalanceType = 6109,
     #[error("No rebalance necessary based on current rebalance type/parameters")]
@@ -358,6 +358,58 @@ pub enum YvaultsError {
     InvestAmountBelowMinimum = 6166,
     #[error("Deposit and invest is disabled on mainnet")]
     DepositAndInvestDisabled = 6167,
+    #[error(
+        "Candidate tick lower index is greater than or equal to candidate tick upper index"
+    )]
+    InvalidPendingTickRange = 6168,
+    #[error("Candidate ticks do not match pending range")]
+    CandidateTickOutOfRange = 6169,
+    #[error("Shares to mint are below the requested minimum")]
+    SharesOutBelowMinimum = 6170,
+    #[error("Strategy share calculation method is not a valid MintingMethod")]
+    InvalidMintingMethod = 6171,
+    #[error("Token ata balance is lower than the min post-deposit balance")]
+    MinPostDepositBalanceExceedsAtaBalance = 6172,
+    #[error("Strategy is in emergency mode")]
+    StrategyInEmergencyMode = 6173,
+    #[error("Local admin is blocked")]
+    LocalAdminBlocked = 6174,
+    #[error("Cannot compute price per share when no shares are issued")]
+    NoSharesIssued = 6175,
+    #[error("Unexpected error from an external program or Anchor framework")]
+    UnexpectedExternalError = 6176,
+    #[error("Value is bigger than the maximum accepted value")]
+    ValueBiggerThanMaxAcceptedValue = 6177,
+    #[error("Autodrift max ticks per rebalance is too low for the pool tick spacing")]
+    AutodriftMaxTicksTooLowForTickSpacing = 6178,
+    #[error(
+        "Autodrift max ticks per rebalance requires the initial drift direction to be enforced"
+    )]
+    AutodriftMaxTicksRequiresEnforcedDirection = 6179,
+    #[error("Invalid config value provided")]
+    InvalidConfigValue = 6180,
+    #[error("Pool price too divergent from twap")]
+    PoolPriceTooDivergentFromTwap = 6181,
+    #[error("Token TWAP is not configured")]
+    TokenTwapNotConfigured = 6182,
+    #[error("Swap rewards signer does not match the actions authority")]
+    SwapRewardsInvalidAuthority = 6183,
+    #[error("Autodrift max ticks per epoch is too low for the pool tick spacing")]
+    AutodriftMaxTicksPerEpochTooLowForTickSpacing = 6184,
+    #[error(
+        "Autodrift max ticks per epoch requires the initial drift direction to be enforced"
+    )]
+    AutodriftMaxTicksPerEpochRequiresEnforcedDirection = 6185,
+    #[error("Stored reference tick index price is not set")]
+    RefTickIndexPriceNotSet = 6186,
+    #[error("Stored reference tick index price is too old")]
+    RefTickIndexPriceTooOld = 6187,
+    #[error("Stored snapshot price is too far from the current pool price")]
+    SnapshotPriceTooFarFromPoolPrice = 6188,
+    #[error("Stored reference tick index price is future-dated")]
+    RefTickIndexPriceInFuture = 6189,
+    #[error("Stored reference tick index price is too recent")]
+    RefTickIndexPriceTooRecent = 6190,
 }
 impl From<YvaultsError> for ProgramError {
     fn from(e: YvaultsError) -> Self {

@@ -77,7 +77,7 @@ pub struct Pool {
     pub creator_fee: u64,
     pub protocol_fee: u64,
     pub is_migrated: u8,
-    pub _padding0: [u8; 7],
+    pub padding0: [u8; 7],
     pub padding: [u64; 15],
 }
 impl Pool {
@@ -94,7 +94,7 @@ impl Pool {
         let creator_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let protocol_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let is_migrated: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding0: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let padding0: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         let padding: [u64; 15] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
@@ -109,7 +109,7 @@ impl Pool {
             creator_fee,
             protocol_fee,
             is_migrated,
-            _padding0,
+            padding0,
             padding,
         })
     }
@@ -125,7 +125,7 @@ impl Pool {
         borsh::BorshSerialize::serialize(&self.creator_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.is_migrated, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }

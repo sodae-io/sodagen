@@ -132,6 +132,18 @@ pub enum WhirlpoolError {
     InvalidTradeEnableTimestamp = 6063,
     #[error("Trade is not enabled yet")]
     TradeIsNotEnabled = 6064,
+    #[error("Rent calculation error")]
+    RentCalculationError = 6065,
+    #[error("Feature is not enabled")]
+    FeatureIsNotEnabled = 6066,
+    #[error(
+        "This whirlpool only supports open_position_with_token_extensions instruction"
+    )]
+    PositionWithTokenExtensionsRequired = 6067,
+    #[error("Provided adaptive fee constants are unchanged")]
+    AdaptiveFeeConstantsUnchanged = 6068,
+    #[error("Price outside slippage bounds")]
+    PriceSlippageOutOfBounds = 6069,
 }
 impl From<WhirlpoolError> for ProgramError {
     fn from(e: WhirlpoolError) -> Self {

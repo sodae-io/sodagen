@@ -12,6 +12,32 @@ use solana_pubkey::Pubkey;
     serde::Serialize,
     serde::Deserialize
 )]
+pub struct ExchangeRateWithDecimals {
+    pub exchange_rate_sf: u128,
+    pub mint_decimals: u8,
+}
+impl ExchangeRateWithDecimals {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let exchange_rate_sf: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let mint_decimals: u8 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            exchange_rate_sf,
+            mint_decimals,
+        })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub struct ReserveConfigCustomizationArgs {
     pub override_fixed_rate_bps: u8,
     pub fixed_borrow_rate_bps: u32,
@@ -143,8 +169,77 @@ pub enum UpdateConfigMode {
     UpdateDebtTermSeconds,
     UpdateEarlyRepayRemainingInterestPct,
     UpdateReserveEmergencyMode,
-    UpdateRewardsAmountPerSlot,
+    UpdateRewardsAmountPerAccrualUnit,
     UpdateReservePermissionedOps,
+    UpdateInterestRateBasis,
+}
+impl TryFrom<u8> for UpdateConfigMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateLoanToValuePct),
+            1u8 => Ok(Self::UpdateMaxLiquidationBonusBps),
+            2u8 => Ok(Self::UpdateLiquidationThresholdPct),
+            3u8 => Ok(Self::UpdateProtocolLiquidationFee),
+            4u8 => Ok(Self::UpdateProtocolTakeRate),
+            5u8 => Ok(Self::UpdateFeesOriginationFee),
+            6u8 => Ok(Self::UpdateFeesFlashLoanFee),
+            7u8 => Ok(Self::DeprecatedUpdateFeesReferralFeeBps),
+            8u8 => Ok(Self::UpdateDepositLimit),
+            9u8 => Ok(Self::UpdateBorrowLimit),
+            10u8 => Ok(Self::UpdateTokenInfoLowerHeuristic),
+            11u8 => Ok(Self::UpdateTokenInfoUpperHeuristic),
+            12u8 => Ok(Self::UpdateTokenInfoExpHeuristic),
+            13u8 => Ok(Self::UpdateTokenInfoTwapDivergence),
+            14u8 => Ok(Self::UpdateTokenInfoScopeTwap),
+            15u8 => Ok(Self::UpdateTokenInfoScopeChain),
+            16u8 => Ok(Self::UpdateTokenInfoName),
+            17u8 => Ok(Self::UpdateTokenInfoPriceMaxAge),
+            18u8 => Ok(Self::UpdateTokenInfoTwapMaxAge),
+            19u8 => Ok(Self::UpdateScopePriceFeed),
+            20u8 => Ok(Self::UpdatePythPrice),
+            21u8 => Ok(Self::UpdateSwitchboardFeed),
+            22u8 => Ok(Self::UpdateSwitchboardTwapFeed),
+            23u8 => Ok(Self::UpdateBorrowRateCurve),
+            24u8 => Ok(Self::DeprecatedUpdateEntireReserveConfig),
+            25u8 => Ok(Self::UpdateDebtWithdrawalCap),
+            26u8 => Ok(Self::UpdateDepositWithdrawalCap),
+            27u8 => Ok(Self::DeprecatedUpdateDebtWithdrawalCapCurrentTotal),
+            28u8 => Ok(Self::DeprecatedUpdateDepositWithdrawalCapCurrentTotal),
+            29u8 => Ok(Self::UpdateBadDebtLiquidationBonusBps),
+            30u8 => Ok(Self::UpdateMinLiquidationBonusBps),
+            31u8 => Ok(Self::UpdateDeleveragingMarginCallPeriod),
+            32u8 => Ok(Self::UpdateBorrowFactor),
+            33u8 => Ok(Self::DeprecatedUpdateAssetTier),
+            34u8 => Ok(Self::UpdateElevationGroup),
+            35u8 => Ok(Self::UpdateDeleveragingThresholdDecreaseBpsPerDay),
+            36u8 => Ok(Self::DeprecatedUpdateMultiplierSideBoost),
+            37u8 => Ok(Self::DeprecatedUpdateMultiplierTagBoost),
+            38u8 => Ok(Self::UpdateReserveStatus),
+            39u8 => Ok(Self::UpdateFarmCollateral),
+            40u8 => Ok(Self::UpdateFarmDebt),
+            41u8 => Ok(Self::UpdateDisableUsageAsCollateralOutsideEmode),
+            42u8 => Ok(Self::UpdateBlockBorrowingAboveUtilizationPct),
+            43u8 => Ok(Self::UpdateBlockPriceUsage),
+            44u8 => Ok(Self::UpdateBorrowLimitOutsideElevationGroup),
+            45u8 => Ok(Self::UpdateBorrowLimitsInElevationGroupAgainstThisReserve),
+            46u8 => Ok(Self::UpdateHostFixedInterestRateBps),
+            47u8 => Ok(Self::UpdateAutodeleverageEnabled),
+            48u8 => Ok(Self::UpdateDeleveragingBonusIncreaseBpsPerDay),
+            49u8 => Ok(Self::UpdateProtocolOrderExecutionFee),
+            50u8 => Ok(Self::UpdateProposerAuthorityLock),
+            51u8 => Ok(Self::UpdateMinDeleveragingBonusBps),
+            52u8 => Ok(Self::UpdateBlockCTokenUsage),
+            53u8 => Ok(Self::UpdateDebtMaturityTimestamp),
+            54u8 => Ok(Self::UpdateDebtTermSeconds),
+            55u8 => Ok(Self::UpdateEarlyRepayRemainingInterestPct),
+            56u8 => Ok(Self::UpdateReserveEmergencyMode),
+            57u8 => Ok(Self::UpdateRewardsAmountPerAccrualUnit),
+            58u8 => Ok(Self::UpdateReservePermissionedOps),
+            59u8 => Ok(Self::UpdateInterestRateBasis),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -224,6 +319,62 @@ pub enum UpdateLendingMarketMode {
     UpdatePermissionedOps,
     DeprecatedUpdateReserveRewardsMaxAprPct,
     UpdateReserveRewardsMaxAprBps,
+    UpdateDisableNonceBlock,
+}
+impl TryFrom<u8> for UpdateLendingMarketMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateOwner),
+            1u8 => Ok(Self::UpdateEmergencyMode),
+            2u8 => Ok(Self::UpdateLiquidationCloseFactor),
+            3u8 => Ok(Self::UpdateLiquidationMaxValue),
+            4u8 => Ok(Self::DeprecatedUpdateGlobalUnhealthyBorrow),
+            5u8 => Ok(Self::UpdateGlobalAllowedBorrow),
+            6u8 => Ok(Self::UpdateEmergencyCouncil),
+            7u8 => Ok(Self::UpdateMinFullLiquidationThreshold),
+            8u8 => Ok(Self::UpdateInsolvencyRiskLtv),
+            9u8 => Ok(Self::UpdateElevationGroup),
+            10u8 => Ok(Self::UpdateReferralFeeBps),
+            11u8 => Ok(Self::DeprecatedUpdateMultiplierPoints),
+            12u8 => Ok(Self::UpdatePriceRefreshTriggerToMaxAgePct),
+            13u8 => Ok(Self::UpdateAutodeleverageEnabled),
+            14u8 => Ok(Self::UpdateBorrowingDisabled),
+            15u8 => Ok(Self::UpdateMinNetValueObligationPostAction),
+            16u8 => Ok(Self::UpdateMinValueLtvSkipPriorityLiqCheck),
+            17u8 => Ok(Self::UpdateMinValueBfSkipPriorityLiqCheck),
+            18u8 => Ok(Self::UpdatePaddingFields),
+            19u8 => Ok(Self::UpdateName),
+            20u8 => Ok(Self::UpdateIndividualAutodeleverageMarginCallPeriodSecs),
+            21u8 => Ok(Self::UpdateInitialDepositAmount),
+            22u8 => Ok(Self::UpdateObligationOrderExecutionEnabled),
+            23u8 => Ok(Self::UpdateImmutableFlag),
+            24u8 => Ok(Self::UpdateObligationOrderCreationEnabled),
+            25u8 => Ok(Self::UpdateProposerAuthority),
+            26u8 => Ok(Self::UpdatePriceTriggeredLiquidationDisabled),
+            27u8 => Ok(Self::UpdateMatureReserveDebtLiquidationEnabled),
+            28u8 => Ok(Self::UpdateObligationBorrowDebtTermLiquidationEnabled),
+            29u8 => Ok(Self::UpdateBorrowOrderCreationEnabled),
+            30u8 => Ok(Self::UpdateBorrowOrderExecutionEnabled),
+            31u8 => Ok(Self::UpdateMinBorrowOrderFillValue),
+            32u8 => Ok(Self::UpdateWithdrawTicketIssuanceEnabled),
+            33u8 => Ok(Self::UpdateWithdrawTicketRedemptionEnabled),
+            34u8 => Ok(Self::UpdateMinWithdrawQueuedLiquidityValue),
+            35u8 => Ok(Self::UpdateFixedTermRolloverWindowDurationSeconds),
+            36u8 => Ok(Self::UpdateOpenTermRolloverWindowDurationSeconds),
+            37u8 => Ok(Self::UpdateObligationBorrowRolloverConfigurationEnabled),
+            38u8 => Ok(Self::UpdateTermBasedFullLiquidationDurationSecs),
+            39u8 => Ok(Self::UpdateObligationBorrowMigrationToFixedExecutionEnabled),
+            40u8 => Ok(Self::UpdateMinPartialRolloverValue),
+            41u8 => Ok(Self::UpdateWithdrawTicketCancellationEnabled),
+            42u8 => Ok(Self::UpdatePermissioningAuthority),
+            43u8 => Ok(Self::UpdatePermissionedOps),
+            44u8 => Ok(Self::DeprecatedUpdateReserveRewardsMaxAprPct),
+            45u8 => Ok(Self::UpdateReserveRewardsMaxAprBps),
+            46u8 => Ok(Self::UpdateDisableNonceBlock),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -240,6 +391,16 @@ pub enum UpdateGlobalConfigMode {
     PendingAdmin,
     FeeCollector,
 }
+impl TryFrom<u8> for UpdateGlobalConfigMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::PendingAdmin),
+            1u8 => Ok(Self::FeeCollector),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -254,7 +415,8 @@ pub struct LastUpdate {
     pub slot: u64,
     pub stale: u8,
     pub price_status: u8,
-    pub placeholder: [u8; 6],
+    pub alignment_padding: [u8; 2],
+    pub timestamp: u32,
 }
 impl LastUpdate {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -262,13 +424,15 @@ impl LastUpdate {
         let slot: u64 = crate::borsh_de_or_default(&mut reader)?;
         let stale: u8 = crate::borsh_de_or_default(&mut reader)?;
         let price_status: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let placeholder: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let alignment_padding: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let timestamp: u32 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             slot,
             stale,
             price_status,
-            placeholder,
+            alignment_padding,
+            timestamp,
         })
     }
 }
@@ -394,7 +558,7 @@ pub struct FixedTermBorrowRolloverConfig {
     pub auto_rollover_enabled: u8,
     pub open_term_allowed: u8,
     pub migration_to_fixed_enabled: u8,
-    pub alignment_padding: [u8; 1],
+    pub fixed_term_rollover_window_duration_days: u8,
     pub max_borrow_rate_bps: u32,
     pub min_debt_term_seconds: u64,
 }
@@ -404,7 +568,9 @@ impl FixedTermBorrowRolloverConfig {
         let auto_rollover_enabled: u8 = crate::borsh_de_or_default(&mut reader)?;
         let open_term_allowed: u8 = crate::borsh_de_or_default(&mut reader)?;
         let migration_to_fixed_enabled: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let alignment_padding: [u8; 1] = crate::borsh_de_or_default(&mut reader)?;
+        let fixed_term_rollover_window_duration_days: u8 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         let max_borrow_rate_bps: u32 = crate::borsh_de_or_default(&mut reader)?;
         let min_debt_term_seconds: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
@@ -412,7 +578,7 @@ impl FixedTermBorrowRolloverConfig {
             auto_rollover_enabled,
             open_term_allowed,
             migration_to_fixed_enabled,
-            alignment_padding,
+            fixed_term_rollover_window_duration_days,
             max_borrow_rate_bps,
             min_debt_term_seconds,
         })
@@ -603,6 +769,21 @@ pub enum UpdateObligationConfigMode {
     FixedTermRolloverMinDebtTermSeconds,
     FixedTermRolloverOpenTermAllowed,
     MigrationToFixedEnabled,
+    FixedTermRolloverWindowDurationDays,
+}
+impl TryFrom<u8> for UpdateObligationConfigMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::FixedTermRolloverEnabled),
+            1u8 => Ok(Self::FixedTermRolloverMaxBorrowRateBps),
+            2u8 => Ok(Self::FixedTermRolloverMinDebtTermSeconds),
+            3u8 => Ok(Self::FixedTermRolloverOpenTermAllowed),
+            4u8 => Ok(Self::MigrationToFixedEnabled),
+            5u8 => Ok(Self::FixedTermRolloverWindowDurationDays),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -641,6 +822,16 @@ pub enum FeeCalculation {
     #[default]
     Exclusive,
     Inclusive,
+}
+impl TryFrom<u8> for FeeCalculation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Exclusive),
+            1u8 => Ok(Self::Inclusive),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -695,7 +886,8 @@ pub struct ReserveConfig {
     pub block_ctoken_usage: u8,
     pub early_repay_remaining_interest_pct: u8,
     pub emergency_mode: u8,
-    pub reserved1: [u8; 4],
+    pub interest_rate_basis: u8,
+    pub reserved1: [u8; 3],
     pub protocol_order_execution_fee_pct: u8,
     pub protocol_take_rate_pct: u8,
     pub protocol_liquidation_fee_pct: u8,
@@ -724,7 +916,7 @@ pub struct ReserveConfig {
     pub deleveraging_bonus_increase_bps_per_day: u64,
     pub debt_maturity_timestamp: u64,
     pub debt_term_seconds: u64,
-    pub rewards_amount_per_slot: u64,
+    pub rewards_amount_per_accrual_unit: u64,
     pub permissioned_ops: u64,
 }
 impl ReserveConfig {
@@ -739,7 +931,8 @@ impl ReserveConfig {
             &mut reader,
         )?;
         let emergency_mode: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let reserved1: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let interest_rate_basis: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let reserved1: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
         let protocol_order_execution_fee_pct: u8 = crate::borsh_de_or_default(
             &mut reader,
         )?;
@@ -806,7 +999,9 @@ impl ReserveConfig {
         )?;
         let debt_maturity_timestamp: u64 = crate::borsh_de_or_default(&mut reader)?;
         let debt_term_seconds: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let rewards_amount_per_slot: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let rewards_amount_per_accrual_unit: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         let permissioned_ops: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
@@ -817,6 +1012,7 @@ impl ReserveConfig {
             block_ctoken_usage,
             early_repay_remaining_interest_pct,
             emergency_mode,
+            interest_rate_basis,
             reserved1,
             protocol_order_execution_fee_pct,
             protocol_take_rate_pct,
@@ -846,7 +1042,7 @@ impl ReserveConfig {
             deleveraging_bonus_increase_bps_per_day,
             debt_maturity_timestamp,
             debt_term_seconds,
-            rewards_amount_per_slot,
+            rewards_amount_per_accrual_unit,
             permissioned_ops,
         })
     }
@@ -865,6 +1061,16 @@ pub enum ReserveFarmKind {
     #[default]
     Collateral,
     Debt,
+}
+impl TryFrom<u8> for ReserveFarmKind {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Collateral),
+            1u8 => Ok(Self::Debt),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1001,6 +1207,17 @@ pub enum ReserveStatus {
     Active,
     Obsolete,
     Hidden,
+}
+impl TryFrom<u8> for ReserveStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Active),
+            1u8 => Ok(Self::Obsolete),
+            2u8 => Ok(Self::Hidden),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1255,6 +1472,16 @@ pub enum ProgressCallbackType {
     #[default]
     None,
     KlendQueueAccountingHandlerOnKvault,
+}
+impl TryFrom<u8> for ProgressCallbackType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::KlendQueueAccountingHandlerOnKvault),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

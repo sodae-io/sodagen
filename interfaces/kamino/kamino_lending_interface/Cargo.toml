@@ -1,6 +1,6 @@
 [package]
 name = "kamino_lending_interface"
-version = "1.23.0"
+version = "1.25.0"
 edition = "2021"
 
 [dependencies.borsh]

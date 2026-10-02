@@ -2,7 +2,7 @@
   "address": "omnixgS8fnqHfCcTGKWj6JtKjzpJZ1Y5y9pyFkQDkYE",
   "metadata": {
     "name": "omnipair",
-    "version": "0.10.3",
+    "version": "0.10.5",
     "spec": "0.1.0",
     "description": "Oracless spot and margin money market protocol"
   },
@@ -2095,8 +2095,45 @@
         },
         {
           "name": "rate_model",
+          "docs": [
+            "Derived from the pair rather than passed as a fresh keypair, so creating",
+            "a market needs no signature beyond the deployer's. A keypair signer made",
+            "deployment impossible for a multisig, whose vault cannot produce one.",
+            "",
+            "Deliberately not seeded on the rate parameters: one pair owns one rate",
+            "model, which avoids `init_if_needed` and any chance of overwriting a",
+            "model another pair is already using. Sharing a model across pairs is",
+            "still available through `create_rate_model` + `set_pair_rate_model`.",
+            "",
+            "The bump is recomputed rather than stored: adding a field would change",
+            "`RateModel`'s size and break every account created before this change.",
+            "No other instruction validates this account by seeds, so it is only",
+            "needed here."
+          ],
           "writable": true,
-          "signer": true
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  114,
+                  97,
+                  116,
+                  101,
+                  95,
+                  109,
+                  111,
+                  100,
+                  101,
+                  108
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "pair"
+              }
+            ]
+          }
         },
         {
           "name": "lp_mint",
@@ -6580,6 +6617,11 @@
       "name": "POST_WITHDRAW_DEBT_COVERAGE_BPS",
       "type": "u16",
       "value": "11500"
+    },
+    {
+      "name": "RATE_MODEL_SEED_PREFIX",
+      "type": "bytes",
+      "value": "[114, 97, 116, 101, 95, 109, 111, 100, 101, 108]"
     },
     {
       "name": "RESERVE_VAULT_SEED_PREFIX",

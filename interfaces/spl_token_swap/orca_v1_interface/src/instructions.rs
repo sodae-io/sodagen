@@ -465,7 +465,7 @@ pub fn initialize_verify_account_privileges<'me, 'info>(
     initialize_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const SWAP_IX_ACCOUNTS_LEN: usize = 14;
+pub const SWAP_IX_ACCOUNTS_LEN: usize = 10;
 #[derive(Copy, Clone, Debug)]
 pub struct SwapAccounts<'me, 'info> {
     pub swap: &'me AccountInfo<'info>,
@@ -477,11 +477,7 @@ pub struct SwapAccounts<'me, 'info> {
     pub destination: &'me AccountInfo<'info>,
     pub pool_mint: &'me AccountInfo<'info>,
     pub pool_fee: &'me AccountInfo<'info>,
-    pub source_mint: &'me AccountInfo<'info>,
-    pub destination_mint: &'me AccountInfo<'info>,
-    pub token_program_0: &'me AccountInfo<'info>,
-    pub token_program_1: &'me AccountInfo<'info>,
-    pub token_program_2: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SwapKeys {
@@ -494,11 +490,7 @@ pub struct SwapKeys {
     pub destination: Pubkey,
     pub pool_mint: Pubkey,
     pub pool_fee: Pubkey,
-    pub source_mint: Pubkey,
-    pub destination_mint: Pubkey,
-    pub token_program_0: Pubkey,
-    pub token_program_1: Pubkey,
-    pub token_program_2: Pubkey,
+    pub token_program: Pubkey,
 }
 impl From<SwapAccounts<'_, '_>> for SwapKeys {
     fn from(accounts: SwapAccounts) -> Self {
@@ -512,11 +504,7 @@ impl From<SwapAccounts<'_, '_>> for SwapKeys {
             destination: *accounts.destination.key,
             pool_mint: *accounts.pool_mint.key,
             pool_fee: *accounts.pool_fee.key,
-            source_mint: *accounts.source_mint.key,
-            destination_mint: *accounts.destination_mint.key,
-            token_program_0: *accounts.token_program_0.key,
-            token_program_1: *accounts.token_program_1.key,
-            token_program_2: *accounts.token_program_2.key,
+            token_program: *accounts.token_program.key,
         }
     }
 }
@@ -569,27 +557,7 @@ impl From<SwapKeys> for [AccountMeta; SWAP_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.source_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.destination_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_program_0,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_program_1,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_program_2,
+                pubkey: keys.token_program,
                 is_signer: false,
                 is_writable: false,
             },
@@ -608,11 +576,7 @@ impl From<[Pubkey; SWAP_IX_ACCOUNTS_LEN]> for SwapKeys {
             destination: pubkeys[6],
             pool_mint: pubkeys[7],
             pool_fee: pubkeys[8],
-            source_mint: pubkeys[9],
-            destination_mint: pubkeys[10],
-            token_program_0: pubkeys[11],
-            token_program_1: pubkeys[12],
-            token_program_2: pubkeys[13],
+            token_program: pubkeys[9],
         }
     }
 }
@@ -629,11 +593,7 @@ for [AccountInfo<'info>; SWAP_IX_ACCOUNTS_LEN] {
             accounts.destination.clone(),
             accounts.pool_mint.clone(),
             accounts.pool_fee.clone(),
-            accounts.source_mint.clone(),
-            accounts.destination_mint.clone(),
-            accounts.token_program_0.clone(),
-            accounts.token_program_1.clone(),
-            accounts.token_program_2.clone(),
+            accounts.token_program.clone(),
         ]
     }
 }
@@ -650,11 +610,7 @@ for SwapAccounts<'me, 'info> {
             destination: &arr[6],
             pool_mint: &arr[7],
             pool_fee: &arr[8],
-            source_mint: &arr[9],
-            destination_mint: &arr[10],
-            token_program_0: &arr[11],
-            token_program_1: &arr[12],
-            token_program_2: &arr[13],
+            token_program: &arr[9],
         }
     }
 }
@@ -759,11 +715,7 @@ pub fn swap_verify_account_keys(
         (*accounts.destination.key, keys.destination),
         (*accounts.pool_mint.key, keys.pool_mint),
         (*accounts.pool_fee.key, keys.pool_fee),
-        (*accounts.source_mint.key, keys.source_mint),
-        (*accounts.destination_mint.key, keys.destination_mint),
-        (*accounts.token_program_0.key, keys.token_program_0),
-        (*accounts.token_program_1.key, keys.token_program_1),
-        (*accounts.token_program_2.key, keys.token_program_2),
+        (*accounts.token_program.key, keys.token_program),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -805,7 +757,7 @@ pub fn swap_verify_account_privileges<'me, 'info>(
     swap_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const DEPOSIT_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN: usize = 14;
+pub const DEPOSIT_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN: usize = 10;
 #[derive(Copy, Clone, Debug)]
 pub struct DepositAllTokenTypesAccounts<'me, 'info> {
     pub swap: &'me AccountInfo<'info>,
@@ -817,10 +769,6 @@ pub struct DepositAllTokenTypesAccounts<'me, 'info> {
     pub swap_token_b: &'me AccountInfo<'info>,
     pub pool_mint: &'me AccountInfo<'info>,
     pub destination: &'me AccountInfo<'info>,
-    pub token_a_mint: &'me AccountInfo<'info>,
-    pub token_b_mint: &'me AccountInfo<'info>,
-    pub token_a_program: &'me AccountInfo<'info>,
-    pub token_b_program: &'me AccountInfo<'info>,
     pub token_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -834,10 +782,6 @@ pub struct DepositAllTokenTypesKeys {
     pub swap_token_b: Pubkey,
     pub pool_mint: Pubkey,
     pub destination: Pubkey,
-    pub token_a_mint: Pubkey,
-    pub token_b_mint: Pubkey,
-    pub token_a_program: Pubkey,
-    pub token_b_program: Pubkey,
     pub token_program: Pubkey,
 }
 impl From<DepositAllTokenTypesAccounts<'_, '_>> for DepositAllTokenTypesKeys {
@@ -852,10 +796,6 @@ impl From<DepositAllTokenTypesAccounts<'_, '_>> for DepositAllTokenTypesKeys {
             swap_token_b: *accounts.swap_token_b.key,
             pool_mint: *accounts.pool_mint.key,
             destination: *accounts.destination.key,
-            token_a_mint: *accounts.token_a_mint.key,
-            token_b_mint: *accounts.token_b_mint.key,
-            token_a_program: *accounts.token_a_program.key,
-            token_b_program: *accounts.token_b_program.key,
             token_program: *accounts.token_program.key,
         }
     }
@@ -910,26 +850,6 @@ for [AccountMeta; DEPOSIT_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.token_a_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_b_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_a_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_b_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
                 pubkey: keys.token_program,
                 is_signer: false,
                 is_writable: false,
@@ -950,11 +870,7 @@ for DepositAllTokenTypesKeys {
             swap_token_b: pubkeys[6],
             pool_mint: pubkeys[7],
             destination: pubkeys[8],
-            token_a_mint: pubkeys[9],
-            token_b_mint: pubkeys[10],
-            token_a_program: pubkeys[11],
-            token_b_program: pubkeys[12],
-            token_program: pubkeys[13],
+            token_program: pubkeys[9],
         }
     }
 }
@@ -971,10 +887,6 @@ for [AccountInfo<'info>; DEPOSIT_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN] {
             accounts.swap_token_b.clone(),
             accounts.pool_mint.clone(),
             accounts.destination.clone(),
-            accounts.token_a_mint.clone(),
-            accounts.token_b_mint.clone(),
-            accounts.token_a_program.clone(),
-            accounts.token_b_program.clone(),
             accounts.token_program.clone(),
         ]
     }
@@ -994,11 +906,7 @@ for DepositAllTokenTypesAccounts<'me, 'info> {
             swap_token_b: &arr[6],
             pool_mint: &arr[7],
             destination: &arr[8],
-            token_a_mint: &arr[9],
-            token_b_mint: &arr[10],
-            token_a_program: &arr[11],
-            token_b_program: &arr[12],
-            token_program: &arr[13],
+            token_program: &arr[9],
         }
     }
 }
@@ -1118,10 +1026,6 @@ pub fn deposit_all_token_types_verify_account_keys(
         (*accounts.swap_token_b.key, keys.swap_token_b),
         (*accounts.pool_mint.key, keys.pool_mint),
         (*accounts.destination.key, keys.destination),
-        (*accounts.token_a_mint.key, keys.token_a_mint),
-        (*accounts.token_b_mint.key, keys.token_b_mint),
-        (*accounts.token_a_program.key, keys.token_a_program),
-        (*accounts.token_b_program.key, keys.token_b_program),
         (*accounts.token_program.key, keys.token_program),
     ] {
         if actual != expected {
@@ -1164,7 +1068,7 @@ pub fn deposit_all_token_types_verify_account_privileges<'me, 'info>(
     deposit_all_token_types_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const WITHDRAW_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN: usize = 15;
+pub const WITHDRAW_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN: usize = 11;
 #[derive(Copy, Clone, Debug)]
 pub struct WithdrawAllTokenTypesAccounts<'me, 'info> {
     pub swap: &'me AccountInfo<'info>,
@@ -1177,11 +1081,7 @@ pub struct WithdrawAllTokenTypesAccounts<'me, 'info> {
     pub destination_token_a: &'me AccountInfo<'info>,
     pub destination_token_b: &'me AccountInfo<'info>,
     pub fee_account: &'me AccountInfo<'info>,
-    pub token_a_mint: &'me AccountInfo<'info>,
-    pub token_b_mint: &'me AccountInfo<'info>,
     pub token_program: &'me AccountInfo<'info>,
-    pub token_a_program: &'me AccountInfo<'info>,
-    pub token_b_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WithdrawAllTokenTypesKeys {
@@ -1195,11 +1095,7 @@ pub struct WithdrawAllTokenTypesKeys {
     pub destination_token_a: Pubkey,
     pub destination_token_b: Pubkey,
     pub fee_account: Pubkey,
-    pub token_a_mint: Pubkey,
-    pub token_b_mint: Pubkey,
     pub token_program: Pubkey,
-    pub token_a_program: Pubkey,
-    pub token_b_program: Pubkey,
 }
 impl From<WithdrawAllTokenTypesAccounts<'_, '_>> for WithdrawAllTokenTypesKeys {
     fn from(accounts: WithdrawAllTokenTypesAccounts) -> Self {
@@ -1214,11 +1110,7 @@ impl From<WithdrawAllTokenTypesAccounts<'_, '_>> for WithdrawAllTokenTypesKeys {
             destination_token_a: *accounts.destination_token_a.key,
             destination_token_b: *accounts.destination_token_b.key,
             fee_account: *accounts.fee_account.key,
-            token_a_mint: *accounts.token_a_mint.key,
-            token_b_mint: *accounts.token_b_mint.key,
             token_program: *accounts.token_program.key,
-            token_a_program: *accounts.token_a_program.key,
-            token_b_program: *accounts.token_b_program.key,
         }
     }
 }
@@ -1277,27 +1169,7 @@ for [AccountMeta; WITHDRAW_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.token_a_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_b_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
                 pubkey: keys.token_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_a_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_b_program,
                 is_signer: false,
                 is_writable: false,
             },
@@ -1318,11 +1190,7 @@ for WithdrawAllTokenTypesKeys {
             destination_token_a: pubkeys[7],
             destination_token_b: pubkeys[8],
             fee_account: pubkeys[9],
-            token_a_mint: pubkeys[10],
-            token_b_mint: pubkeys[11],
-            token_program: pubkeys[12],
-            token_a_program: pubkeys[13],
-            token_b_program: pubkeys[14],
+            token_program: pubkeys[10],
         }
     }
 }
@@ -1340,11 +1208,7 @@ for [AccountInfo<'info>; WITHDRAW_ALL_TOKEN_TYPES_IX_ACCOUNTS_LEN] {
             accounts.destination_token_a.clone(),
             accounts.destination_token_b.clone(),
             accounts.fee_account.clone(),
-            accounts.token_a_mint.clone(),
-            accounts.token_b_mint.clone(),
             accounts.token_program.clone(),
-            accounts.token_a_program.clone(),
-            accounts.token_b_program.clone(),
         ]
     }
 }
@@ -1367,11 +1231,7 @@ for WithdrawAllTokenTypesAccounts<'me, 'info> {
             destination_token_a: &arr[7],
             destination_token_b: &arr[8],
             fee_account: &arr[9],
-            token_a_mint: &arr[10],
-            token_b_mint: &arr[11],
-            token_program: &arr[12],
-            token_a_program: &arr[13],
-            token_b_program: &arr[14],
+            token_program: &arr[10],
         }
     }
 }
@@ -1492,11 +1352,7 @@ pub fn withdraw_all_token_types_verify_account_keys(
         (*accounts.destination_token_a.key, keys.destination_token_a),
         (*accounts.destination_token_b.key, keys.destination_token_b),
         (*accounts.fee_account.key, keys.fee_account),
-        (*accounts.token_a_mint.key, keys.token_a_mint),
-        (*accounts.token_b_mint.key, keys.token_b_mint),
         (*accounts.token_program.key, keys.token_program),
-        (*accounts.token_a_program.key, keys.token_a_program),
-        (*accounts.token_b_program.key, keys.token_b_program),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -1539,7 +1395,7 @@ pub fn withdraw_all_token_types_verify_account_privileges<'me, 'info>(
     withdraw_all_token_types_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const DEPOSIT_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_IN_IX_ACCOUNTS_LEN: usize = 11;
+pub const DEPOSIT_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_IN_IX_ACCOUNTS_LEN: usize = 9;
 #[derive(Copy, Clone, Debug)]
 pub struct DepositSingleTokenTypeExactAmountInAccounts<'me, 'info> {
     pub swap: &'me AccountInfo<'info>,
@@ -1550,9 +1406,7 @@ pub struct DepositSingleTokenTypeExactAmountInAccounts<'me, 'info> {
     pub swap_token_b: &'me AccountInfo<'info>,
     pub pool_mint: &'me AccountInfo<'info>,
     pub destination: &'me AccountInfo<'info>,
-    pub source_mint: &'me AccountInfo<'info>,
-    pub token_program_0: &'me AccountInfo<'info>,
-    pub token_program_1: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DepositSingleTokenTypeExactAmountInKeys {
@@ -1564,9 +1418,7 @@ pub struct DepositSingleTokenTypeExactAmountInKeys {
     pub swap_token_b: Pubkey,
     pub pool_mint: Pubkey,
     pub destination: Pubkey,
-    pub source_mint: Pubkey,
-    pub token_program_0: Pubkey,
-    pub token_program_1: Pubkey,
+    pub token_program: Pubkey,
 }
 impl From<DepositSingleTokenTypeExactAmountInAccounts<'_, '_>>
 for DepositSingleTokenTypeExactAmountInKeys {
@@ -1580,9 +1432,7 @@ for DepositSingleTokenTypeExactAmountInKeys {
             swap_token_b: *accounts.swap_token_b.key,
             pool_mint: *accounts.pool_mint.key,
             destination: *accounts.destination.key,
-            source_mint: *accounts.source_mint.key,
-            token_program_0: *accounts.token_program_0.key,
-            token_program_1: *accounts.token_program_1.key,
+            token_program: *accounts.token_program.key,
         }
     }
 }
@@ -1631,17 +1481,7 @@ for [AccountMeta; DEPOSIT_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_IN_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.source_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_program_0,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_program_1,
+                pubkey: keys.token_program,
                 is_signer: false,
                 is_writable: false,
             },
@@ -1662,9 +1502,7 @@ for DepositSingleTokenTypeExactAmountInKeys {
             swap_token_b: pubkeys[5],
             pool_mint: pubkeys[6],
             destination: pubkeys[7],
-            source_mint: pubkeys[8],
-            token_program_0: pubkeys[9],
-            token_program_1: pubkeys[10],
+            token_program: pubkeys[8],
         }
     }
 }
@@ -1680,9 +1518,7 @@ for [AccountInfo<'info>; DEPOSIT_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_IN_IX_ACCOUNTS_L
             accounts.swap_token_b.clone(),
             accounts.pool_mint.clone(),
             accounts.destination.clone(),
-            accounts.source_mint.clone(),
-            accounts.token_program_0.clone(),
-            accounts.token_program_1.clone(),
+            accounts.token_program.clone(),
         ]
     }
 }
@@ -1706,9 +1542,7 @@ impl<
             swap_token_b: &arr[5],
             pool_mint: &arr[6],
             destination: &arr[7],
-            source_mint: &arr[8],
-            token_program_0: &arr[9],
-            token_program_1: &arr[10],
+            token_program: &arr[8],
         }
     }
 }
@@ -1846,9 +1680,7 @@ pub fn deposit_single_token_type_exact_amount_in_verify_account_keys(
         (*accounts.swap_token_b.key, keys.swap_token_b),
         (*accounts.pool_mint.key, keys.pool_mint),
         (*accounts.destination.key, keys.destination),
-        (*accounts.source_mint.key, keys.source_mint),
-        (*accounts.token_program_0.key, keys.token_program_0),
-        (*accounts.token_program_1.key, keys.token_program_1),
+        (*accounts.token_program.key, keys.token_program),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -1889,7 +1721,7 @@ pub fn deposit_single_token_type_exact_amount_in_verify_account_privileges<'me, 
     deposit_single_token_type_exact_amount_in_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const WITHDRAW_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_OUT_IX_ACCOUNTS_LEN: usize = 12;
+pub const WITHDRAW_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_OUT_IX_ACCOUNTS_LEN: usize = 10;
 #[derive(Copy, Clone, Debug)]
 pub struct WithdrawSingleTokenTypeExactAmountOutAccounts<'me, 'info> {
     pub swap: &'me AccountInfo<'info>,
@@ -1901,9 +1733,7 @@ pub struct WithdrawSingleTokenTypeExactAmountOutAccounts<'me, 'info> {
     pub swap_token_b: &'me AccountInfo<'info>,
     pub destination: &'me AccountInfo<'info>,
     pub fee_account: &'me AccountInfo<'info>,
-    pub destination_mint: &'me AccountInfo<'info>,
-    pub token_program_0: &'me AccountInfo<'info>,
-    pub token_program_1: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WithdrawSingleTokenTypeExactAmountOutKeys {
@@ -1916,9 +1746,7 @@ pub struct WithdrawSingleTokenTypeExactAmountOutKeys {
     pub swap_token_b: Pubkey,
     pub destination: Pubkey,
     pub fee_account: Pubkey,
-    pub destination_mint: Pubkey,
-    pub token_program_0: Pubkey,
-    pub token_program_1: Pubkey,
+    pub token_program: Pubkey,
 }
 impl From<WithdrawSingleTokenTypeExactAmountOutAccounts<'_, '_>>
 for WithdrawSingleTokenTypeExactAmountOutKeys {
@@ -1933,9 +1761,7 @@ for WithdrawSingleTokenTypeExactAmountOutKeys {
             swap_token_b: *accounts.swap_token_b.key,
             destination: *accounts.destination.key,
             fee_account: *accounts.fee_account.key,
-            destination_mint: *accounts.destination_mint.key,
-            token_program_0: *accounts.token_program_0.key,
-            token_program_1: *accounts.token_program_1.key,
+            token_program: *accounts.token_program.key,
         }
     }
 }
@@ -1989,17 +1815,7 @@ for [AccountMeta; WITHDRAW_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_OUT_IX_ACCOUNTS_LEN] {
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.destination_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_program_0,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_program_1,
+                pubkey: keys.token_program,
                 is_signer: false,
                 is_writable: false,
             },
@@ -2021,9 +1837,7 @@ for WithdrawSingleTokenTypeExactAmountOutKeys {
             swap_token_b: pubkeys[6],
             destination: pubkeys[7],
             fee_account: pubkeys[8],
-            destination_mint: pubkeys[9],
-            token_program_0: pubkeys[10],
-            token_program_1: pubkeys[11],
+            token_program: pubkeys[9],
         }
     }
 }
@@ -2040,9 +1854,7 @@ for [AccountInfo<'info>; WITHDRAW_SINGLE_TOKEN_TYPE_EXACT_AMOUNT_OUT_IX_ACCOUNTS
             accounts.swap_token_b.clone(),
             accounts.destination.clone(),
             accounts.fee_account.clone(),
-            accounts.destination_mint.clone(),
-            accounts.token_program_0.clone(),
-            accounts.token_program_1.clone(),
+            accounts.token_program.clone(),
         ]
     }
 }
@@ -2069,9 +1881,7 @@ impl<
             swap_token_b: &arr[6],
             destination: &arr[7],
             fee_account: &arr[8],
-            destination_mint: &arr[9],
-            token_program_0: &arr[10],
-            token_program_1: &arr[11],
+            token_program: &arr[9],
         }
     }
 }
@@ -2210,9 +2020,7 @@ pub fn withdraw_single_token_type_exact_amount_out_verify_account_keys(
         (*accounts.swap_token_b.key, keys.swap_token_b),
         (*accounts.destination.key, keys.destination),
         (*accounts.fee_account.key, keys.fee_account),
-        (*accounts.destination_mint.key, keys.destination_mint),
-        (*accounts.token_program_0.key, keys.token_program_0),
-        (*accounts.token_program_1.key, keys.token_program_1),
+        (*accounts.token_program.key, keys.token_program),
     ] {
         if actual != expected {
             return Err((actual, expected));

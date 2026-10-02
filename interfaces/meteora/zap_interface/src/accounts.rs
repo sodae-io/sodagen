@@ -31,22 +31,22 @@ pub struct LbPair {
     pub reserve_x: Pubkey,
     pub reserve_y: Pubkey,
     pub protocol_fee: ProtocolFee,
-    pub _padding_1: [u8; 32],
+    pub padding_1: [u8; 32],
     pub reward_infos: [DlmmRewardInfo; 2],
     pub oracle: Pubkey,
     pub bin_array_bitmap: [u64; 16],
     pub last_updated_at: i64,
-    pub _padding_2: [u8; 32],
+    pub padding_2: [u8; 32],
     pub pre_activation_swap_address: Pubkey,
     pub base_key: Pubkey,
     pub activation_point: u64,
     pub pre_activation_duration: u64,
-    pub _padding_3: [u8; 8],
-    pub _padding_4: u64,
+    pub padding_3: [u8; 8],
+    pub padding_4: u64,
     pub creator: Pubkey,
     pub token_mint_x_program_flag: u8,
     pub token_mint_y_program_flag: u8,
-    pub _reserved: [u8; 22],
+    pub reserved: [u8; 22],
 }
 impl LbPair {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -80,24 +80,24 @@ impl LbPair {
         } else {
             <ProtocolFee>::deserialize(&mut reader)?
         };
-        let _padding_1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let reward_infos: [DlmmRewardInfo; 2] = crate::borsh_de_or_default(&mut reader)?;
         let oracle: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let bin_array_bitmap: [u64; 16] = crate::borsh_de_or_default(&mut reader)?;
         let last_updated_at: i64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_2: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_2: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let pre_activation_swap_address: Pubkey = crate::borsh_de_or_default(
             &mut reader,
         )?;
         let base_key: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let activation_point: u64 = crate::borsh_de_or_default(&mut reader)?;
         let pre_activation_duration: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_4: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_4: u64 = crate::borsh_de_or_default(&mut reader)?;
         let creator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let token_mint_x_program_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
         let token_mint_y_program_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved: [u8; 22] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved: [u8; 22] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             parameters,
@@ -117,22 +117,22 @@ impl LbPair {
             reserve_x,
             reserve_y,
             protocol_fee,
-            _padding_1,
+            padding_1,
             reward_infos,
             oracle,
             bin_array_bitmap,
             last_updated_at,
-            _padding_2,
+            padding_2,
             pre_activation_swap_address,
             base_key,
             activation_point,
             pre_activation_duration,
-            _padding_3,
-            _padding_4,
+            padding_3,
+            padding_4,
             creator,
             token_mint_x_program_flag,
             token_mint_y_program_flag,
-            _reserved,
+            reserved,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -156,12 +156,12 @@ impl LbPair {
         borsh::BorshSerialize::serialize(&self.reserve_x, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.reserve_y, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_fee, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.reward_infos, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.oracle, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bin_array_bitmap, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.last_updated_at, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_2, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.pre_activation_swap_address,
             &mut writer,
@@ -169,12 +169,12 @@ impl LbPair {
         borsh::BorshSerialize::serialize(&self.base_key, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.activation_point, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pre_activation_duration, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_3, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_4, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_3, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_4, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.creator, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_mint_x_program_flag, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_mint_y_program_flag, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved, &mut writer)?;
         Ok(())
     }
 }
@@ -219,13 +219,12 @@ pub struct Pool {
     pub token_a_vault: Pubkey,
     pub token_b_vault: Pubkey,
     pub whitelisted_vault: Pubkey,
-    pub partner: Pubkey,
+    pub padding_0: [u8; 32],
     pub liquidity: u128,
-    pub _padding: u128,
+    pub padding_1: u128,
     pub protocol_a_fee: u64,
     pub protocol_b_fee: u64,
-    pub partner_a_fee: u64,
-    pub partner_b_fee: u64,
+    pub padding_2: u128,
     pub sqrt_min_price: u128,
     pub sqrt_max_price: u128,
     pub sqrt_price: u128,
@@ -236,14 +235,18 @@ pub struct Pool {
     pub token_b_flag: u8,
     pub collect_fee_mode: u8,
     pub pool_type: u8,
-    pub version: u8,
-    pub _padding_0: u8,
+    pub fee_version: u8,
+    pub padding_3: u8,
     pub fee_a_per_liquidity: [u8; 32],
     pub fee_b_per_liquidity: [u8; 32],
     pub permanent_lock_liquidity: u128,
     pub metrics: PoolMetrics,
     pub creator: Pubkey,
-    pub _padding_1: [u64; 6],
+    pub token_a_amount: u64,
+    pub token_b_amount: u64,
+    pub layout_version: u8,
+    pub padding_4: [u8; 7],
+    pub padding_5: [u64; 3],
     pub reward_infos: [CpAmmRewardInfo; 2],
 }
 impl Pool {
@@ -259,13 +262,12 @@ impl Pool {
         let token_a_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let token_b_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let whitelisted_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let partner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let liquidity: u128 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: u128 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: u128 = crate::borsh_de_or_default(&mut reader)?;
         let protocol_a_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let protocol_b_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let partner_a_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let partner_b_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_2: u128 = crate::borsh_de_or_default(&mut reader)?;
         let sqrt_min_price: u128 = crate::borsh_de_or_default(&mut reader)?;
         let sqrt_max_price: u128 = crate::borsh_de_or_default(&mut reader)?;
         let sqrt_price: u128 = crate::borsh_de_or_default(&mut reader)?;
@@ -276,8 +278,8 @@ impl Pool {
         let token_b_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
         let collect_fee_mode: u8 = crate::borsh_de_or_default(&mut reader)?;
         let pool_type: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let version: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let fee_version: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_3: u8 = crate::borsh_de_or_default(&mut reader)?;
         let fee_a_per_liquidity: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let fee_b_per_liquidity: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let permanent_lock_liquidity: u128 = crate::borsh_de_or_default(&mut reader)?;
@@ -287,7 +289,11 @@ impl Pool {
             <PoolMetrics>::deserialize(&mut reader)?
         };
         let creator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u64; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let token_a_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let token_b_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let layout_version: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_4: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_5: [u64; 3] = crate::borsh_de_or_default(&mut reader)?;
         let reward_infos: [CpAmmRewardInfo; 2] = crate::borsh_de_or_default(
             &mut reader,
         )?;
@@ -299,13 +305,12 @@ impl Pool {
             token_a_vault,
             token_b_vault,
             whitelisted_vault,
-            partner,
+            padding_0,
             liquidity,
-            _padding,
+            padding_1,
             protocol_a_fee,
             protocol_b_fee,
-            partner_a_fee,
-            partner_b_fee,
+            padding_2,
             sqrt_min_price,
             sqrt_max_price,
             sqrt_price,
@@ -316,14 +321,18 @@ impl Pool {
             token_b_flag,
             collect_fee_mode,
             pool_type,
-            version,
-            _padding_0,
+            fee_version,
+            padding_3,
             fee_a_per_liquidity,
             fee_b_per_liquidity,
             permanent_lock_liquidity,
             metrics,
             creator,
-            _padding_1,
+            token_a_amount,
+            token_b_amount,
+            layout_version,
+            padding_4,
+            padding_5,
             reward_infos,
         })
     }
@@ -334,13 +343,12 @@ impl Pool {
         borsh::BorshSerialize::serialize(&self.token_a_vault, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.token_b_vault, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.whitelisted_vault, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.partner, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.liquidity, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_a_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_b_fee, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.partner_a_fee, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.partner_b_fee, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_2, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.sqrt_min_price, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.sqrt_max_price, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.sqrt_price, &mut writer)?;
@@ -351,14 +359,18 @@ impl Pool {
         borsh::BorshSerialize::serialize(&self.token_b_flag, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.collect_fee_mode, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pool_type, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.version, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.fee_version, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_3, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_a_per_liquidity, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_b_per_liquidity, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.permanent_lock_liquidity, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.metrics, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.creator, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_a_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_b_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.layout_version, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_4, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_5, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.reward_infos, &mut writer)?;
         Ok(())
     }

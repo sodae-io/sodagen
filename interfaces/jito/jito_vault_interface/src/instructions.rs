@@ -30,7 +30,6 @@ pub enum JitoVaultProgramIx {
     SetProgramFeeWallet,
     SetIsPaused(SetIsPausedIxArgs),
     DelegateTokenAccount,
-    RevokeDelegateTokenAccount,
     SetAdmin,
     SetSecondaryAdmin(SetSecondaryAdminIxArgs),
     AddDelegation(AddDelegationIxArgs),
@@ -42,7 +41,6 @@ pub enum JitoVaultProgramIx {
     CreateTokenMetadata(CreateTokenMetadataIxArgs),
     UpdateTokenMetadata(UpdateTokenMetadataIxArgs),
     SetConfigAdmin,
-    SetConfigSecondaryAdmin(SetConfigSecondaryAdminIxArgs),
 }
 impl JitoVaultProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
@@ -114,9 +112,6 @@ impl JitoVaultProgramIx {
                 Ok(Self::SetIsPaused(SetIsPausedIxArgs::deserialize(&mut reader)?))
             }
             DELEGATE_TOKEN_ACCOUNT_IX_DISCM => Ok(Self::DelegateTokenAccount),
-            REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_DISCM => {
-                Ok(Self::RevokeDelegateTokenAccount)
-            }
             SET_ADMIN_IX_DISCM => Ok(Self::SetAdmin),
             SET_SECONDARY_ADMIN_IX_DISCM => {
                 Ok(
@@ -170,13 +165,6 @@ impl JitoVaultProgramIx {
                 )
             }
             SET_CONFIG_ADMIN_IX_DISCM => Ok(Self::SetConfigAdmin),
-            SET_CONFIG_SECONDARY_ADMIN_IX_DISCM => {
-                Ok(
-                    Self::SetConfigSecondaryAdmin(
-                        SetConfigSecondaryAdminIxArgs::deserialize(&mut reader)?,
-                    ),
-                )
-            }
             _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
         }
     }
@@ -254,9 +242,6 @@ impl JitoVaultProgramIx {
             Self::DelegateTokenAccount => {
                 writer.write_all(&[DELEGATE_TOKEN_ACCOUNT_IX_DISCM])
             }
-            Self::RevokeDelegateTokenAccount => {
-                writer.write_all(&[REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_DISCM])
-            }
             Self::SetAdmin => writer.write_all(&[SET_ADMIN_IX_DISCM]),
             Self::SetSecondaryAdmin(args) => {
                 writer.write_all(&[SET_SECONDARY_ADMIN_IX_DISCM])?;
@@ -293,10 +278,6 @@ impl JitoVaultProgramIx {
                 args.serialize(&mut writer)
             }
             Self::SetConfigAdmin => writer.write_all(&[SET_CONFIG_ADMIN_IX_DISCM]),
-            Self::SetConfigSecondaryAdmin(args) => {
-                writer.write_all(&[SET_CONFIG_SECONDARY_ADMIN_IX_DISCM])?;
-                args.serialize(&mut writer)
-            }
         }
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -5427,236 +5408,6 @@ pub fn delegate_token_account_verify_account_privileges<'me, 'info>(
     delegate_token_account_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN: usize = 6;
-#[derive(Copy, Clone, Debug)]
-pub struct RevokeDelegateTokenAccountAccounts<'me, 'info> {
-    pub config: &'me AccountInfo<'info>,
-    pub vault: &'me AccountInfo<'info>,
-    pub delegate_asset_admin: &'me AccountInfo<'info>,
-    pub token_mint: &'me AccountInfo<'info>,
-    pub token_account: &'me AccountInfo<'info>,
-    pub token_program: &'me AccountInfo<'info>,
-}
-#[derive(Copy, Clone, Debug)]
-pub struct RevokeDelegateTokenAccountKeys {
-    pub config: Pubkey,
-    pub vault: Pubkey,
-    pub delegate_asset_admin: Pubkey,
-    pub token_mint: Pubkey,
-    pub token_account: Pubkey,
-    pub token_program: Pubkey,
-}
-impl From<RevokeDelegateTokenAccountAccounts<'_, '_>>
-for RevokeDelegateTokenAccountKeys {
-    fn from(accounts: RevokeDelegateTokenAccountAccounts) -> Self {
-        Self {
-            config: *accounts.config.key,
-            vault: *accounts.vault.key,
-            delegate_asset_admin: *accounts.delegate_asset_admin.key,
-            token_mint: *accounts.token_mint.key,
-            token_account: *accounts.token_account.key,
-            token_program: *accounts.token_program.key,
-        }
-    }
-}
-impl From<RevokeDelegateTokenAccountKeys>
-for [AccountMeta; REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN] {
-    fn from(keys: RevokeDelegateTokenAccountKeys) -> Self {
-        [
-            AccountMeta {
-                pubkey: keys.config,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.vault,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.delegate_asset_admin,
-                is_signer: true,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_mint,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.token_account,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.token_program,
-                is_signer: false,
-                is_writable: false,
-            },
-        ]
-    }
-}
-impl From<[Pubkey; REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN]>
-for RevokeDelegateTokenAccountKeys {
-    fn from(pubkeys: [Pubkey; REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN]) -> Self {
-        Self {
-            config: pubkeys[0],
-            vault: pubkeys[1],
-            delegate_asset_admin: pubkeys[2],
-            token_mint: pubkeys[3],
-            token_account: pubkeys[4],
-            token_program: pubkeys[5],
-        }
-    }
-}
-impl<'info> From<RevokeDelegateTokenAccountAccounts<'_, 'info>>
-for [AccountInfo<'info>; REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN] {
-    fn from(accounts: RevokeDelegateTokenAccountAccounts<'_, 'info>) -> Self {
-        [
-            accounts.config.clone(),
-            accounts.vault.clone(),
-            accounts.delegate_asset_admin.clone(),
-            accounts.token_mint.clone(),
-            accounts.token_account.clone(),
-            accounts.token_program.clone(),
-        ]
-    }
-}
-impl<
-    'me,
-    'info,
-> From<&'me [AccountInfo<'info>; REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN]>
-for RevokeDelegateTokenAccountAccounts<'me, 'info> {
-    fn from(
-        arr: &'me [AccountInfo<'info>; REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN],
-    ) -> Self {
-        Self {
-            config: &arr[0],
-            vault: &arr[1],
-            delegate_asset_admin: &arr[2],
-            token_mint: &arr[3],
-            token_account: &arr[4],
-            token_program: &arr[5],
-        }
-    }
-}
-pub const REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_DISCM: u8 = 21u8;
-#[derive(Clone, Debug, PartialEq)]
-pub struct RevokeDelegateTokenAccountIxData;
-impl RevokeDelegateTokenAccountIxData {
-    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
-        let mut reader = buf;
-        let mut maybe_discm_buf = [0u8; 1];
-        reader.read_exact(&mut maybe_discm_buf)?;
-        let maybe_discm = maybe_discm_buf[0];
-        if maybe_discm != REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_DISCM {
-            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
-        }
-        Ok(Self)
-    }
-    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&[REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_DISCM])
-    }
-    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
-        let mut data = Vec::new();
-        self.serialize(&mut data)?;
-        Ok(data)
-    }
-}
-pub fn revoke_delegate_token_account_ix_with_program_id(
-    program_id: Pubkey,
-    keys: RevokeDelegateTokenAccountKeys,
-) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; REVOKE_DELEGATE_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN] = keys
-        .into();
-    Ok(Instruction {
-        program_id,
-        accounts: Vec::from(metas),
-        data: RevokeDelegateTokenAccountIxData.try_to_vec()?,
-    })
-}
-pub fn revoke_delegate_token_account_ix(
-    keys: RevokeDelegateTokenAccountKeys,
-) -> std::io::Result<Instruction> {
-    revoke_delegate_token_account_ix_with_program_id(JITO_VAULT_PROGRAM_ID, keys)
-}
-pub fn revoke_delegate_token_account_invoke_with_program_id(
-    program_id: Pubkey,
-    accounts: RevokeDelegateTokenAccountAccounts<'_, '_>,
-) -> ProgramResult {
-    let keys: RevokeDelegateTokenAccountKeys = accounts.into();
-    let ix = revoke_delegate_token_account_ix_with_program_id(program_id, keys)?;
-    invoke_instruction(&ix, accounts)
-}
-pub fn revoke_delegate_token_account_invoke(
-    accounts: RevokeDelegateTokenAccountAccounts<'_, '_>,
-) -> ProgramResult {
-    revoke_delegate_token_account_invoke_with_program_id(JITO_VAULT_PROGRAM_ID, accounts)
-}
-pub fn revoke_delegate_token_account_invoke_signed_with_program_id(
-    program_id: Pubkey,
-    accounts: RevokeDelegateTokenAccountAccounts<'_, '_>,
-    seeds: &[&[&[u8]]],
-) -> ProgramResult {
-    let keys: RevokeDelegateTokenAccountKeys = accounts.into();
-    let ix = revoke_delegate_token_account_ix_with_program_id(program_id, keys)?;
-    invoke_instruction_signed(&ix, accounts, seeds)
-}
-pub fn revoke_delegate_token_account_invoke_signed(
-    accounts: RevokeDelegateTokenAccountAccounts<'_, '_>,
-    seeds: &[&[&[u8]]],
-) -> ProgramResult {
-    revoke_delegate_token_account_invoke_signed_with_program_id(
-        JITO_VAULT_PROGRAM_ID,
-        accounts,
-        seeds,
-    )
-}
-pub fn revoke_delegate_token_account_verify_account_keys(
-    accounts: RevokeDelegateTokenAccountAccounts<'_, '_>,
-    keys: RevokeDelegateTokenAccountKeys,
-) -> Result<(), (Pubkey, Pubkey)> {
-    for (actual, expected) in [
-        (accounts.config.key, &keys.config),
-        (accounts.vault.key, &keys.vault),
-        (accounts.delegate_asset_admin.key, &keys.delegate_asset_admin),
-        (accounts.token_mint.key, &keys.token_mint),
-        (accounts.token_account.key, &keys.token_account),
-        (accounts.token_program.key, &keys.token_program),
-    ] {
-        if actual != expected {
-            return Err((*actual, *expected));
-        }
-    }
-    Ok(())
-}
-pub fn revoke_delegate_token_account_verify_writable_privileges<'me, 'info>(
-    accounts: RevokeDelegateTokenAccountAccounts<'me, 'info>,
-) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [accounts.token_account] {
-        if !should_be_writable.is_writable {
-            return Err((should_be_writable, ProgramError::InvalidAccountData));
-        }
-    }
-    Ok(())
-}
-pub fn revoke_delegate_token_account_verify_signer_privileges<'me, 'info>(
-    accounts: RevokeDelegateTokenAccountAccounts<'me, 'info>,
-) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.delegate_asset_admin] {
-        if !should_be_signer.is_signer {
-            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
-        }
-    }
-    Ok(())
-}
-pub fn revoke_delegate_token_account_verify_account_privileges<'me, 'info>(
-    accounts: RevokeDelegateTokenAccountAccounts<'me, 'info>,
-) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    revoke_delegate_token_account_verify_writable_privileges(accounts)?;
-    revoke_delegate_token_account_verify_signer_privileges(accounts)?;
-    Ok(())
-}
 pub const SET_ADMIN_IX_ACCOUNTS_LEN: usize = 4;
 #[derive(Copy, Clone, Debug)]
 pub struct SetAdminAccounts<'me, 'info> {
@@ -5740,7 +5491,7 @@ for SetAdminAccounts<'me, 'info> {
         }
     }
 }
-pub const SET_ADMIN_IX_DISCM: u8 = 22u8;
+pub const SET_ADMIN_IX_DISCM: u8 = 21u8;
 #[derive(Clone, Debug, PartialEq)]
 pub struct SetAdminIxData;
 impl SetAdminIxData {
@@ -5931,7 +5682,7 @@ for SetSecondaryAdminAccounts<'me, 'info> {
         }
     }
 }
-pub const SET_SECONDARY_ADMIN_IX_DISCM: u8 = 23u8;
+pub const SET_SECONDARY_ADMIN_IX_DISCM: u8 = 22u8;
 #[derive(
     BorshDeserialize,
     BorshSerialize,
@@ -6173,7 +5924,7 @@ for AddDelegationAccounts<'me, 'info> {
         }
     }
 }
-pub const ADD_DELEGATION_IX_DISCM: u8 = 24u8;
+pub const ADD_DELEGATION_IX_DISCM: u8 = 23u8;
 #[derive(
     BorshDeserialize,
     BorshSerialize,
@@ -6419,7 +6170,7 @@ for CooldownDelegationAccounts<'me, 'info> {
         }
     }
 }
-pub const COOLDOWN_DELEGATION_IX_DISCM: u8 = 25u8;
+pub const COOLDOWN_DELEGATION_IX_DISCM: u8 = 24u8;
 #[derive(
     BorshDeserialize,
     BorshSerialize,
@@ -6676,7 +6427,7 @@ for UpdateVaultBalanceAccounts<'me, 'info> {
         }
     }
 }
-pub const UPDATE_VAULT_BALANCE_IX_DISCM: u8 = 26u8;
+pub const UPDATE_VAULT_BALANCE_IX_DISCM: u8 = 25u8;
 #[derive(Clone, Debug, PartialEq)]
 pub struct UpdateVaultBalanceIxData;
 impl UpdateVaultBalanceIxData {
@@ -6891,7 +6642,7 @@ for InitializeVaultUpdateStateTrackerAccounts<'me, 'info> {
         }
     }
 }
-pub const INITIALIZE_VAULT_UPDATE_STATE_TRACKER_IX_DISCM: u8 = 27u8;
+pub const INITIALIZE_VAULT_UPDATE_STATE_TRACKER_IX_DISCM: u8 = 26u8;
 #[derive(
     BorshDeserialize,
     BorshSerialize,
@@ -7161,7 +6912,7 @@ for CrankVaultUpdateStateTrackerAccounts<'me, 'info> {
         }
     }
 }
-pub const CRANK_VAULT_UPDATE_STATE_TRACKER_IX_DISCM: u8 = 28u8;
+pub const CRANK_VAULT_UPDATE_STATE_TRACKER_IX_DISCM: u8 = 27u8;
 #[derive(Clone, Debug, PartialEq)]
 pub struct CrankVaultUpdateStateTrackerIxData;
 impl CrankVaultUpdateStateTrackerIxData {
@@ -7366,7 +7117,7 @@ for CloseVaultUpdateStateTrackerAccounts<'me, 'info> {
         }
     }
 }
-pub const CLOSE_VAULT_UPDATE_STATE_TRACKER_IX_DISCM: u8 = 29u8;
+pub const CLOSE_VAULT_UPDATE_STATE_TRACKER_IX_DISCM: u8 = 28u8;
 #[derive(
     BorshDeserialize,
     BorshSerialize,
@@ -7654,7 +7405,7 @@ for CreateTokenMetadataAccounts<'me, 'info> {
         }
     }
 }
-pub const CREATE_TOKEN_METADATA_IX_DISCM: u8 = 30u8;
+pub const CREATE_TOKEN_METADATA_IX_DISCM: u8 = 29u8;
 #[derive(
     BorshDeserialize,
     BorshSerialize,
@@ -7906,7 +7657,7 @@ for UpdateTokenMetadataAccounts<'me, 'info> {
         }
     }
 }
-pub const UPDATE_TOKEN_METADATA_IX_DISCM: u8 = 31u8;
+pub const UPDATE_TOKEN_METADATA_IX_DISCM: u8 = 30u8;
 #[derive(
     BorshDeserialize,
     BorshSerialize,
@@ -8127,7 +7878,7 @@ for SetConfigAdminAccounts<'me, 'info> {
         }
     }
 }
-pub const SET_CONFIG_ADMIN_IX_DISCM: u8 = 32u8;
+pub const SET_CONFIG_ADMIN_IX_DISCM: u8 = 31u8;
 #[derive(Clone, Debug, PartialEq)]
 pub struct SetConfigAdminIxData;
 impl SetConfigAdminIxData {
@@ -8236,222 +7987,5 @@ pub fn set_config_admin_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     set_config_admin_verify_writable_privileges(accounts)?;
     set_config_admin_verify_signer_privileges(accounts)?;
-    Ok(())
-}
-pub const SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN: usize = 3;
-#[derive(Copy, Clone, Debug)]
-pub struct SetConfigSecondaryAdminAccounts<'me, 'info> {
-    pub config: &'me AccountInfo<'info>,
-    pub admin: &'me AccountInfo<'info>,
-    pub new_admin: &'me AccountInfo<'info>,
-}
-#[derive(Copy, Clone, Debug)]
-pub struct SetConfigSecondaryAdminKeys {
-    pub config: Pubkey,
-    pub admin: Pubkey,
-    pub new_admin: Pubkey,
-}
-impl From<SetConfigSecondaryAdminAccounts<'_, '_>> for SetConfigSecondaryAdminKeys {
-    fn from(accounts: SetConfigSecondaryAdminAccounts) -> Self {
-        Self {
-            config: *accounts.config.key,
-            admin: *accounts.admin.key,
-            new_admin: *accounts.new_admin.key,
-        }
-    }
-}
-impl From<SetConfigSecondaryAdminKeys>
-for [AccountMeta; SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN] {
-    fn from(keys: SetConfigSecondaryAdminKeys) -> Self {
-        [
-            AccountMeta {
-                pubkey: keys.config,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.admin,
-                is_signer: true,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.new_admin,
-                is_signer: false,
-                is_writable: false,
-            },
-        ]
-    }
-}
-impl From<[Pubkey; SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN]>
-for SetConfigSecondaryAdminKeys {
-    fn from(pubkeys: [Pubkey; SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN]) -> Self {
-        Self {
-            config: pubkeys[0],
-            admin: pubkeys[1],
-            new_admin: pubkeys[2],
-        }
-    }
-}
-impl<'info> From<SetConfigSecondaryAdminAccounts<'_, 'info>>
-for [AccountInfo<'info>; SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN] {
-    fn from(accounts: SetConfigSecondaryAdminAccounts<'_, 'info>) -> Self {
-        [accounts.config.clone(), accounts.admin.clone(), accounts.new_admin.clone()]
-    }
-}
-impl<
-    'me,
-    'info,
-> From<&'me [AccountInfo<'info>; SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN]>
-for SetConfigSecondaryAdminAccounts<'me, 'info> {
-    fn from(
-        arr: &'me [AccountInfo<'info>; SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN],
-    ) -> Self {
-        Self {
-            config: &arr[0],
-            admin: &arr[1],
-            new_admin: &arr[2],
-        }
-    }
-}
-pub const SET_CONFIG_SECONDARY_ADMIN_IX_DISCM: u8 = 33u8;
-#[derive(
-    BorshDeserialize,
-    BorshSerialize,
-    Clone,
-    Debug,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize
-)]
-pub struct SetConfigSecondaryAdminIxArgs {
-    pub config_admin_role: ConfigAdminRole,
-}
-impl SetConfigSecondaryAdminIxArgs {
-    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
-        let mut reader: &[u8] = *__buf;
-        let config_admin_role: ConfigAdminRole = crate::borsh_de_or_default(
-            &mut reader,
-        )?;
-        *__buf = reader;
-        Ok(Self { config_admin_role })
-    }
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct SetConfigSecondaryAdminIxData(pub SetConfigSecondaryAdminIxArgs);
-impl From<SetConfigSecondaryAdminIxArgs> for SetConfigSecondaryAdminIxData {
-    fn from(args: SetConfigSecondaryAdminIxArgs) -> Self {
-        Self(args)
-    }
-}
-impl SetConfigSecondaryAdminIxData {
-    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
-        let mut reader = buf;
-        let mut maybe_discm_buf = [0u8; 1];
-        reader.read_exact(&mut maybe_discm_buf)?;
-        let maybe_discm = maybe_discm_buf[0];
-        if maybe_discm != SET_CONFIG_SECONDARY_ADMIN_IX_DISCM {
-            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
-        }
-        Ok(Self(SetConfigSecondaryAdminIxArgs::deserialize(&mut reader)?))
-    }
-    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&[SET_CONFIG_SECONDARY_ADMIN_IX_DISCM])?;
-        self.0.serialize(&mut writer)
-    }
-    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
-        let mut data = Vec::new();
-        self.serialize(&mut data)?;
-        Ok(data)
-    }
-}
-pub fn set_config_secondary_admin_ix_with_program_id(
-    program_id: Pubkey,
-    keys: SetConfigSecondaryAdminKeys,
-    args: SetConfigSecondaryAdminIxArgs,
-) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; SET_CONFIG_SECONDARY_ADMIN_IX_ACCOUNTS_LEN] = keys.into();
-    let data: SetConfigSecondaryAdminIxData = args.into();
-    Ok(Instruction {
-        program_id,
-        accounts: Vec::from(metas),
-        data: data.try_to_vec()?,
-    })
-}
-pub fn set_config_secondary_admin_ix(
-    keys: SetConfigSecondaryAdminKeys,
-    args: SetConfigSecondaryAdminIxArgs,
-) -> std::io::Result<Instruction> {
-    set_config_secondary_admin_ix_with_program_id(JITO_VAULT_PROGRAM_ID, keys, args)
-}
-pub fn set_config_secondary_admin_invoke_with_program_id(
-    program_id: Pubkey,
-    accounts: SetConfigSecondaryAdminAccounts<'_, '_>,
-    args: SetConfigSecondaryAdminIxArgs,
-) -> ProgramResult {
-    let keys: SetConfigSecondaryAdminKeys = accounts.into();
-    let ix = set_config_secondary_admin_ix_with_program_id(program_id, keys, args)?;
-    invoke_instruction(&ix, accounts)
-}
-pub fn set_config_secondary_admin_invoke(
-    accounts: SetConfigSecondaryAdminAccounts<'_, '_>,
-    args: SetConfigSecondaryAdminIxArgs,
-) -> ProgramResult {
-    set_config_secondary_admin_invoke_with_program_id(
-        JITO_VAULT_PROGRAM_ID,
-        accounts,
-        args,
-    )
-}
-pub fn set_config_secondary_admin_invoke_signed_with_program_id(
-    program_id: Pubkey,
-    accounts: SetConfigSecondaryAdminAccounts<'_, '_>,
-    args: SetConfigSecondaryAdminIxArgs,
-    seeds: &[&[&[u8]]],
-) -> ProgramResult {
-    let keys: SetConfigSecondaryAdminKeys = accounts.into();
-    let ix = set_config_secondary_admin_ix_with_program_id(program_id, keys, args)?;
-    invoke_instruction_signed(&ix, accounts, seeds)
-}
-pub fn set_config_secondary_admin_invoke_signed(
-    accounts: SetConfigSecondaryAdminAccounts<'_, '_>,
-    args: SetConfigSecondaryAdminIxArgs,
-    seeds: &[&[&[u8]]],
-) -> ProgramResult {
-    set_config_secondary_admin_invoke_signed_with_program_id(
-        JITO_VAULT_PROGRAM_ID,
-        accounts,
-        args,
-        seeds,
-    )
-}
-pub fn set_config_secondary_admin_verify_account_keys(
-    accounts: SetConfigSecondaryAdminAccounts<'_, '_>,
-    keys: SetConfigSecondaryAdminKeys,
-) -> Result<(), (Pubkey, Pubkey)> {
-    for (actual, expected) in [
-        (accounts.config.key, &keys.config),
-        (accounts.admin.key, &keys.admin),
-        (accounts.new_admin.key, &keys.new_admin),
-    ] {
-        if actual != expected {
-            return Err((*actual, *expected));
-        }
-    }
-    Ok(())
-}
-pub fn set_config_secondary_admin_verify_signer_privileges<'me, 'info>(
-    accounts: SetConfigSecondaryAdminAccounts<'me, 'info>,
-) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.admin] {
-        if !should_be_signer.is_signer {
-            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
-        }
-    }
-    Ok(())
-}
-pub fn set_config_secondary_admin_verify_account_privileges<'me, 'info>(
-    accounts: SetConfigSecondaryAdminAccounts<'me, 'info>,
-) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    set_config_secondary_admin_verify_signer_privileges(accounts)?;
     Ok(())
 }

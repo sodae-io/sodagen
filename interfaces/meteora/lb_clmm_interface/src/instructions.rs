@@ -350,14 +350,14 @@ impl LbClmmProgramIx {
         }
         if buf.starts_with(&FOR_IDL_TYPE_GENERATION_DO_NOT_CALL_IX_DISCM) {
             let mut reader = &buf[FOR_IDL_TYPE_GENERATION_DO_NOT_CALL_IX_DISCM.len()..];
-            let _ix = if reader.is_empty() {
+            let ix = if reader.is_empty() {
                 Default::default()
             } else {
                 <DummyIx>::deserialize(&mut reader)?
             };
             return Ok(
                 Self::ForIdlTypeGenerationDoNotCall(ForIdlTypeGenerationDoNotCallIxArgs {
-                    _ix,
+                    ix,
                 }),
             );
         }
@@ -1075,7 +1075,7 @@ impl LbClmmProgramIx {
             }
             Self::ForIdlTypeGenerationDoNotCall(args) => {
                 writer.write_all(&FOR_IDL_TYPE_GENERATION_DO_NOT_CALL_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args._ix, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.ix, &mut writer)?;
                 Ok(())
             }
             Self::FundReward(args) => {
@@ -9287,7 +9287,7 @@ pub const FOR_IDL_TYPE_GENERATION_DO_NOT_CALL_IX_DISCM: [u8; 8usize] = [
 ];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct ForIdlTypeGenerationDoNotCallIxArgs {
-    pub _ix: DummyIx,
+    pub ix: DummyIx,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct ForIdlTypeGenerationDoNotCallIxData(pub ForIdlTypeGenerationDoNotCallIxArgs);
@@ -9304,20 +9304,20 @@ impl ForIdlTypeGenerationDoNotCallIxData {
         if maybe_discm != FOR_IDL_TYPE_GENERATION_DO_NOT_CALL_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let _ix = if reader.is_empty() {
+        let ix = if reader.is_empty() {
             Default::default()
         } else {
             <DummyIx>::deserialize(&mut reader)?
         };
         Ok(
             Self(ForIdlTypeGenerationDoNotCallIxArgs {
-                _ix,
+                ix,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&FOR_IDL_TYPE_GENERATION_DO_NOT_CALL_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0._ix, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.ix, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

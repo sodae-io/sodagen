@@ -9,8 +9,11 @@ use crate::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum AmmV3ProgramIx {
     CloseLimitOrder,
+    ClosePermissionPda,
     ClosePosition,
     CloseProtocolPosition,
+    CloseSupportMintAssociated,
+    CollectExcessLamports,
     CollectFundFee(CollectFundFeeIxArgs),
     CollectProtocolFee(CollectProtocolFeeIxArgs),
     CollectRemainingRewards(CollectRemainingRewardsIxArgs),
@@ -18,6 +21,8 @@ pub enum AmmV3ProgramIx {
     CreateCustomizablePool(CreateCustomizablePoolIxArgs),
     CreateDynamicFeeConfig(CreateDynamicFeeConfigIxArgs),
     CreateOperationAccount,
+    CreatePermissionPda,
+    CreatePermissionedPool(CreatePermissionedPoolIxArgs),
     CreatePool(CreatePoolIxArgs),
     CreateSupportMintAssociated,
     DecreaseLimitOrder(DecreaseLimitOrderIxArgs),
@@ -48,11 +53,20 @@ impl AmmV3ProgramIx {
         if buf.starts_with(&CLOSE_LIMIT_ORDER_IX_DISCM) {
             return Ok(Self::CloseLimitOrder);
         }
+        if buf.starts_with(&CLOSE_PERMISSION_PDA_IX_DISCM) {
+            return Ok(Self::ClosePermissionPda);
+        }
         if buf.starts_with(&CLOSE_POSITION_IX_DISCM) {
             return Ok(Self::ClosePosition);
         }
         if buf.starts_with(&CLOSE_PROTOCOL_POSITION_IX_DISCM) {
             return Ok(Self::CloseProtocolPosition);
+        }
+        if buf.starts_with(&CLOSE_SUPPORT_MINT_ASSOCIATED_IX_DISCM) {
+            return Ok(Self::CloseSupportMintAssociated);
+        }
+        if buf.starts_with(&COLLECT_EXCESS_LAMPORTS_IX_DISCM) {
+            return Ok(Self::CollectExcessLamports);
         }
         if buf.starts_with(&COLLECT_FUND_FEE_IX_DISCM) {
             let mut reader = &buf[COLLECT_FUND_FEE_IX_DISCM.len()..];
@@ -138,6 +152,24 @@ impl AmmV3ProgramIx {
         }
         if buf.starts_with(&CREATE_OPERATION_ACCOUNT_IX_DISCM) {
             return Ok(Self::CreateOperationAccount);
+        }
+        if buf.starts_with(&CREATE_PERMISSION_PDA_IX_DISCM) {
+            return Ok(Self::CreatePermissionPda);
+        }
+        if buf.starts_with(&CREATE_PERMISSIONED_POOL_IX_DISCM) {
+            let mut reader = &buf[CREATE_PERMISSIONED_POOL_IX_DISCM.len()..];
+            let customizable_params = if reader.is_empty() {
+                Default::default()
+            } else {
+                <CreateCustomizableParams>::deserialize(&mut reader)?
+            };
+            let seed_index: u16 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::CreatePermissionedPool(CreatePermissionedPoolIxArgs {
+                    customizable_params,
+                    seed_index,
+                }),
+            );
         }
         if buf.starts_with(&CREATE_POOL_IX_DISCM) {
             let mut reader = &buf[CREATE_POOL_IX_DISCM.len()..];
@@ -454,9 +486,16 @@ impl AmmV3ProgramIx {
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         match self {
             Self::CloseLimitOrder => writer.write_all(&CLOSE_LIMIT_ORDER_IX_DISCM),
+            Self::ClosePermissionPda => writer.write_all(&CLOSE_PERMISSION_PDA_IX_DISCM),
             Self::ClosePosition => writer.write_all(&CLOSE_POSITION_IX_DISCM),
             Self::CloseProtocolPosition => {
                 writer.write_all(&CLOSE_PROTOCOL_POSITION_IX_DISCM)
+            }
+            Self::CloseSupportMintAssociated => {
+                writer.write_all(&CLOSE_SUPPORT_MINT_ASSOCIATED_IX_DISCM)
+            }
+            Self::CollectExcessLamports => {
+                writer.write_all(&COLLECT_EXCESS_LAMPORTS_IX_DISCM)
             }
             Self::CollectFundFee(args) => {
                 writer.write_all(&COLLECT_FUND_FEE_IX_DISCM)?;
@@ -510,6 +549,18 @@ impl AmmV3ProgramIx {
             }
             Self::CreateOperationAccount => {
                 writer.write_all(&CREATE_OPERATION_ACCOUNT_IX_DISCM)
+            }
+            Self::CreatePermissionPda => {
+                writer.write_all(&CREATE_PERMISSION_PDA_IX_DISCM)
+            }
+            Self::CreatePermissionedPool(args) => {
+                writer.write_all(&CREATE_PERMISSIONED_POOL_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(
+                    &args.customizable_params,
+                    &mut writer,
+                )?;
+                borsh::BorshSerialize::serialize(&args.seed_index, &mut writer)?;
+                Ok(())
             }
             Self::CreatePool(args) => {
                 writer.write_all(&CREATE_POOL_IX_DISCM)?;
@@ -915,6 +966,195 @@ pub fn close_limit_order_verify_account_privileges<'me, 'info>(
     close_limit_order_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct ClosePermissionPdaAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub permission_authority: &'me AccountInfo<'info>,
+    pub permission: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ClosePermissionPdaKeys {
+    pub owner: Pubkey,
+    pub permission_authority: Pubkey,
+    pub permission: Pubkey,
+}
+impl From<ClosePermissionPdaAccounts<'_, '_>> for ClosePermissionPdaKeys {
+    fn from(accounts: ClosePermissionPdaAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            permission_authority: *accounts.permission_authority.key,
+            permission: *accounts.permission.key,
+        }
+    }
+}
+impl From<ClosePermissionPdaKeys>
+for [AccountMeta; CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClosePermissionPdaKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.permission_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.permission,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN]> for ClosePermissionPdaKeys {
+    fn from(pubkeys: [Pubkey; CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            permission_authority: pubkeys[1],
+            permission: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<ClosePermissionPdaAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClosePermissionPdaAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.permission_authority.clone(),
+            accounts.permission.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN]>
+for ClosePermissionPdaAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            permission_authority: &arr[1],
+            permission: &arr[2],
+        }
+    }
+}
+pub const CLOSE_PERMISSION_PDA_IX_DISCM: [u8; 8usize] = [
+    156, 84, 32, 118, 69, 135, 70, 123,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClosePermissionPdaIxData;
+impl ClosePermissionPdaIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLOSE_PERMISSION_PDA_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLOSE_PERMISSION_PDA_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn close_permission_pda_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ClosePermissionPdaKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLOSE_PERMISSION_PDA_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: ClosePermissionPdaIxData.try_to_vec()?,
+    })
+}
+pub fn close_permission_pda_ix(
+    keys: ClosePermissionPdaKeys,
+) -> std::io::Result<Instruction> {
+    close_permission_pda_ix_with_program_id(AMM_V3_PROGRAM_ID, keys)
+}
+pub fn close_permission_pda_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ClosePermissionPdaAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: ClosePermissionPdaKeys = accounts.into();
+    let ix = close_permission_pda_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn close_permission_pda_invoke(
+    accounts: ClosePermissionPdaAccounts<'_, '_>,
+) -> ProgramResult {
+    close_permission_pda_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts)
+}
+pub fn close_permission_pda_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ClosePermissionPdaAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ClosePermissionPdaKeys = accounts.into();
+    let ix = close_permission_pda_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn close_permission_pda_invoke_signed(
+    accounts: ClosePermissionPdaAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    close_permission_pda_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn close_permission_pda_verify_account_keys(
+    accounts: ClosePermissionPdaAccounts<'_, '_>,
+    keys: ClosePermissionPdaKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.permission_authority.key, keys.permission_authority),
+        (*accounts.permission.key, keys.permission),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn close_permission_pda_verify_writable_privileges<'me, 'info>(
+    accounts: ClosePermissionPdaAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.owner, accounts.permission] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn close_permission_pda_verify_signer_privileges<'me, 'info>(
+    accounts: ClosePermissionPdaAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn close_permission_pda_verify_account_privileges<'me, 'info>(
+    accounts: ClosePermissionPdaAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    close_permission_pda_verify_writable_privileges(accounts)?;
+    close_permission_pda_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CLOSE_POSITION_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
 pub struct ClosePositionAccounts<'me, 'info> {
@@ -1305,6 +1545,403 @@ pub fn close_protocol_position_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     close_protocol_position_verify_writable_privileges(accounts)?;
     close_protocol_position_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct CloseSupportMintAssociatedAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub token_mint: &'me AccountInfo<'info>,
+    pub support_mint_associated: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CloseSupportMintAssociatedKeys {
+    pub owner: Pubkey,
+    pub token_mint: Pubkey,
+    pub support_mint_associated: Pubkey,
+}
+impl From<CloseSupportMintAssociatedAccounts<'_, '_>>
+for CloseSupportMintAssociatedKeys {
+    fn from(accounts: CloseSupportMintAssociatedAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            token_mint: *accounts.token_mint.key,
+            support_mint_associated: *accounts.support_mint_associated.key,
+        }
+    }
+}
+impl From<CloseSupportMintAssociatedKeys>
+for [AccountMeta; CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN] {
+    fn from(keys: CloseSupportMintAssociatedKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.support_mint_associated,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN]>
+for CloseSupportMintAssociatedKeys {
+    fn from(pubkeys: [Pubkey; CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            token_mint: pubkeys[1],
+            support_mint_associated: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<CloseSupportMintAssociatedAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CloseSupportMintAssociatedAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.token_mint.clone(),
+            accounts.support_mint_associated.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN]>
+for CloseSupportMintAssociatedAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            token_mint: &arr[1],
+            support_mint_associated: &arr[2],
+        }
+    }
+}
+pub const CLOSE_SUPPORT_MINT_ASSOCIATED_IX_DISCM: [u8; 8usize] = [
+    96, 136, 183, 99, 72, 152, 54, 131,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CloseSupportMintAssociatedIxData;
+impl CloseSupportMintAssociatedIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLOSE_SUPPORT_MINT_ASSOCIATED_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLOSE_SUPPORT_MINT_ASSOCIATED_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn close_support_mint_associated_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CloseSupportMintAssociatedKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLOSE_SUPPORT_MINT_ASSOCIATED_IX_ACCOUNTS_LEN] = keys
+        .into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CloseSupportMintAssociatedIxData.try_to_vec()?,
+    })
+}
+pub fn close_support_mint_associated_ix(
+    keys: CloseSupportMintAssociatedKeys,
+) -> std::io::Result<Instruction> {
+    close_support_mint_associated_ix_with_program_id(AMM_V3_PROGRAM_ID, keys)
+}
+pub fn close_support_mint_associated_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseSupportMintAssociatedAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CloseSupportMintAssociatedKeys = accounts.into();
+    let ix = close_support_mint_associated_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn close_support_mint_associated_invoke(
+    accounts: CloseSupportMintAssociatedAccounts<'_, '_>,
+) -> ProgramResult {
+    close_support_mint_associated_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts)
+}
+pub fn close_support_mint_associated_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseSupportMintAssociatedAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CloseSupportMintAssociatedKeys = accounts.into();
+    let ix = close_support_mint_associated_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn close_support_mint_associated_invoke_signed(
+    accounts: CloseSupportMintAssociatedAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    close_support_mint_associated_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn close_support_mint_associated_verify_account_keys(
+    accounts: CloseSupportMintAssociatedAccounts<'_, '_>,
+    keys: CloseSupportMintAssociatedKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.token_mint.key, keys.token_mint),
+        (*accounts.support_mint_associated.key, keys.support_mint_associated),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn close_support_mint_associated_verify_writable_privileges<'me, 'info>(
+    accounts: CloseSupportMintAssociatedAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.owner, accounts.support_mint_associated] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn close_support_mint_associated_verify_signer_privileges<'me, 'info>(
+    accounts: CloseSupportMintAssociatedAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn close_support_mint_associated_verify_account_privileges<'me, 'info>(
+    accounts: CloseSupportMintAssociatedAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    close_support_mint_associated_verify_writable_privileges(accounts)?;
+    close_support_mint_associated_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN: usize = 4;
+#[derive(Copy, Clone, Debug)]
+pub struct CollectExcessLamportsAccounts<'me, 'info> {
+    pub collect_lamports_wallet: &'me AccountInfo<'info>,
+    pub pool_state: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub token_program_2022: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CollectExcessLamportsKeys {
+    pub collect_lamports_wallet: Pubkey,
+    pub pool_state: Pubkey,
+    pub token_program: Pubkey,
+    pub token_program_2022: Pubkey,
+}
+impl From<CollectExcessLamportsAccounts<'_, '_>> for CollectExcessLamportsKeys {
+    fn from(accounts: CollectExcessLamportsAccounts) -> Self {
+        Self {
+            collect_lamports_wallet: *accounts.collect_lamports_wallet.key,
+            pool_state: *accounts.pool_state.key,
+            token_program: *accounts.token_program.key,
+            token_program_2022: *accounts.token_program_2022.key,
+        }
+    }
+}
+impl From<CollectExcessLamportsKeys>
+for [AccountMeta; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] {
+    fn from(keys: CollectExcessLamportsKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.collect_lamports_wallet,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.pool_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program_2022,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]>
+for CollectExcessLamportsKeys {
+    fn from(pubkeys: [Pubkey; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            collect_lamports_wallet: pubkeys[0],
+            pool_state: pubkeys[1],
+            token_program: pubkeys[2],
+            token_program_2022: pubkeys[3],
+        }
+    }
+}
+impl<'info> From<CollectExcessLamportsAccounts<'_, 'info>>
+for [AccountInfo<'info>; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CollectExcessLamportsAccounts<'_, 'info>) -> Self {
+        [
+            accounts.collect_lamports_wallet.clone(),
+            accounts.pool_state.clone(),
+            accounts.token_program.clone(),
+            accounts.token_program_2022.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]>
+for CollectExcessLamportsAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            collect_lamports_wallet: &arr[0],
+            pool_state: &arr[1],
+            token_program: &arr[2],
+            token_program_2022: &arr[3],
+        }
+    }
+}
+pub const COLLECT_EXCESS_LAMPORTS_IX_DISCM: [u8; 8usize] = [
+    28, 189, 19, 40, 164, 176, 118, 17,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CollectExcessLamportsIxData;
+impl CollectExcessLamportsIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != COLLECT_EXCESS_LAMPORTS_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&COLLECT_EXCESS_LAMPORTS_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn collect_excess_lamports_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CollectExcessLamportsKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CollectExcessLamportsIxData.try_to_vec()?,
+    })
+}
+pub fn collect_excess_lamports_ix(
+    keys: CollectExcessLamportsKeys,
+) -> std::io::Result<Instruction> {
+    collect_excess_lamports_ix_with_program_id(AMM_V3_PROGRAM_ID, keys)
+}
+pub fn collect_excess_lamports_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CollectExcessLamportsKeys = accounts.into();
+    let ix = collect_excess_lamports_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn collect_excess_lamports_invoke(
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+) -> ProgramResult {
+    collect_excess_lamports_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts)
+}
+pub fn collect_excess_lamports_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CollectExcessLamportsKeys = accounts.into();
+    let ix = collect_excess_lamports_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn collect_excess_lamports_invoke_signed(
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    collect_excess_lamports_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn collect_excess_lamports_verify_account_keys(
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+    keys: CollectExcessLamportsKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.collect_lamports_wallet.key, keys.collect_lamports_wallet),
+        (*accounts.pool_state.key, keys.pool_state),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.token_program_2022.key, keys.token_program_2022),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn collect_excess_lamports_verify_writable_privileges<'me, 'info>(
+    accounts: CollectExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.collect_lamports_wallet, accounts.pool_state] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn collect_excess_lamports_verify_signer_privileges<'me, 'info>(
+    accounts: CollectExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.collect_lamports_wallet] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn collect_excess_lamports_verify_account_privileges<'me, 'info>(
+    accounts: CollectExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    collect_excess_lamports_verify_writable_privileges(accounts)?;
+    collect_excess_lamports_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const COLLECT_FUND_FEE_IX_ACCOUNTS_LEN: usize = 11;
@@ -3230,6 +3867,583 @@ pub fn create_operation_account_verify_account_privileges<'me, 'info>(
     create_operation_account_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN: usize = 4;
+#[derive(Copy, Clone, Debug)]
+pub struct CreatePermissionPdaAccounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub permission_authority: &'me AccountInfo<'info>,
+    pub permission: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CreatePermissionPdaKeys {
+    pub owner: Pubkey,
+    pub permission_authority: Pubkey,
+    pub permission: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<CreatePermissionPdaAccounts<'_, '_>> for CreatePermissionPdaKeys {
+    fn from(accounts: CreatePermissionPdaAccounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            permission_authority: *accounts.permission_authority.key,
+            permission: *accounts.permission.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<CreatePermissionPdaKeys>
+for [AccountMeta; CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreatePermissionPdaKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.permission_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.permission,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN]> for CreatePermissionPdaKeys {
+    fn from(pubkeys: [Pubkey; CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            permission_authority: pubkeys[1],
+            permission: pubkeys[2],
+            system_program: pubkeys[3],
+        }
+    }
+}
+impl<'info> From<CreatePermissionPdaAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreatePermissionPdaAccounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.permission_authority.clone(),
+            accounts.permission.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN]>
+for CreatePermissionPdaAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            permission_authority: &arr[1],
+            permission: &arr[2],
+            system_program: &arr[3],
+        }
+    }
+}
+pub const CREATE_PERMISSION_PDA_IX_DISCM: [u8; 8usize] = [
+    135, 136, 2, 216, 137, 169, 181, 202,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreatePermissionPdaIxData;
+impl CreatePermissionPdaIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_PERMISSION_PDA_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_PERMISSION_PDA_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn create_permission_pda_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CreatePermissionPdaKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CREATE_PERMISSION_PDA_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CreatePermissionPdaIxData.try_to_vec()?,
+    })
+}
+pub fn create_permission_pda_ix(
+    keys: CreatePermissionPdaKeys,
+) -> std::io::Result<Instruction> {
+    create_permission_pda_ix_with_program_id(AMM_V3_PROGRAM_ID, keys)
+}
+pub fn create_permission_pda_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CreatePermissionPdaAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CreatePermissionPdaKeys = accounts.into();
+    let ix = create_permission_pda_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn create_permission_pda_invoke(
+    accounts: CreatePermissionPdaAccounts<'_, '_>,
+) -> ProgramResult {
+    create_permission_pda_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts)
+}
+pub fn create_permission_pda_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CreatePermissionPdaAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CreatePermissionPdaKeys = accounts.into();
+    let ix = create_permission_pda_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn create_permission_pda_invoke_signed(
+    accounts: CreatePermissionPdaAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    create_permission_pda_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn create_permission_pda_verify_account_keys(
+    accounts: CreatePermissionPdaAccounts<'_, '_>,
+    keys: CreatePermissionPdaKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.permission_authority.key, keys.permission_authority),
+        (*accounts.permission.key, keys.permission),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn create_permission_pda_verify_writable_privileges<'me, 'info>(
+    accounts: CreatePermissionPdaAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.owner, accounts.permission] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn create_permission_pda_verify_signer_privileges<'me, 'info>(
+    accounts: CreatePermissionPdaAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn create_permission_pda_verify_account_privileges<'me, 'info>(
+    accounts: CreatePermissionPdaAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    create_permission_pda_verify_writable_privileges(accounts)?;
+    create_permission_pda_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN: usize = 15;
+#[derive(Copy, Clone, Debug)]
+pub struct CreatePermissionedPoolAccounts<'me, 'info> {
+    pub payer: &'me AccountInfo<'info>,
+    pub pool_creator: &'me AccountInfo<'info>,
+    pub permission: &'me AccountInfo<'info>,
+    pub amm_config: &'me AccountInfo<'info>,
+    pub pool_state: &'me AccountInfo<'info>,
+    pub token_mint_0: &'me AccountInfo<'info>,
+    pub token_mint_1: &'me AccountInfo<'info>,
+    pub token_vault_0: &'me AccountInfo<'info>,
+    pub token_vault_1: &'me AccountInfo<'info>,
+    pub observation_state: &'me AccountInfo<'info>,
+    pub tick_array_bitmap: &'me AccountInfo<'info>,
+    pub token_program_0: &'me AccountInfo<'info>,
+    pub token_program_1: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub rent: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CreatePermissionedPoolKeys {
+    pub payer: Pubkey,
+    pub pool_creator: Pubkey,
+    pub permission: Pubkey,
+    pub amm_config: Pubkey,
+    pub pool_state: Pubkey,
+    pub token_mint_0: Pubkey,
+    pub token_mint_1: Pubkey,
+    pub token_vault_0: Pubkey,
+    pub token_vault_1: Pubkey,
+    pub observation_state: Pubkey,
+    pub tick_array_bitmap: Pubkey,
+    pub token_program_0: Pubkey,
+    pub token_program_1: Pubkey,
+    pub system_program: Pubkey,
+    pub rent: Pubkey,
+}
+impl From<CreatePermissionedPoolAccounts<'_, '_>> for CreatePermissionedPoolKeys {
+    fn from(accounts: CreatePermissionedPoolAccounts) -> Self {
+        Self {
+            payer: *accounts.payer.key,
+            pool_creator: *accounts.pool_creator.key,
+            permission: *accounts.permission.key,
+            amm_config: *accounts.amm_config.key,
+            pool_state: *accounts.pool_state.key,
+            token_mint_0: *accounts.token_mint_0.key,
+            token_mint_1: *accounts.token_mint_1.key,
+            token_vault_0: *accounts.token_vault_0.key,
+            token_vault_1: *accounts.token_vault_1.key,
+            observation_state: *accounts.observation_state.key,
+            tick_array_bitmap: *accounts.tick_array_bitmap.key,
+            token_program_0: *accounts.token_program_0.key,
+            token_program_1: *accounts.token_program_1.key,
+            system_program: *accounts.system_program.key,
+            rent: *accounts.rent.key,
+        }
+    }
+}
+impl From<CreatePermissionedPoolKeys>
+for [AccountMeta; CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreatePermissionedPoolKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.pool_creator,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.permission,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.amm_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.pool_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_mint_0,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_mint_1,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_vault_0,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_vault_1,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.observation_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.tick_array_bitmap,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_program_0,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program_1,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.rent,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN]>
+for CreatePermissionedPoolKeys {
+    fn from(pubkeys: [Pubkey; CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            payer: pubkeys[0],
+            pool_creator: pubkeys[1],
+            permission: pubkeys[2],
+            amm_config: pubkeys[3],
+            pool_state: pubkeys[4],
+            token_mint_0: pubkeys[5],
+            token_mint_1: pubkeys[6],
+            token_vault_0: pubkeys[7],
+            token_vault_1: pubkeys[8],
+            observation_state: pubkeys[9],
+            tick_array_bitmap: pubkeys[10],
+            token_program_0: pubkeys[11],
+            token_program_1: pubkeys[12],
+            system_program: pubkeys[13],
+            rent: pubkeys[14],
+        }
+    }
+}
+impl<'info> From<CreatePermissionedPoolAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreatePermissionedPoolAccounts<'_, 'info>) -> Self {
+        [
+            accounts.payer.clone(),
+            accounts.pool_creator.clone(),
+            accounts.permission.clone(),
+            accounts.amm_config.clone(),
+            accounts.pool_state.clone(),
+            accounts.token_mint_0.clone(),
+            accounts.token_mint_1.clone(),
+            accounts.token_vault_0.clone(),
+            accounts.token_vault_1.clone(),
+            accounts.observation_state.clone(),
+            accounts.tick_array_bitmap.clone(),
+            accounts.token_program_0.clone(),
+            accounts.token_program_1.clone(),
+            accounts.system_program.clone(),
+            accounts.rent.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN]>
+for CreatePermissionedPoolAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            payer: &arr[0],
+            pool_creator: &arr[1],
+            permission: &arr[2],
+            amm_config: &arr[3],
+            pool_state: &arr[4],
+            token_mint_0: &arr[5],
+            token_mint_1: &arr[6],
+            token_vault_0: &arr[7],
+            token_vault_1: &arr[8],
+            observation_state: &arr[9],
+            tick_array_bitmap: &arr[10],
+            token_program_0: &arr[11],
+            token_program_1: &arr[12],
+            system_program: &arr[13],
+            rent: &arr[14],
+        }
+    }
+}
+pub const CREATE_PERMISSIONED_POOL_IX_DISCM: [u8; 8usize] = [
+    36, 243, 179, 35, 42, 239, 53, 229,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CreatePermissionedPoolIxArgs {
+    pub customizable_params: CreateCustomizableParams,
+    pub seed_index: u16,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreatePermissionedPoolIxData(pub CreatePermissionedPoolIxArgs);
+impl From<CreatePermissionedPoolIxArgs> for CreatePermissionedPoolIxData {
+    fn from(args: CreatePermissionedPoolIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl CreatePermissionedPoolIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_PERMISSIONED_POOL_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let customizable_params = if reader.is_empty() {
+            Default::default()
+        } else {
+            <CreateCustomizableParams>::deserialize(&mut reader)?
+        };
+        let seed_index: u16 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(CreatePermissionedPoolIxArgs {
+                customizable_params,
+                seed_index,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_PERMISSIONED_POOL_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.customizable_params, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.seed_index, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn create_permissioned_pool_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CreatePermissionedPoolKeys,
+    args: CreatePermissionedPoolIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CREATE_PERMISSIONED_POOL_IX_ACCOUNTS_LEN] = keys.into();
+    let data: CreatePermissionedPoolIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn create_permissioned_pool_ix(
+    keys: CreatePermissionedPoolKeys,
+    args: CreatePermissionedPoolIxArgs,
+) -> std::io::Result<Instruction> {
+    create_permissioned_pool_ix_with_program_id(AMM_V3_PROGRAM_ID, keys, args)
+}
+pub fn create_permissioned_pool_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CreatePermissionedPoolAccounts<'_, '_>,
+    args: CreatePermissionedPoolIxArgs,
+) -> ProgramResult {
+    let keys: CreatePermissionedPoolKeys = accounts.into();
+    let ix = create_permissioned_pool_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn create_permissioned_pool_invoke(
+    accounts: CreatePermissionedPoolAccounts<'_, '_>,
+    args: CreatePermissionedPoolIxArgs,
+) -> ProgramResult {
+    create_permissioned_pool_invoke_with_program_id(AMM_V3_PROGRAM_ID, accounts, args)
+}
+pub fn create_permissioned_pool_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CreatePermissionedPoolAccounts<'_, '_>,
+    args: CreatePermissionedPoolIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CreatePermissionedPoolKeys = accounts.into();
+    let ix = create_permissioned_pool_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn create_permissioned_pool_invoke_signed(
+    accounts: CreatePermissionedPoolAccounts<'_, '_>,
+    args: CreatePermissionedPoolIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    create_permissioned_pool_invoke_signed_with_program_id(
+        AMM_V3_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn create_permissioned_pool_verify_account_keys(
+    accounts: CreatePermissionedPoolAccounts<'_, '_>,
+    keys: CreatePermissionedPoolKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.payer.key, keys.payer),
+        (*accounts.pool_creator.key, keys.pool_creator),
+        (*accounts.permission.key, keys.permission),
+        (*accounts.amm_config.key, keys.amm_config),
+        (*accounts.pool_state.key, keys.pool_state),
+        (*accounts.token_mint_0.key, keys.token_mint_0),
+        (*accounts.token_mint_1.key, keys.token_mint_1),
+        (*accounts.token_vault_0.key, keys.token_vault_0),
+        (*accounts.token_vault_1.key, keys.token_vault_1),
+        (*accounts.observation_state.key, keys.observation_state),
+        (*accounts.tick_array_bitmap.key, keys.tick_array_bitmap),
+        (*accounts.token_program_0.key, keys.token_program_0),
+        (*accounts.token_program_1.key, keys.token_program_1),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.rent.key, keys.rent),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn create_permissioned_pool_verify_writable_privileges<'me, 'info>(
+    accounts: CreatePermissionedPoolAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.payer,
+        accounts.pool_state,
+        accounts.token_vault_0,
+        accounts.token_vault_1,
+        accounts.observation_state,
+        accounts.tick_array_bitmap,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn create_permissioned_pool_verify_signer_privileges<'me, 'info>(
+    accounts: CreatePermissionedPoolAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn create_permissioned_pool_verify_account_privileges<'me, 'info>(
+    accounts: CreatePermissionedPoolAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    create_permissioned_pool_verify_writable_privileges(accounts)?;
+    create_permissioned_pool_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CREATE_POOL_IX_ACCOUNTS_LEN: usize = 13;
 #[derive(Copy, Clone, Debug)]
 pub struct CreatePoolAccounts<'me, 'info> {
@@ -4874,7 +6088,7 @@ for [AccountMeta; INCREASE_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
             AccountMeta {
                 pubkey: keys.pool_state,
                 is_signer: false,
-                is_writable: false,
+                is_writable: true,
             },
             AccountMeta {
                 pubkey: keys.tick_array,
@@ -5071,6 +6285,7 @@ pub fn increase_limit_order_verify_writable_privileges<'me, 'info>(
     accounts: IncreaseLimitOrderAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     for should_be_writable in [
+        accounts.pool_state,
         accounts.tick_array,
         accounts.limit_order,
         accounts.input_token_account,
@@ -6111,7 +7326,7 @@ pub fn initialize_reward_verify_account_privileges<'me, 'info>(
     initialize_reward_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 10;
+pub const OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN: usize = 13;
 #[derive(Copy, Clone, Debug)]
 pub struct OpenLimitOrderAccounts<'me, 'info> {
     pub payer: &'me AccountInfo<'info>,
@@ -6120,8 +7335,11 @@ pub struct OpenLimitOrderAccounts<'me, 'info> {
     pub limit_order_nonce: &'me AccountInfo<'info>,
     pub limit_order: &'me AccountInfo<'info>,
     pub input_token_account: &'me AccountInfo<'info>,
+    pub output_token_account: &'me AccountInfo<'info>,
     pub input_vault: &'me AccountInfo<'info>,
+    pub output_vault: &'me AccountInfo<'info>,
     pub input_vault_mint: &'me AccountInfo<'info>,
+    pub output_vault_mint: &'me AccountInfo<'info>,
     pub input_token_program: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
 }
@@ -6133,8 +7351,11 @@ pub struct OpenLimitOrderKeys {
     pub limit_order_nonce: Pubkey,
     pub limit_order: Pubkey,
     pub input_token_account: Pubkey,
+    pub output_token_account: Pubkey,
     pub input_vault: Pubkey,
+    pub output_vault: Pubkey,
     pub input_vault_mint: Pubkey,
+    pub output_vault_mint: Pubkey,
     pub input_token_program: Pubkey,
     pub system_program: Pubkey,
 }
@@ -6147,8 +7368,11 @@ impl From<OpenLimitOrderAccounts<'_, '_>> for OpenLimitOrderKeys {
             limit_order_nonce: *accounts.limit_order_nonce.key,
             limit_order: *accounts.limit_order.key,
             input_token_account: *accounts.input_token_account.key,
+            output_token_account: *accounts.output_token_account.key,
             input_vault: *accounts.input_vault.key,
+            output_vault: *accounts.output_vault.key,
             input_vault_mint: *accounts.input_vault_mint.key,
+            output_vault_mint: *accounts.output_vault_mint.key,
             input_token_program: *accounts.input_token_program.key,
             system_program: *accounts.system_program.key,
         }
@@ -6188,12 +7412,27 @@ impl From<OpenLimitOrderKeys> for [AccountMeta; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN
                 is_writable: true,
             },
             AccountMeta {
+                pubkey: keys.output_token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
                 pubkey: keys.input_vault,
                 is_signer: false,
                 is_writable: true,
             },
             AccountMeta {
+                pubkey: keys.output_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
                 pubkey: keys.input_vault_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.output_vault_mint,
                 is_signer: false,
                 is_writable: false,
             },
@@ -6219,10 +7458,13 @@ impl From<[Pubkey; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN]> for OpenLimitOrderKeys {
             limit_order_nonce: pubkeys[3],
             limit_order: pubkeys[4],
             input_token_account: pubkeys[5],
-            input_vault: pubkeys[6],
-            input_vault_mint: pubkeys[7],
-            input_token_program: pubkeys[8],
-            system_program: pubkeys[9],
+            output_token_account: pubkeys[6],
+            input_vault: pubkeys[7],
+            output_vault: pubkeys[8],
+            input_vault_mint: pubkeys[9],
+            output_vault_mint: pubkeys[10],
+            input_token_program: pubkeys[11],
+            system_program: pubkeys[12],
         }
     }
 }
@@ -6236,8 +7478,11 @@ for [AccountInfo<'info>; OPEN_LIMIT_ORDER_IX_ACCOUNTS_LEN] {
             accounts.limit_order_nonce.clone(),
             accounts.limit_order.clone(),
             accounts.input_token_account.clone(),
+            accounts.output_token_account.clone(),
             accounts.input_vault.clone(),
+            accounts.output_vault.clone(),
             accounts.input_vault_mint.clone(),
+            accounts.output_vault_mint.clone(),
             accounts.input_token_program.clone(),
             accounts.system_program.clone(),
         ]
@@ -6253,10 +7498,13 @@ for OpenLimitOrderAccounts<'me, 'info> {
             limit_order_nonce: &arr[3],
             limit_order: &arr[4],
             input_token_account: &arr[5],
-            input_vault: &arr[6],
-            input_vault_mint: &arr[7],
-            input_token_program: &arr[8],
-            system_program: &arr[9],
+            output_token_account: &arr[6],
+            input_vault: &arr[7],
+            output_vault: &arr[8],
+            input_vault_mint: &arr[9],
+            output_vault_mint: &arr[10],
+            input_token_program: &arr[11],
+            system_program: &arr[12],
         }
     }
 }
@@ -6377,8 +7625,11 @@ pub fn open_limit_order_verify_account_keys(
         (*accounts.limit_order_nonce.key, keys.limit_order_nonce),
         (*accounts.limit_order.key, keys.limit_order),
         (*accounts.input_token_account.key, keys.input_token_account),
+        (*accounts.output_token_account.key, keys.output_token_account),
         (*accounts.input_vault.key, keys.input_vault),
+        (*accounts.output_vault.key, keys.output_vault),
         (*accounts.input_vault_mint.key, keys.input_vault_mint),
+        (*accounts.output_vault_mint.key, keys.output_vault_mint),
         (*accounts.input_token_program.key, keys.input_token_program),
         (*accounts.system_program.key, keys.system_program),
     ] {
@@ -6398,7 +7649,9 @@ pub fn open_limit_order_verify_writable_privileges<'me, 'info>(
         accounts.limit_order_nonce,
         accounts.limit_order,
         accounts.input_token_account,
+        accounts.output_token_account,
         accounts.input_vault,
+        accounts.output_vault,
     ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));

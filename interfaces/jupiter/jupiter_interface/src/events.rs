@@ -195,6 +195,60 @@ impl CandidateSwapResultsEvent {
         Ok(data)
     }
 }
+pub const CANDIDATE_SWAP_QUOTE_ERROR_EVENT_DISCM: [u8; 8] = [
+    248, 134, 37, 55, 145, 177, 114, 79,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct CandidateSwapQuoteError {
+    pub candidate_index: u64,
+    pub in_amount: u64,
+    pub error_code: u64,
+}
+impl CandidateSwapQuoteError {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let candidate_index: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let in_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let error_code: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            candidate_index,
+            in_amount,
+            error_code,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.candidate_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.in_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.error_code, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct CandidateSwapQuoteErrorEvent(pub CandidateSwapQuoteError);
+impl CandidateSwapQuoteErrorEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CANDIDATE_SWAP_QUOTE_ERROR_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = CandidateSwapQuoteError::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CANDIDATE_SWAP_QUOTE_ERROR_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const BEST_SWAP_OUT_AMOUNT_VIOLATION_EVENT_DISCM: [u8; 8] = [
     124, 66, 196, 51, 218, 173, 46, 93,
 ];

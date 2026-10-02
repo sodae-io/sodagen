@@ -9,8 +9,13 @@ use crate::*;
 #[derive(Clone, Debug, PartialEq)]
 pub enum VaultProgramIx {
     Initialize,
+    InitializeIdleVault,
     EnableVault(EnableVaultIxArgs),
     SetOperator,
+    UpdateLockedProfitDegradation(UpdateLockedProfitDegradationIxArgs),
+    GetUnlockedAmount,
+    TransferAdmin,
+    TransferFeeVault,
     InitializeStrategy(InitializeStrategyIxArgs),
     RemoveStrategy,
     RemoveStrategy2(RemoveStrategy2IxArgs),
@@ -18,6 +23,7 @@ pub enum VaultProgramIx {
     AddStrategy,
     DepositStrategy(DepositStrategyIxArgs),
     WithdrawStrategy(WithdrawStrategyIxArgs),
+    ClaimRewards,
     Withdraw2(Withdraw2IxArgs),
     Deposit(DepositIxArgs),
     Withdraw(WithdrawIxArgs),
@@ -28,6 +34,9 @@ impl VaultProgramIx {
         if buf.starts_with(&INITIALIZE_IX_DISCM) {
             return Ok(Self::Initialize);
         }
+        if buf.starts_with(&INITIALIZE_IDLE_VAULT_IX_DISCM) {
+            return Ok(Self::InitializeIdleVault);
+        }
         if buf.starts_with(&ENABLE_VAULT_IX_DISCM) {
             let mut reader = &buf[ENABLE_VAULT_IX_DISCM.len()..];
             let enabled: u8 = crate::borsh_de_or_default(&mut reader)?;
@@ -35,6 +44,26 @@ impl VaultProgramIx {
         }
         if buf.starts_with(&SET_OPERATOR_IX_DISCM) {
             return Ok(Self::SetOperator);
+        }
+        if buf.starts_with(&UPDATE_LOCKED_PROFIT_DEGRADATION_IX_DISCM) {
+            let mut reader = &buf[UPDATE_LOCKED_PROFIT_DEGRADATION_IX_DISCM.len()..];
+            let locked_profit_degradation: u64 = crate::borsh_de_or_default(
+                &mut reader,
+            )?;
+            return Ok(
+                Self::UpdateLockedProfitDegradation(UpdateLockedProfitDegradationIxArgs {
+                    locked_profit_degradation,
+                }),
+            );
+        }
+        if buf.starts_with(&GET_UNLOCKED_AMOUNT_IX_DISCM) {
+            return Ok(Self::GetUnlockedAmount);
+        }
+        if buf.starts_with(&TRANSFER_ADMIN_IX_DISCM) {
+            return Ok(Self::TransferAdmin);
+        }
+        if buf.starts_with(&TRANSFER_FEE_VAULT_IX_DISCM) {
+            return Ok(Self::TransferFeeVault);
         }
         if buf.starts_with(&INITIALIZE_STRATEGY_IX_DISCM) {
             let mut reader = &buf[INITIALIZE_STRATEGY_IX_DISCM.len()..];
@@ -78,6 +107,9 @@ impl VaultProgramIx {
             let mut reader = &buf[WITHDRAW_STRATEGY_IX_DISCM.len()..];
             let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(Self::WithdrawStrategy(WithdrawStrategyIxArgs { amount }));
+        }
+        if buf.starts_with(&CLAIM_REWARDS_IX_DISCM) {
+            return Ok(Self::ClaimRewards);
         }
         if buf.starts_with(&WITHDRAW2_IX_DISCM) {
             let mut reader = &buf[WITHDRAW2_IX_DISCM.len()..];
@@ -128,12 +160,26 @@ impl VaultProgramIx {
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         match self {
             Self::Initialize => writer.write_all(&INITIALIZE_IX_DISCM),
+            Self::InitializeIdleVault => {
+                writer.write_all(&INITIALIZE_IDLE_VAULT_IX_DISCM)
+            }
             Self::EnableVault(args) => {
                 writer.write_all(&ENABLE_VAULT_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.enabled, &mut writer)?;
                 Ok(())
             }
             Self::SetOperator => writer.write_all(&SET_OPERATOR_IX_DISCM),
+            Self::UpdateLockedProfitDegradation(args) => {
+                writer.write_all(&UPDATE_LOCKED_PROFIT_DEGRADATION_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(
+                    &args.locked_profit_degradation,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
+            Self::GetUnlockedAmount => writer.write_all(&GET_UNLOCKED_AMOUNT_IX_DISCM),
+            Self::TransferAdmin => writer.write_all(&TRANSFER_ADMIN_IX_DISCM),
+            Self::TransferFeeVault => writer.write_all(&TRANSFER_FEE_VAULT_IX_DISCM),
             Self::InitializeStrategy(args) => {
                 writer.write_all(&INITIALIZE_STRATEGY_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.bumps, &mut writer)?;
@@ -161,6 +207,7 @@ impl VaultProgramIx {
                 borsh::BorshSerialize::serialize(&args.amount, &mut writer)?;
                 Ok(())
             }
+            Self::ClaimRewards => writer.write_all(&CLAIM_REWARDS_IX_DISCM),
             Self::Withdraw2(args) => {
                 writer.write_all(&WITHDRAW2_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.unmint_amount, &mut writer)?;
@@ -450,6 +497,260 @@ pub fn initialize_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     initialize_verify_writable_privileges(accounts)?;
     initialize_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN: usize = 8;
+#[derive(Copy, Clone, Debug)]
+pub struct InitializeIdleVaultAccounts<'me, 'info> {
+    pub vault: &'me AccountInfo<'info>,
+    pub payer: &'me AccountInfo<'info>,
+    pub token_vault: &'me AccountInfo<'info>,
+    pub token_mint: &'me AccountInfo<'info>,
+    pub lp_mint: &'me AccountInfo<'info>,
+    pub rent: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct InitializeIdleVaultKeys {
+    pub vault: Pubkey,
+    pub payer: Pubkey,
+    pub token_vault: Pubkey,
+    pub token_mint: Pubkey,
+    pub lp_mint: Pubkey,
+    pub rent: Pubkey,
+    pub token_program: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<InitializeIdleVaultAccounts<'_, '_>> for InitializeIdleVaultKeys {
+    fn from(accounts: InitializeIdleVaultAccounts) -> Self {
+        Self {
+            vault: *accounts.vault.key,
+            payer: *accounts.payer.key,
+            token_vault: *accounts.token_vault.key,
+            token_mint: *accounts.token_mint.key,
+            lp_mint: *accounts.lp_mint.key,
+            rent: *accounts.rent.key,
+            token_program: *accounts.token_program.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<InitializeIdleVaultKeys>
+for [AccountMeta; INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN] {
+    fn from(keys: InitializeIdleVaultKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.lp_mint,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.rent,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN]> for InitializeIdleVaultKeys {
+    fn from(pubkeys: [Pubkey; INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            vault: pubkeys[0],
+            payer: pubkeys[1],
+            token_vault: pubkeys[2],
+            token_mint: pubkeys[3],
+            lp_mint: pubkeys[4],
+            rent: pubkeys[5],
+            token_program: pubkeys[6],
+            system_program: pubkeys[7],
+        }
+    }
+}
+impl<'info> From<InitializeIdleVaultAccounts<'_, 'info>>
+for [AccountInfo<'info>; INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN] {
+    fn from(accounts: InitializeIdleVaultAccounts<'_, 'info>) -> Self {
+        [
+            accounts.vault.clone(),
+            accounts.payer.clone(),
+            accounts.token_vault.clone(),
+            accounts.token_mint.clone(),
+            accounts.lp_mint.clone(),
+            accounts.rent.clone(),
+            accounts.token_program.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN]>
+for InitializeIdleVaultAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            vault: &arr[0],
+            payer: &arr[1],
+            token_vault: &arr[2],
+            token_mint: &arr[3],
+            lp_mint: &arr[4],
+            rent: &arr[5],
+            token_program: &arr[6],
+            system_program: &arr[7],
+        }
+    }
+}
+pub const INITIALIZE_IDLE_VAULT_IX_DISCM: [u8; 8usize] = [
+    100, 187, 43, 147, 149, 180, 117, 223,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializeIdleVaultIxData;
+impl InitializeIdleVaultIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != INITIALIZE_IDLE_VAULT_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&INITIALIZE_IDLE_VAULT_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn initialize_idle_vault_ix_with_program_id(
+    program_id: Pubkey,
+    keys: InitializeIdleVaultKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; INITIALIZE_IDLE_VAULT_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: InitializeIdleVaultIxData.try_to_vec()?,
+    })
+}
+pub fn initialize_idle_vault_ix(
+    keys: InitializeIdleVaultKeys,
+) -> std::io::Result<Instruction> {
+    initialize_idle_vault_ix_with_program_id(VAULT_PROGRAM_ID, keys)
+}
+pub fn initialize_idle_vault_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: InitializeIdleVaultAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: InitializeIdleVaultKeys = accounts.into();
+    let ix = initialize_idle_vault_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn initialize_idle_vault_invoke(
+    accounts: InitializeIdleVaultAccounts<'_, '_>,
+) -> ProgramResult {
+    initialize_idle_vault_invoke_with_program_id(VAULT_PROGRAM_ID, accounts)
+}
+pub fn initialize_idle_vault_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: InitializeIdleVaultAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: InitializeIdleVaultKeys = accounts.into();
+    let ix = initialize_idle_vault_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn initialize_idle_vault_invoke_signed(
+    accounts: InitializeIdleVaultAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    initialize_idle_vault_invoke_signed_with_program_id(
+        VAULT_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn initialize_idle_vault_verify_account_keys(
+    accounts: InitializeIdleVaultAccounts<'_, '_>,
+    keys: InitializeIdleVaultKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.vault.key, keys.vault),
+        (*accounts.payer.key, keys.payer),
+        (*accounts.token_vault.key, keys.token_vault),
+        (*accounts.token_mint.key, keys.token_mint),
+        (*accounts.lp_mint.key, keys.lp_mint),
+        (*accounts.rent.key, keys.rent),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn initialize_idle_vault_verify_writable_privileges<'me, 'info>(
+    accounts: InitializeIdleVaultAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.vault,
+        accounts.payer,
+        accounts.token_vault,
+        accounts.lp_mint,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn initialize_idle_vault_verify_signer_privileges<'me, 'info>(
+    accounts: InitializeIdleVaultAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn initialize_idle_vault_verify_account_privileges<'me, 'info>(
+    accounts: InitializeIdleVaultAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    initialize_idle_vault_verify_writable_privileges(accounts)?;
+    initialize_idle_vault_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const ENABLE_VAULT_IX_ACCOUNTS_LEN: usize = 2;
@@ -806,6 +1107,700 @@ pub fn set_operator_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     set_operator_verify_writable_privileges(accounts)?;
     set_operator_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN: usize = 2;
+#[derive(Copy, Clone, Debug)]
+pub struct UpdateLockedProfitDegradationAccounts<'me, 'info> {
+    pub vault: &'me AccountInfo<'info>,
+    pub admin: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct UpdateLockedProfitDegradationKeys {
+    pub vault: Pubkey,
+    pub admin: Pubkey,
+}
+impl From<UpdateLockedProfitDegradationAccounts<'_, '_>>
+for UpdateLockedProfitDegradationKeys {
+    fn from(accounts: UpdateLockedProfitDegradationAccounts) -> Self {
+        Self {
+            vault: *accounts.vault.key,
+            admin: *accounts.admin.key,
+        }
+    }
+}
+impl From<UpdateLockedProfitDegradationKeys>
+for [AccountMeta; UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN] {
+    fn from(keys: UpdateLockedProfitDegradationKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.admin,
+                is_signer: true,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN]>
+for UpdateLockedProfitDegradationKeys {
+    fn from(
+        pubkeys: [Pubkey; UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            vault: pubkeys[0],
+            admin: pubkeys[1],
+        }
+    }
+}
+impl<'info> From<UpdateLockedProfitDegradationAccounts<'_, 'info>>
+for [AccountInfo<'info>; UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN] {
+    fn from(accounts: UpdateLockedProfitDegradationAccounts<'_, 'info>) -> Self {
+        [accounts.vault.clone(), accounts.admin.clone()]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN]>
+for UpdateLockedProfitDegradationAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            vault: &arr[0],
+            admin: &arr[1],
+        }
+    }
+}
+pub const UPDATE_LOCKED_PROFIT_DEGRADATION_IX_DISCM: [u8; 8usize] = [
+    103, 192, 9, 190, 43, 209, 235, 115,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct UpdateLockedProfitDegradationIxArgs {
+    pub locked_profit_degradation: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct UpdateLockedProfitDegradationIxData(pub UpdateLockedProfitDegradationIxArgs);
+impl From<UpdateLockedProfitDegradationIxArgs> for UpdateLockedProfitDegradationIxData {
+    fn from(args: UpdateLockedProfitDegradationIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl UpdateLockedProfitDegradationIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != UPDATE_LOCKED_PROFIT_DEGRADATION_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let locked_profit_degradation: u64 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(UpdateLockedProfitDegradationIxArgs {
+                locked_profit_degradation,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&UPDATE_LOCKED_PROFIT_DEGRADATION_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.locked_profit_degradation,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn update_locked_profit_degradation_ix_with_program_id(
+    program_id: Pubkey,
+    keys: UpdateLockedProfitDegradationKeys,
+    args: UpdateLockedProfitDegradationIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; UPDATE_LOCKED_PROFIT_DEGRADATION_IX_ACCOUNTS_LEN] = keys
+        .into();
+    let data: UpdateLockedProfitDegradationIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn update_locked_profit_degradation_ix(
+    keys: UpdateLockedProfitDegradationKeys,
+    args: UpdateLockedProfitDegradationIxArgs,
+) -> std::io::Result<Instruction> {
+    update_locked_profit_degradation_ix_with_program_id(VAULT_PROGRAM_ID, keys, args)
+}
+pub fn update_locked_profit_degradation_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: UpdateLockedProfitDegradationAccounts<'_, '_>,
+    args: UpdateLockedProfitDegradationIxArgs,
+) -> ProgramResult {
+    let keys: UpdateLockedProfitDegradationKeys = accounts.into();
+    let ix = update_locked_profit_degradation_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn update_locked_profit_degradation_invoke(
+    accounts: UpdateLockedProfitDegradationAccounts<'_, '_>,
+    args: UpdateLockedProfitDegradationIxArgs,
+) -> ProgramResult {
+    update_locked_profit_degradation_invoke_with_program_id(
+        VAULT_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn update_locked_profit_degradation_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: UpdateLockedProfitDegradationAccounts<'_, '_>,
+    args: UpdateLockedProfitDegradationIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: UpdateLockedProfitDegradationKeys = accounts.into();
+    let ix = update_locked_profit_degradation_ix_with_program_id(
+        program_id,
+        keys,
+        args,
+    )?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn update_locked_profit_degradation_invoke_signed(
+    accounts: UpdateLockedProfitDegradationAccounts<'_, '_>,
+    args: UpdateLockedProfitDegradationIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    update_locked_profit_degradation_invoke_signed_with_program_id(
+        VAULT_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn update_locked_profit_degradation_verify_account_keys(
+    accounts: UpdateLockedProfitDegradationAccounts<'_, '_>,
+    keys: UpdateLockedProfitDegradationKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.vault.key, keys.vault),
+        (*accounts.admin.key, keys.admin),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn update_locked_profit_degradation_verify_writable_privileges<'me, 'info>(
+    accounts: UpdateLockedProfitDegradationAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.vault] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn update_locked_profit_degradation_verify_signer_privileges<'me, 'info>(
+    accounts: UpdateLockedProfitDegradationAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn update_locked_profit_degradation_verify_account_privileges<'me, 'info>(
+    accounts: UpdateLockedProfitDegradationAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    update_locked_profit_degradation_verify_writable_privileges(accounts)?;
+    update_locked_profit_degradation_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN: usize = 1;
+#[derive(Copy, Clone, Debug)]
+pub struct GetUnlockedAmountAccounts<'me, 'info> {
+    pub vault: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct GetUnlockedAmountKeys {
+    pub vault: Pubkey,
+}
+impl From<GetUnlockedAmountAccounts<'_, '_>> for GetUnlockedAmountKeys {
+    fn from(accounts: GetUnlockedAmountAccounts) -> Self {
+        Self { vault: *accounts.vault.key }
+    }
+}
+impl From<GetUnlockedAmountKeys> for [AccountMeta; GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN] {
+    fn from(keys: GetUnlockedAmountKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.vault,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN]> for GetUnlockedAmountKeys {
+    fn from(pubkeys: [Pubkey; GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN]) -> Self {
+        Self { vault: pubkeys[0] }
+    }
+}
+impl<'info> From<GetUnlockedAmountAccounts<'_, 'info>>
+for [AccountInfo<'info>; GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN] {
+    fn from(accounts: GetUnlockedAmountAccounts<'_, 'info>) -> Self {
+        [accounts.vault.clone()]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN]>
+for GetUnlockedAmountAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self { vault: &arr[0] }
+    }
+}
+pub const GET_UNLOCKED_AMOUNT_IX_DISCM: [u8; 8usize] = [
+    22, 184, 50, 213, 60, 168, 181, 227,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct GetUnlockedAmountIxData;
+impl GetUnlockedAmountIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != GET_UNLOCKED_AMOUNT_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&GET_UNLOCKED_AMOUNT_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn get_unlocked_amount_ix_with_program_id(
+    program_id: Pubkey,
+    keys: GetUnlockedAmountKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; GET_UNLOCKED_AMOUNT_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: GetUnlockedAmountIxData.try_to_vec()?,
+    })
+}
+pub fn get_unlocked_amount_ix(
+    keys: GetUnlockedAmountKeys,
+) -> std::io::Result<Instruction> {
+    get_unlocked_amount_ix_with_program_id(VAULT_PROGRAM_ID, keys)
+}
+pub fn get_unlocked_amount_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: GetUnlockedAmountAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: GetUnlockedAmountKeys = accounts.into();
+    let ix = get_unlocked_amount_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn get_unlocked_amount_invoke(
+    accounts: GetUnlockedAmountAccounts<'_, '_>,
+) -> ProgramResult {
+    get_unlocked_amount_invoke_with_program_id(VAULT_PROGRAM_ID, accounts)
+}
+pub fn get_unlocked_amount_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: GetUnlockedAmountAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: GetUnlockedAmountKeys = accounts.into();
+    let ix = get_unlocked_amount_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn get_unlocked_amount_invoke_signed(
+    accounts: GetUnlockedAmountAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    get_unlocked_amount_invoke_signed_with_program_id(VAULT_PROGRAM_ID, accounts, seeds)
+}
+pub fn get_unlocked_amount_verify_account_keys(
+    accounts: GetUnlockedAmountAccounts<'_, '_>,
+    keys: GetUnlockedAmountKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [(*accounts.vault.key, keys.vault)] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub const TRANSFER_ADMIN_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct TransferAdminAccounts<'me, 'info> {
+    pub vault: &'me AccountInfo<'info>,
+    pub admin: &'me AccountInfo<'info>,
+    pub new_admin: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct TransferAdminKeys {
+    pub vault: Pubkey,
+    pub admin: Pubkey,
+    pub new_admin: Pubkey,
+}
+impl From<TransferAdminAccounts<'_, '_>> for TransferAdminKeys {
+    fn from(accounts: TransferAdminAccounts) -> Self {
+        Self {
+            vault: *accounts.vault.key,
+            admin: *accounts.admin.key,
+            new_admin: *accounts.new_admin.key,
+        }
+    }
+}
+impl From<TransferAdminKeys> for [AccountMeta; TRANSFER_ADMIN_IX_ACCOUNTS_LEN] {
+    fn from(keys: TransferAdminKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.admin,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.new_admin,
+                is_signer: true,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; TRANSFER_ADMIN_IX_ACCOUNTS_LEN]> for TransferAdminKeys {
+    fn from(pubkeys: [Pubkey; TRANSFER_ADMIN_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            vault: pubkeys[0],
+            admin: pubkeys[1],
+            new_admin: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<TransferAdminAccounts<'_, 'info>>
+for [AccountInfo<'info>; TRANSFER_ADMIN_IX_ACCOUNTS_LEN] {
+    fn from(accounts: TransferAdminAccounts<'_, 'info>) -> Self {
+        [accounts.vault.clone(), accounts.admin.clone(), accounts.new_admin.clone()]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; TRANSFER_ADMIN_IX_ACCOUNTS_LEN]>
+for TransferAdminAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; TRANSFER_ADMIN_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            vault: &arr[0],
+            admin: &arr[1],
+            new_admin: &arr[2],
+        }
+    }
+}
+pub const TRANSFER_ADMIN_IX_DISCM: [u8; 8usize] = [42, 242, 66, 106, 228, 10, 111, 156];
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransferAdminIxData;
+impl TransferAdminIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != TRANSFER_ADMIN_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&TRANSFER_ADMIN_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn transfer_admin_ix_with_program_id(
+    program_id: Pubkey,
+    keys: TransferAdminKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; TRANSFER_ADMIN_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: TransferAdminIxData.try_to_vec()?,
+    })
+}
+pub fn transfer_admin_ix(keys: TransferAdminKeys) -> std::io::Result<Instruction> {
+    transfer_admin_ix_with_program_id(VAULT_PROGRAM_ID, keys)
+}
+pub fn transfer_admin_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: TransferAdminAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: TransferAdminKeys = accounts.into();
+    let ix = transfer_admin_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn transfer_admin_invoke(accounts: TransferAdminAccounts<'_, '_>) -> ProgramResult {
+    transfer_admin_invoke_with_program_id(VAULT_PROGRAM_ID, accounts)
+}
+pub fn transfer_admin_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: TransferAdminAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: TransferAdminKeys = accounts.into();
+    let ix = transfer_admin_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn transfer_admin_invoke_signed(
+    accounts: TransferAdminAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    transfer_admin_invoke_signed_with_program_id(VAULT_PROGRAM_ID, accounts, seeds)
+}
+pub fn transfer_admin_verify_account_keys(
+    accounts: TransferAdminAccounts<'_, '_>,
+    keys: TransferAdminKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.vault.key, keys.vault),
+        (*accounts.admin.key, keys.admin),
+        (*accounts.new_admin.key, keys.new_admin),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_admin_verify_writable_privileges<'me, 'info>(
+    accounts: TransferAdminAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.vault] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_admin_verify_signer_privileges<'me, 'info>(
+    accounts: TransferAdminAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin, accounts.new_admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_admin_verify_account_privileges<'me, 'info>(
+    accounts: TransferAdminAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    transfer_admin_verify_writable_privileges(accounts)?;
+    transfer_admin_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN: usize = 3;
+#[derive(Copy, Clone, Debug)]
+pub struct TransferFeeVaultAccounts<'me, 'info> {
+    pub vault: &'me AccountInfo<'info>,
+    pub admin: &'me AccountInfo<'info>,
+    pub new_fee_vault: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct TransferFeeVaultKeys {
+    pub vault: Pubkey,
+    pub admin: Pubkey,
+    pub new_fee_vault: Pubkey,
+}
+impl From<TransferFeeVaultAccounts<'_, '_>> for TransferFeeVaultKeys {
+    fn from(accounts: TransferFeeVaultAccounts) -> Self {
+        Self {
+            vault: *accounts.vault.key,
+            admin: *accounts.admin.key,
+            new_fee_vault: *accounts.new_fee_vault.key,
+        }
+    }
+}
+impl From<TransferFeeVaultKeys> for [AccountMeta; TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN] {
+    fn from(keys: TransferFeeVaultKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.vault,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.admin,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.new_fee_vault,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN]> for TransferFeeVaultKeys {
+    fn from(pubkeys: [Pubkey; TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            vault: pubkeys[0],
+            admin: pubkeys[1],
+            new_fee_vault: pubkeys[2],
+        }
+    }
+}
+impl<'info> From<TransferFeeVaultAccounts<'_, 'info>>
+for [AccountInfo<'info>; TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN] {
+    fn from(accounts: TransferFeeVaultAccounts<'_, 'info>) -> Self {
+        [accounts.vault.clone(), accounts.admin.clone(), accounts.new_fee_vault.clone()]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN]>
+for TransferFeeVaultAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            vault: &arr[0],
+            admin: &arr[1],
+            new_fee_vault: &arr[2],
+        }
+    }
+}
+pub const TRANSFER_FEE_VAULT_IX_DISCM: [u8; 8usize] = [
+    24, 18, 129, 149, 149, 32, 45, 105,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransferFeeVaultIxData;
+impl TransferFeeVaultIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != TRANSFER_FEE_VAULT_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&TRANSFER_FEE_VAULT_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn transfer_fee_vault_ix_with_program_id(
+    program_id: Pubkey,
+    keys: TransferFeeVaultKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; TRANSFER_FEE_VAULT_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: TransferFeeVaultIxData.try_to_vec()?,
+    })
+}
+pub fn transfer_fee_vault_ix(
+    keys: TransferFeeVaultKeys,
+) -> std::io::Result<Instruction> {
+    transfer_fee_vault_ix_with_program_id(VAULT_PROGRAM_ID, keys)
+}
+pub fn transfer_fee_vault_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: TransferFeeVaultAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: TransferFeeVaultKeys = accounts.into();
+    let ix = transfer_fee_vault_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn transfer_fee_vault_invoke(
+    accounts: TransferFeeVaultAccounts<'_, '_>,
+) -> ProgramResult {
+    transfer_fee_vault_invoke_with_program_id(VAULT_PROGRAM_ID, accounts)
+}
+pub fn transfer_fee_vault_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: TransferFeeVaultAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: TransferFeeVaultKeys = accounts.into();
+    let ix = transfer_fee_vault_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn transfer_fee_vault_invoke_signed(
+    accounts: TransferFeeVaultAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    transfer_fee_vault_invoke_signed_with_program_id(VAULT_PROGRAM_ID, accounts, seeds)
+}
+pub fn transfer_fee_vault_verify_account_keys(
+    accounts: TransferFeeVaultAccounts<'_, '_>,
+    keys: TransferFeeVaultKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.vault.key, keys.vault),
+        (*accounts.admin.key, keys.admin),
+        (*accounts.new_fee_vault.key, keys.new_fee_vault),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_fee_vault_verify_writable_privileges<'me, 'info>(
+    accounts: TransferFeeVaultAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.vault] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_fee_vault_verify_signer_privileges<'me, 'info>(
+    accounts: TransferFeeVaultAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn transfer_fee_vault_verify_account_privileges<'me, 'info>(
+    accounts: TransferFeeVaultAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    transfer_fee_vault_verify_writable_privileges(accounts)?;
+    transfer_fee_vault_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const INITIALIZE_STRATEGY_IX_ACCOUNTS_LEN: usize = 10;
@@ -2683,6 +3678,206 @@ pub fn withdraw_strategy_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     withdraw_strategy_verify_writable_privileges(accounts)?;
     withdraw_strategy_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CLAIM_REWARDS_IX_ACCOUNTS_LEN: usize = 5;
+#[derive(Copy, Clone, Debug)]
+pub struct ClaimRewardsAccounts<'me, 'info> {
+    pub vault: &'me AccountInfo<'info>,
+    pub strategy: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub token_reward_acc: &'me AccountInfo<'info>,
+    pub operator: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ClaimRewardsKeys {
+    pub vault: Pubkey,
+    pub strategy: Pubkey,
+    pub token_program: Pubkey,
+    pub token_reward_acc: Pubkey,
+    pub operator: Pubkey,
+}
+impl From<ClaimRewardsAccounts<'_, '_>> for ClaimRewardsKeys {
+    fn from(accounts: ClaimRewardsAccounts) -> Self {
+        Self {
+            vault: *accounts.vault.key,
+            strategy: *accounts.strategy.key,
+            token_program: *accounts.token_program.key,
+            token_reward_acc: *accounts.token_reward_acc.key,
+            operator: *accounts.operator.key,
+        }
+    }
+}
+impl From<ClaimRewardsKeys> for [AccountMeta; CLAIM_REWARDS_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClaimRewardsKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.vault,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.strategy,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_reward_acc,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.operator,
+                is_signer: true,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLAIM_REWARDS_IX_ACCOUNTS_LEN]> for ClaimRewardsKeys {
+    fn from(pubkeys: [Pubkey; CLAIM_REWARDS_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            vault: pubkeys[0],
+            strategy: pubkeys[1],
+            token_program: pubkeys[2],
+            token_reward_acc: pubkeys[3],
+            operator: pubkeys[4],
+        }
+    }
+}
+impl<'info> From<ClaimRewardsAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLAIM_REWARDS_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClaimRewardsAccounts<'_, 'info>) -> Self {
+        [
+            accounts.vault.clone(),
+            accounts.strategy.clone(),
+            accounts.token_program.clone(),
+            accounts.token_reward_acc.clone(),
+            accounts.operator.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; CLAIM_REWARDS_IX_ACCOUNTS_LEN]>
+for ClaimRewardsAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; CLAIM_REWARDS_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            vault: &arr[0],
+            strategy: &arr[1],
+            token_program: &arr[2],
+            token_reward_acc: &arr[3],
+            operator: &arr[4],
+        }
+    }
+}
+pub const CLAIM_REWARDS_IX_DISCM: [u8; 8usize] = [4, 144, 132, 71, 116, 23, 151, 80];
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClaimRewardsIxData;
+impl ClaimRewardsIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLAIM_REWARDS_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLAIM_REWARDS_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn claim_rewards_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ClaimRewardsKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLAIM_REWARDS_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: ClaimRewardsIxData.try_to_vec()?,
+    })
+}
+pub fn claim_rewards_ix(keys: ClaimRewardsKeys) -> std::io::Result<Instruction> {
+    claim_rewards_ix_with_program_id(VAULT_PROGRAM_ID, keys)
+}
+pub fn claim_rewards_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimRewardsAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: ClaimRewardsKeys = accounts.into();
+    let ix = claim_rewards_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn claim_rewards_invoke(accounts: ClaimRewardsAccounts<'_, '_>) -> ProgramResult {
+    claim_rewards_invoke_with_program_id(VAULT_PROGRAM_ID, accounts)
+}
+pub fn claim_rewards_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ClaimRewardsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ClaimRewardsKeys = accounts.into();
+    let ix = claim_rewards_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn claim_rewards_invoke_signed(
+    accounts: ClaimRewardsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    claim_rewards_invoke_signed_with_program_id(VAULT_PROGRAM_ID, accounts, seeds)
+}
+pub fn claim_rewards_verify_account_keys(
+    accounts: ClaimRewardsAccounts<'_, '_>,
+    keys: ClaimRewardsKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.vault.key, keys.vault),
+        (*accounts.strategy.key, keys.strategy),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.token_reward_acc.key, keys.token_reward_acc),
+        (*accounts.operator.key, keys.operator),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn claim_rewards_verify_writable_privileges<'me, 'info>(
+    accounts: ClaimRewardsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.token_reward_acc] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn claim_rewards_verify_signer_privileges<'me, 'info>(
+    accounts: ClaimRewardsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.operator] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn claim_rewards_verify_account_privileges<'me, 'info>(
+    accounts: ClaimRewardsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    claim_rewards_verify_writable_privileges(accounts)?;
+    claim_rewards_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const WITHDRAW2_IX_ACCOUNTS_LEN: usize = 7;

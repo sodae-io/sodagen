@@ -295,7 +295,14 @@ impl NamedInstruction {
             self.args.as_ref().unwrap()
         };
         let ix_args_ident = self.ix_args_ident();
-        let args_fields = args.iter().map(|a| quote! { pub #a });
+        let args_fields = args.iter().map(|a| {
+            let big_array_attr = if a.r#type.is_big_array() {
+                quote! { #[serde(with = "crate::big_array_serde")] }
+            } else {
+                quote! {}
+            };
+            quote! { #big_array_attr pub #a }
+        });
         let field_names = args
             .iter()
             .map(|a| format_ident!("{}", a.name.to_snake_case()));

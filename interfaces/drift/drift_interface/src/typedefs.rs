@@ -2364,6 +2364,16 @@ pub enum SwapDirection {
     Add,
     Remove,
 }
+impl TryFrom<u8> for SwapDirection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Add),
+            1u8 => Ok(Self::Remove),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2392,6 +2402,16 @@ pub enum PositionDirection {
     Long,
     Short,
 }
+impl TryFrom<u8> for PositionDirection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Long),
+            1u8 => Ok(Self::Short),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2409,6 +2429,18 @@ pub enum SpotFulfillmentType {
     PhoenixV1,
     OpenbookV2,
 }
+impl TryFrom<u8> for SpotFulfillmentType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::SerumV3),
+            1u8 => Ok(Self::Match),
+            2u8 => Ok(Self::PhoenixV1),
+            3u8 => Ok(Self::OpenbookV2),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2423,6 +2455,16 @@ pub enum SwapReduceOnly {
     #[default]
     In,
     Out,
+}
+impl TryFrom<u8> for SwapReduceOnly {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::In),
+            1u8 => Ok(Self::Out),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2439,6 +2481,16 @@ pub enum TwapPeriod {
     FundingPeriod,
     FiveMin,
 }
+impl TryFrom<u8> for TwapPeriod {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::FundingPeriod),
+            1u8 => Ok(Self::FiveMin),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2453,6 +2505,16 @@ pub enum LiquidationMultiplierType {
     #[default]
     Discount,
     Premium,
+}
+impl TryFrom<u8> for LiquidationMultiplierType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Discount),
+            1u8 => Ok(Self::Premium),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2470,6 +2532,17 @@ pub enum SettlementDirection {
     FromLpPool,
     None,
 }
+impl TryFrom<u8> for SettlementDirection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::ToLpPool),
+            1u8 => Ok(Self::FromLpPool),
+            2u8 => Ok(Self::None),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2485,6 +2558,17 @@ pub enum MarginRequirementType {
     Initial,
     Fill,
     Maintenance,
+}
+impl TryFrom<u8> for MarginRequirementType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Initial),
+            1u8 => Ok(Self::Fill),
+            2u8 => Ok(Self::Maintenance),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2534,6 +2618,29 @@ pub enum DriftAction {
     UpdateLpPoolAum,
     LpPoolSwap,
 }
+impl TryFrom<u8> for DriftAction {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateFunding),
+            1u8 => Ok(Self::SettlePnl),
+            2u8 => Ok(Self::TriggerOrder),
+            3u8 => Ok(Self::FillOrderMatch),
+            4u8 => Ok(Self::FillOrderAmmLowRisk),
+            5u8 => Ok(Self::FillOrderAmmImmediate),
+            6u8 => Ok(Self::Liquidate),
+            7u8 => Ok(Self::MarginCalc),
+            8u8 => Ok(Self::UpdateTwap),
+            9u8 => Ok(Self::UpdateAmmCurve),
+            10u8 => Ok(Self::OracleOrderPrice),
+            11u8 => Ok(Self::UseMmOraclePrice),
+            12u8 => Ok(Self::UpdateAmmCache),
+            13u8 => Ok(Self::UpdateLpPoolAum),
+            14u8 => Ok(Self::LpPoolSwap),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2551,6 +2658,19 @@ pub enum LogMode {
     MmOracle,
     SafeMmOracle,
     Margin,
+}
+impl TryFrom<u8> for LogMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::ExchangeOracle),
+            2u8 => Ok(Self::MmOracle),
+            3u8 => Ok(Self::SafeMmOracle),
+            4u8 => Ok(Self::Margin),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2570,6 +2690,19 @@ pub enum PositionUpdateType {
     Close,
     Flip,
 }
+impl TryFrom<u8> for PositionUpdateType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Open),
+            1u8 => Ok(Self::Increase),
+            2u8 => Ok(Self::Reduce),
+            3u8 => Ok(Self::Close),
+            4u8 => Ok(Self::Flip),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2588,6 +2721,19 @@ pub enum DepositExplanation {
     RepayBorrow,
     Reward,
 }
+impl TryFrom<u8> for DepositExplanation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::Transfer),
+            2u8 => Ok(Self::Borrow),
+            3u8 => Ok(Self::RepayBorrow),
+            4u8 => Ok(Self::Reward),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2602,6 +2748,16 @@ pub enum DepositDirection {
     #[default]
     Deposit,
     Withdraw,
+}
+impl TryFrom<u8> for DepositDirection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Deposit),
+            1u8 => Ok(Self::Withdraw),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2620,6 +2776,19 @@ pub enum OrderAction {
     Fill,
     Trigger,
     Expire,
+}
+impl TryFrom<u8> for OrderAction {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Place),
+            1u8 => Ok(Self::Cancel),
+            2u8 => Ok(Self::Fill),
+            3u8 => Ok(Self::Trigger),
+            4u8 => Ok(Self::Expire),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2655,6 +2824,35 @@ pub enum OrderActionExplanation {
     OrderFilledWithOpenbookV2,
     TransferPerpPosition,
 }
+impl TryFrom<u8> for OrderActionExplanation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::InsufficientFreeCollateral),
+            2u8 => Ok(Self::OraclePriceBreachedLimitPrice),
+            3u8 => Ok(Self::MarketOrderFilledToLimitPrice),
+            4u8 => Ok(Self::OrderExpired),
+            5u8 => Ok(Self::Liquidation),
+            6u8 => Ok(Self::OrderFilledWithAmm),
+            7u8 => Ok(Self::OrderFilledWithAmmJit),
+            8u8 => Ok(Self::OrderFilledWithMatch),
+            9u8 => Ok(Self::OrderFilledWithMatchJit),
+            10u8 => Ok(Self::MarketExpired),
+            11u8 => Ok(Self::RiskingIncreasingOrder),
+            12u8 => Ok(Self::ReduceOnlyOrderIncreasedPosition),
+            13u8 => Ok(Self::OrderFillWithSerum),
+            14u8 => Ok(Self::NoBorrowLiquidity),
+            15u8 => Ok(Self::OrderFillWithPhoenix),
+            16u8 => Ok(Self::OrderFilledWithAmmJitLpSplit),
+            17u8 => Ok(Self::OrderFilledWithLpJit),
+            18u8 => Ok(Self::DeriskLp),
+            19u8 => Ok(Self::OrderFilledWithOpenbookV2),
+            20u8 => Ok(Self::TransferPerpPosition),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2671,6 +2869,18 @@ pub enum LPAction {
     RemoveLiquidity,
     SettleLiquidity,
     RemoveLiquidityDerisk,
+}
+impl TryFrom<u8> for LPAction {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::AddLiquidity),
+            1u8 => Ok(Self::RemoveLiquidity),
+            2u8 => Ok(Self::SettleLiquidity),
+            3u8 => Ok(Self::RemoveLiquidityDerisk),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2691,6 +2901,20 @@ pub enum LiquidationType {
     PerpBankruptcy,
     SpotBankruptcy,
 }
+impl TryFrom<u8> for LiquidationType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::LiquidatePerp),
+            1u8 => Ok(Self::LiquidateSpot),
+            2u8 => Ok(Self::LiquidateBorrowForPerpPnl),
+            3u8 => Ok(Self::LiquidatePerpPnlForDeposit),
+            4u8 => Ok(Self::PerpBankruptcy),
+            5u8 => Ok(Self::SpotBankruptcy),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2704,6 +2928,15 @@ pub enum LiquidationType {
 pub enum LiquidationBitFlag {
     #[default]
     IsolatedPosition,
+}
+impl TryFrom<u8> for LiquidationBitFlag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::IsolatedPosition),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2719,6 +2952,16 @@ pub enum SettlePnlExplanation {
     #[default]
     None,
     ExpiredPosition,
+}
+impl TryFrom<u8> for SettlePnlExplanation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::ExpiredPosition),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2739,6 +2982,21 @@ pub enum StakeAction {
     UnstakeTransfer,
     StakeTransfer,
     AdminDeposit,
+}
+impl TryFrom<u8> for StakeAction {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Stake),
+            1u8 => Ok(Self::UnstakeRequest),
+            2u8 => Ok(Self::UnstakeCancelRequest),
+            3u8 => Ok(Self::Unstake),
+            4u8 => Ok(Self::UnstakeTransfer),
+            5u8 => Ok(Self::StakeTransfer),
+            6u8 => Ok(Self::AdminDeposit),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2799,6 +3057,16 @@ pub enum ConstituentStatus {
     #[default]
     ReduceOnly,
     Decommissioned,
+}
+impl TryFrom<u8> for ConstituentStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::ReduceOnly),
+            1u8 => Ok(Self::Decommissioned),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2866,6 +3134,30 @@ pub enum OracleSource {
     PythLazer1M,
     PythLazerStableCoin,
 }
+impl TryFrom<u8> for OracleSource {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Pyth),
+            1u8 => Ok(Self::Switchboard),
+            2u8 => Ok(Self::QuoteAsset),
+            3u8 => Ok(Self::Pyth1K),
+            4u8 => Ok(Self::Pyth1M),
+            5u8 => Ok(Self::PythStableCoin),
+            6u8 => Ok(Self::Prelaunch),
+            7u8 => Ok(Self::PythPull),
+            8u8 => Ok(Self::Pyth1KPull),
+            9u8 => Ok(Self::Pyth1MPull),
+            10u8 => Ok(Self::PythStableCoinPull),
+            11u8 => Ok(Self::SwitchboardOnDemand),
+            12u8 => Ok(Self::PythLazer),
+            13u8 => Ok(Self::PythLazer1K),
+            14u8 => Ok(Self::PythLazer1M),
+            15u8 => Ok(Self::PythLazerStableCoin),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2880,6 +3172,16 @@ pub enum OrderParamsBitFlag {
     #[default]
     ImmediateOrCancel,
     UpdateHighLeverageMode,
+}
+impl TryFrom<u8> for OrderParamsBitFlag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::ImmediateOrCancel),
+            1u8 => Ok(Self::UpdateHighLeverageMode),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2898,6 +3200,18 @@ pub enum PostOnlyParam {
     TryPostOnly,
     Slide,
 }
+impl TryFrom<u8> for PostOnlyParam {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::MustPostOnly),
+            2u8 => Ok(Self::TryPostOnly),
+            3u8 => Ok(Self::Slide),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2913,6 +3227,16 @@ pub enum ModifyOrderPolicy {
     MustModify,
     ExcludePreviousFill,
 }
+impl TryFrom<u8> for ModifyOrderPolicy {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::MustModify),
+            1u8 => Ok(Self::ExcludePreviousFill),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2927,6 +3251,16 @@ pub enum PlaceAndTakeOrderSuccessCondition {
     #[default]
     PartialFill,
     FullFill,
+}
+impl TryFrom<u8> for PlaceAndTakeOrderSuccessCondition {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::PartialFill),
+            1u8 => Ok(Self::FullFill),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2949,6 +3283,22 @@ pub enum PerpOperation {
     AmmImmediateFill,
     SettleRevPool,
 }
+impl TryFrom<u8> for PerpOperation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateFunding),
+            1u8 => Ok(Self::AmmFill),
+            2u8 => Ok(Self::Fill),
+            3u8 => Ok(Self::SettlePnl),
+            4u8 => Ok(Self::SettlePnlWithPosition),
+            5u8 => Ok(Self::Liquidation),
+            6u8 => Ok(Self::AmmImmediateFill),
+            7u8 => Ok(Self::SettleRevPool),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2967,6 +3317,19 @@ pub enum SpotOperation {
     Withdraw,
     Liquidation,
 }
+impl TryFrom<u8> for SpotOperation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateCumulativeInterest),
+            1u8 => Ok(Self::Fill),
+            2u8 => Ok(Self::Deposit),
+            3u8 => Ok(Self::Withdraw),
+            4u8 => Ok(Self::Liquidation),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2984,6 +3347,18 @@ pub enum InsuranceFundOperation {
     RequestRemove,
     Remove,
 }
+impl TryFrom<u8> for InsuranceFundOperation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Init),
+            1u8 => Ok(Self::Add),
+            2u8 => Ok(Self::RequestRemove),
+            3u8 => Ok(Self::Remove),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2998,6 +3373,16 @@ pub enum PerpLpOperation {
     #[default]
     TrackAmmRevenue,
     SettleQuoteOwed,
+}
+impl TryFrom<u8> for PerpLpOperation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::TrackAmmRevenue),
+            1u8 => Ok(Self::SettleQuoteOwed),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3014,6 +3399,17 @@ pub enum ConstituentLpOperation {
     Swap,
     Deposit,
     Withdraw,
+}
+impl TryFrom<u8> for ConstituentLpOperation {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Swap),
+            1u8 => Ok(Self::Deposit),
+            2u8 => Ok(Self::Withdraw),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3037,6 +3433,23 @@ pub enum MarketStatus {
     Settlement,
     Delisted,
 }
+impl TryFrom<u8> for MarketStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Initialized),
+            1u8 => Ok(Self::Active),
+            2u8 => Ok(Self::FundingPaused),
+            3u8 => Ok(Self::AmmPaused),
+            4u8 => Ok(Self::FillPaused),
+            5u8 => Ok(Self::WithdrawPaused),
+            6u8 => Ok(Self::ReduceOnly),
+            7u8 => Ok(Self::Settlement),
+            8u8 => Ok(Self::Delisted),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3053,6 +3466,17 @@ pub enum LpStatus {
     Active,
     Decommissioning,
 }
+impl TryFrom<u8> for LpStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uncollateralized),
+            1u8 => Ok(Self::Active),
+            2u8 => Ok(Self::Decommissioning),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3068,6 +3492,17 @@ pub enum ContractType {
     Perpetual,
     Future,
     Prediction,
+}
+impl TryFrom<u8> for ContractType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Perpetual),
+            1u8 => Ok(Self::Future),
+            2u8 => Ok(Self::Prediction),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3088,6 +3523,20 @@ pub enum ContractTier {
     HighlySpeculative,
     Isolated,
 }
+impl TryFrom<u8> for ContractTier {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::A),
+            1u8 => Ok(Self::B),
+            2u8 => Ok(Self::C),
+            3u8 => Ok(Self::Speculative),
+            4u8 => Ok(Self::HighlySpeculative),
+            5u8 => Ok(Self::Isolated),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3101,6 +3550,15 @@ pub enum ContractTier {
 pub enum MarketConfigFlag {
     #[default]
     DisableFormulaicKUpdate,
+}
+impl TryFrom<u8> for MarketConfigFlag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::DisableFormulaicKUpdate),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3119,6 +3577,18 @@ pub enum RevenueShareOrderBitFlag {
     Completed,
     Referral,
 }
+impl TryFrom<u8> for RevenueShareOrderBitFlag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Init),
+            1u8 => Ok(Self::Open),
+            2u8 => Ok(Self::Completed),
+            3u8 => Ok(Self::Referral),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3135,6 +3605,17 @@ pub enum SizeDistribution {
     Ascending,
     Descending,
 }
+impl TryFrom<u8> for SizeDistribution {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Flat),
+            1u8 => Ok(Self::Ascending),
+            2u8 => Ok(Self::Descending),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3149,6 +3630,16 @@ pub enum SettlePnlMode {
     #[default]
     MustSettle,
     TrySettle,
+}
+impl TryFrom<u8> for SettlePnlMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::MustSettle),
+            1u8 => Ok(Self::TrySettle),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3165,6 +3656,16 @@ pub enum SpotBalanceType {
     Deposit,
     Borrow,
 }
+impl TryFrom<u8> for SpotBalanceType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Deposit),
+            1u8 => Ok(Self::Borrow),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3179,6 +3680,16 @@ pub enum SpotFulfillmentConfigStatus {
     #[default]
     Enabled,
     Disabled,
+}
+impl TryFrom<u8> for SpotFulfillmentConfigStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Enabled),
+            1u8 => Ok(Self::Disabled),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3198,6 +3709,19 @@ pub enum AssetTier {
     Isolated,
     Unlisted,
 }
+impl TryFrom<u8> for AssetTier {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Collateral),
+            1u8 => Ok(Self::Protected),
+            2u8 => Ok(Self::Cross),
+            3u8 => Ok(Self::Isolated),
+            4u8 => Ok(Self::Unlisted),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3212,6 +3736,16 @@ pub enum TokenProgramFlag {
     #[default]
     Token2022,
     TransferHook,
+}
+impl TryFrom<u8> for TokenProgramFlag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Token2022),
+            1u8 => Ok(Self::TransferHook),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3234,6 +3768,22 @@ pub enum ExchangeStatus {
     SettlePnlPaused,
     AmmImmediateFillPaused,
 }
+impl TryFrom<u8> for ExchangeStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::DepositPaused),
+            1u8 => Ok(Self::WithdrawPaused),
+            2u8 => Ok(Self::AmmPaused),
+            3u8 => Ok(Self::FillPaused),
+            4u8 => Ok(Self::LiqPaused),
+            5u8 => Ok(Self::FundingPaused),
+            6u8 => Ok(Self::SettlePnlPaused),
+            7u8 => Ok(Self::AmmImmediateFillPaused),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3251,6 +3801,18 @@ pub enum FeatureBitFlags {
     BuilderCodes,
     BuilderReferral,
 }
+impl TryFrom<u8> for FeatureBitFlags {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::MmOracleUpdate),
+            1u8 => Ok(Self::MedianTriggerPrice),
+            2u8 => Ok(Self::BuilderCodes),
+            3u8 => Ok(Self::BuilderReferral),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3266,6 +3828,17 @@ pub enum LpPoolFeatureBitFlags {
     SettleLpPool,
     SwapLpPool,
     MintRedeemLpPool,
+}
+impl TryFrom<u8> for LpPoolFeatureBitFlags {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::SettleLpPool),
+            1u8 => Ok(Self::SwapLpPool),
+            2u8 => Ok(Self::MintRedeemLpPool),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3285,6 +3858,19 @@ pub enum UserStatus {
     AdvancedLp,
     ProtectedMakerOrders,
 }
+impl TryFrom<u8> for UserStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::BeingLiquidated),
+            1u8 => Ok(Self::Bankrupt),
+            2u8 => Ok(Self::ReduceOnly),
+            3u8 => Ok(Self::AdvancedLp),
+            4u8 => Ok(Self::ProtectedMakerOrders),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3299,6 +3885,16 @@ pub enum AssetType {
     #[default]
     Base,
     Quote,
+}
+impl TryFrom<u8> for AssetType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Base),
+            1u8 => Ok(Self::Quote),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3316,6 +3912,18 @@ pub enum OrderStatus {
     Open,
     Filled,
     Canceled,
+}
+impl TryFrom<u8> for OrderStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Init),
+            1u8 => Ok(Self::Open),
+            2u8 => Ok(Self::Filled),
+            3u8 => Ok(Self::Canceled),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3335,6 +3943,19 @@ pub enum OrderType {
     TriggerLimit,
     Oracle,
 }
+impl TryFrom<u8> for OrderType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Market),
+            1u8 => Ok(Self::Limit),
+            2u8 => Ok(Self::TriggerMarket),
+            3u8 => Ok(Self::TriggerLimit),
+            4u8 => Ok(Self::Oracle),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3352,6 +3973,18 @@ pub enum OrderTriggerCondition {
     TriggeredAbove,
     TriggeredBelow,
 }
+impl TryFrom<u8> for OrderTriggerCondition {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Above),
+            1u8 => Ok(Self::Below),
+            2u8 => Ok(Self::TriggeredAbove),
+            3u8 => Ok(Self::TriggeredBelow),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3366,6 +3999,16 @@ pub enum MarketType {
     #[default]
     Spot,
     Perp,
+}
+impl TryFrom<u8> for MarketType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Spot),
+            1u8 => Ok(Self::Perp),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3386,6 +4029,20 @@ pub enum OrderBitFlag {
     HasBuilder,
     IsIsolatedPosition,
 }
+impl TryFrom<u8> for OrderBitFlag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::SignedMessage),
+            1u8 => Ok(Self::OracleTriggerMarket),
+            2u8 => Ok(Self::SafeTriggerOrder),
+            3u8 => Ok(Self::NewTriggerReduceOnly),
+            4u8 => Ok(Self::HasBuilder),
+            5u8 => Ok(Self::IsIsolatedPosition),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3401,6 +4058,17 @@ pub enum PositionFlag {
     IsolatedPosition,
     BeingLiquidated,
     Bankrupt,
+}
+impl TryFrom<u8> for PositionFlag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::IsolatedPosition),
+            1u8 => Ok(Self::BeingLiquidated),
+            2u8 => Ok(Self::Bankrupt),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3418,6 +4086,17 @@ pub enum ReferrerStatus {
     IsReferred,
     BuilderReferral,
 }
+impl TryFrom<u8> for ReferrerStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::IsReferrer),
+            1u8 => Ok(Self::IsReferred),
+            2u8 => Ok(Self::BuilderReferral),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3434,6 +4113,17 @@ pub enum MarginMode {
     HighLeverage,
     HighLeverageMaintenance,
 }
+impl TryFrom<u8> for MarginMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Default),
+            1u8 => Ok(Self::HighLeverage),
+            2u8 => Ok(Self::HighLeverageMaintenance),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -3447,6 +4137,15 @@ pub enum MarginMode {
 pub enum FuelOverflowStatus {
     #[default]
     Exists,
+}
+impl TryFrom<u8> for FuelOverflowStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Exists),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3463,6 +4162,17 @@ pub enum UserStatsPausedOperations {
     UpdateBidAskTwap,
     AmmAtomicFill,
     AmmAtomicRiskIncreasingFill,
+}
+impl TryFrom<u8> for UserStatsPausedOperations {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateBidAskTwap),
+            1u8 => Ok(Self::AmmAtomicFill),
+            2u8 => Ok(Self::AmmAtomicRiskIncreasingFill),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -3488,4 +4198,24 @@ pub enum SignatureVerificationError {
     InvalidMessageHex,
     InvalidMessageData,
     LoadInstructionAtFailed,
+}
+impl TryFrom<u8> for SignatureVerificationError {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::InvalidEd25519InstructionProgramId),
+            1u8 => Ok(Self::InvalidEd25519InstructionDataLength),
+            2u8 => Ok(Self::InvalidSignatureIndex),
+            3u8 => Ok(Self::InvalidSignatureOffset),
+            4u8 => Ok(Self::InvalidPublicKeyOffset),
+            5u8 => Ok(Self::InvalidMessageOffset),
+            6u8 => Ok(Self::InvalidMessageDataSize),
+            7u8 => Ok(Self::InvalidInstructionIndex),
+            8u8 => Ok(Self::MessageOffsetOverflow),
+            9u8 => Ok(Self::InvalidMessageHex),
+            10u8 => Ok(Self::InvalidMessageData),
+            11u8 => Ok(Self::LoadInstructionAtFailed),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

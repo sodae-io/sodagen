@@ -2,120 +2,128 @@ use solana_program_error::ProgramError;
 use thiserror::Error;
 #[derive(Clone, Copy, Debug, Eq, Error, num_derive::FromPrimitive, PartialEq)]
 pub enum RaydiumAmmError {
-    #[error("AlreadyInUse")]
+    #[error("Already in use")]
     AlreadyInUse = 0,
-    #[error("InvalidProgramAddress")]
+    #[error("Invalid program address")]
     InvalidProgramAddress = 1,
-    #[error("ExpectedMint")]
+    #[error("Expected mint")]
     ExpectedMint = 2,
-    #[error("ExpectedAccount")]
+    #[error("Expected account")]
     ExpectedAccount = 3,
-    #[error("InvalidCoinVault")]
+    #[error("Invalid coin vault")]
     InvalidCoinVault = 4,
-    #[error("InvalidPCVault")]
+    #[error("Invalid PC vault")]
     InvalidPcVault = 5,
-    #[error("InvalidTokenLP")]
+    #[error("Invalid token LP")]
     InvalidTokenLp = 6,
-    #[error("InvalidDestTokenCoin")]
+    #[error("Invalid destination token coin")]
     InvalidDestTokenCoin = 7,
-    #[error("InvalidDestTokenPC")]
+    #[error("Invalid destination token PC")]
     InvalidDestTokenPc = 8,
-    #[error("InvalidPoolMint")]
+    #[error("Invalid pool mint")]
     InvalidPoolMint = 9,
-    #[error("InvalidOpenOrders")]
+    #[error("Invalid open orders")]
     InvalidOpenOrders = 10,
-    #[error("InvalidSerumMarket")]
-    InvalidSerumMarket = 11,
-    #[error("InvalidSerumProgram")]
-    InvalidSerumProgram = 12,
-    #[error("InvalidTargetOrders")]
+    #[error("Invalid market")]
+    InvalidMarket = 11,
+    #[error("Invalid market program")]
+    InvalidMarketProgram = 12,
+    #[error("Invalid target orders")]
     InvalidTargetOrders = 13,
-    #[error("InvalidWithdrawQueue")]
-    InvalidWithdrawQueue = 14,
-    #[error("InvalidTempLp")]
-    InvalidTempLp = 15,
-    #[error("InvalidCoinMint")]
+    #[error("Account must be writable")]
+    AccountNeedWriteable = 14,
+    #[error("Account must be read-only")]
+    AccountNeedReadOnly = 15,
+    #[error("Invalid coin mint")]
     InvalidCoinMint = 16,
-    #[error("InvalidPCMint")]
+    #[error("Invalid PC mint")]
     InvalidPcMint = 17,
-    #[error("InvalidOwner")]
+    #[error("Invalid owner")]
     InvalidOwner = 18,
-    #[error("InvalidSupply")]
+    #[error("Invalid supply")]
     InvalidSupply = 19,
-    #[error("InvalidDelegate")]
+    #[error("Invalid delegate")]
     InvalidDelegate = 20,
-    #[error("Invalid Sign Account")]
+    #[error("Invalid sign account")]
     InvalidSignAccount = 21,
-    #[error("InvalidStatus")]
+    #[error("Invalid status")]
     InvalidStatus = 22,
     #[error("Invalid instruction")]
     InvalidInstruction = 23,
     #[error("Wrong accounts number")]
     WrongAccountsNumber = 24,
-    #[error("Withdraw_transfer is busy")]
-    WithdrawTransferBusy = 25,
-    #[error("WithdrawQueue is full")]
-    WithdrawQueueFull = 26,
-    #[error("WithdrawQueue is empty")]
-    WithdrawQueueEmpty = 27,
-    #[error("Params Set is invalid")]
+    #[error("Invalid target account owner")]
+    InvalidTargetAccountOwner = 25,
+    #[error("Invalid target owner")]
+    InvalidTargetOwner = 26,
+    #[error("Invalid AMM account owner")]
+    InvalidAmmAccountOwner = 27,
+    #[error("Invalid parameter set")]
     InvalidParamsSet = 28,
-    #[error("InvalidInput")]
+    #[error("Invalid input")]
     InvalidInput = 29,
-    #[error("instruction exceeds desired slippage limit")]
+    #[error("Exceeded desired slippage limit")]
     ExceededSlippage = 30,
-    #[error("CalculationExRateFailure")]
+    #[error("Calculation exchange rate failed")]
     CalculationExRateFailure = 31,
-    #[error("Checked_Sub Overflow")]
+    #[error("Checked subtraction overflow")]
     CheckedSubOverflow = 32,
-    #[error("Checked_Add Overflow")]
+    #[error("Checked addition overflow")]
     CheckedAddOverflow = 33,
-    #[error("Checked_Mul Overflow")]
+    #[error("Checked multiplication overflow")]
     CheckedMulOverflow = 34,
-    #[error("Checked_Div Overflow")]
+    #[error("Checked division overflow")]
     CheckedDivOverflow = 35,
-    #[error("Empty Funds")]
+    #[error("Empty funds")]
     CheckedEmptyFunds = 36,
-    #[error("Calc pnl error")]
+    #[error("P&L calculation error")]
     CalcPnlError = 37,
-    #[error("InvalidSplTokenProgram")]
+    #[error("Invalid SPL token program")]
     InvalidSplTokenProgram = 38,
-    #[error("Take Pnl error")]
+    #[error("Take P&L error")]
     TakePnlError = 39,
     #[error("Insufficient funds")]
     InsufficientFunds = 40,
-    #[error("Conversion to u64 failed with an overflow or underflow")]
+    #[error("Conversion to u64 failed with overflow or underflow")]
     ConversionFailure = 41,
-    #[error("user token input does not match amm")]
+    #[error("User token input does not match AMM")]
     InvalidUserToken = 42,
-    #[error("InvalidSrmMint")]
+    #[error("Invalid SRM mint")]
     InvalidSrmMint = 43,
-    #[error("InvalidSrmToken")]
+    #[error("Invalid SRM token")]
     InvalidSrmToken = 44,
-    #[error("TooManyOpenOrders")]
+    #[error("Too many open orders")]
     TooManyOpenOrders = 45,
-    #[error("OrderAtSlotIsPlaced")]
+    #[error("Order at slot is already placed")]
     OrderAtSlotIsPlaced = 46,
-    #[error("InvalidSysProgramAddress")]
+    #[error("Invalid system program address")]
     InvalidSysProgramAddress = 47,
-    #[error("The provided fee does not match the program owner's constraints")]
+    #[error("Invalid fee")]
     InvalidFee = 48,
-    #[error("Repeat create amm about market")]
+    #[error("Repeat AMM creation for the market")]
     RepeatCreateAmm = 49,
-    #[error("Not allow Zero LP")]
+    #[error("Zero LP not allowed")]
     NotAllowZeroLp = 50,
     #[error("Token account has a close authority")]
     InvalidCloseAuthority = 51,
     #[error("Pool token mint has a freeze authority")]
     InvalidFreezeAuthority = 52,
-    #[error("InvalidReferPCMint")]
+    #[error("Invalid referrer PC mint")]
     InvalidReferPcMint = 53,
-    #[error("InvalidConfigAccount")]
+    #[error("Invalid configuration account")]
     InvalidConfigAccount = 54,
-    #[error("Repeat create staking config account")]
+    #[error("Repeat configuration account creation")]
     RepeatCreateConfigAccount = 55,
-    #[error("Unknown Amm Error")]
-    UnknownAmmError = 56,
+    #[error("Market lot size is too large")]
+    MarketLotSizeIsTooLarge = 56,
+    #[error("Initial LP amount is too low")]
+    InitLpAmountTooLess = 57,
+    #[error("Unknown AMM error")]
+    UnknownAmmError = 58,
+    #[error("Not allowed due to same mint")]
+    NotAllowed = 59,
+    #[error("Lamports calculate error")]
+    LamportsCalculateError = 60,
 }
 impl From<RaydiumAmmError> for ProgramError {
     fn from(e: RaydiumAmmError) -> Self {

@@ -139,9 +139,10 @@ impl DynamicFeeStruct {
 pub struct PoolFeesStruct {
     pub base_fee: BaseFeeStruct,
     pub protocol_fee_percent: u8,
-    pub partner_fee_percent: u8,
+    pub padding_0: u8,
     pub referral_fee_percent: u8,
-    pub padding_0: [u8; 5],
+    pub padding_1: [u8; 3],
+    pub compounding_fee_bps: u16,
     pub dynamic_fee: DynamicFeeStruct,
     pub init_sqrt_price: u128,
 }
@@ -154,9 +155,10 @@ impl PoolFeesStruct {
             <BaseFeeStruct>::deserialize(&mut reader)?
         };
         let protocol_fee_percent: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let partner_fee_percent: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: u8 = crate::borsh_de_or_default(&mut reader)?;
         let referral_fee_percent: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let padding_0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
+        let compounding_fee_bps: u16 = crate::borsh_de_or_default(&mut reader)?;
         let dynamic_fee = if reader.is_empty() {
             Default::default()
         } else {
@@ -167,9 +169,10 @@ impl PoolFeesStruct {
         Ok(Self {
             base_fee,
             protocol_fee_percent,
-            partner_fee_percent,
-            referral_fee_percent,
             padding_0,
+            referral_fee_percent,
+            padding_1,
+            compounding_fee_bps,
             dynamic_fee,
             init_sqrt_price,
         })
@@ -190,8 +193,7 @@ pub struct PoolMetrics {
     pub total_lp_b_fee: u128,
     pub total_protocol_a_fee: u64,
     pub total_protocol_b_fee: u64,
-    pub total_partner_a_fee: u64,
-    pub total_partner_b_fee: u64,
+    pub padding_0: [u64; 2],
     pub total_position: u64,
     pub padding: u64,
 }
@@ -202,8 +204,7 @@ impl PoolMetrics {
         let total_lp_b_fee: u128 = crate::borsh_de_or_default(&mut reader)?;
         let total_protocol_a_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let total_protocol_b_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_partner_a_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_partner_b_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u64; 2] = crate::borsh_de_or_default(&mut reader)?;
         let total_position: u64 = crate::borsh_de_or_default(&mut reader)?;
         let padding: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
@@ -212,8 +213,7 @@ impl PoolMetrics {
             total_lp_b_fee,
             total_protocol_a_fee,
             total_protocol_b_fee,
-            total_partner_a_fee,
-            total_partner_b_fee,
+            padding_0,
             total_position,
             padding,
         })
@@ -309,7 +309,7 @@ pub struct StaticParameters {
     pub max_bin_id: i32,
     pub protocol_share: u16,
     pub base_fee_power_factor: u8,
-    pub _padding: [u8; 5],
+    pub padding: [u8; 5],
 }
 impl StaticParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -324,7 +324,7 @@ impl StaticParameters {
         let max_bin_id: i32 = crate::borsh_de_or_default(&mut reader)?;
         let protocol_share: u16 = crate::borsh_de_or_default(&mut reader)?;
         let base_fee_power_factor: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             base_factor,
@@ -337,7 +337,7 @@ impl StaticParameters {
             max_bin_id,
             protocol_share,
             base_fee_power_factor,
-            _padding,
+            padding,
         })
     }
 }
@@ -357,6 +357,17 @@ pub enum StrategyType {
     Curve,
     BidAsk,
 }
+impl TryFrom<u8> for StrategyType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Spot),
+            1u8 => Ok(Self::Curve),
+            2u8 => Ok(Self::BidAsk),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -371,9 +382,9 @@ pub struct VariableParameters {
     pub volatility_accumulator: u32,
     pub volatility_reference: u32,
     pub index_reference: i32,
-    pub _padding: [u8; 4],
+    pub padding: [u8; 4],
     pub last_update_timestamp: i64,
-    pub _padding_1: [u8; 8],
+    pub padding_1: [u8; 8],
 }
 impl VariableParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -381,17 +392,17 @@ impl VariableParameters {
         let volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
         let volatility_reference: u32 = crate::borsh_de_or_default(&mut reader)?;
         let index_reference: i32 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let last_update_timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             volatility_accumulator,
             volatility_reference,
             index_reference,
-            _padding,
+            padding,
             last_update_timestamp,
-            _padding_1,
+            padding_1,
         })
     }
 }
@@ -443,8 +454,8 @@ impl ZapOutParameters {
 pub struct CpAmmStatePoolRewardInfo {
     pub initialized: u8,
     pub reward_token_flag: u8,
-    pub _padding_0: [u8; 6],
-    pub _padding_1: [u8; 8],
+    pub padding_0: [u8; 6],
+    pub padding_1: [u8; 8],
     pub mint: Pubkey,
     pub vault: Pubkey,
     pub funder: Pubkey,
@@ -460,8 +471,8 @@ impl CpAmmStatePoolRewardInfo {
         let mut reader: &[u8] = *__buf;
         let initialized: u8 = crate::borsh_de_or_default(&mut reader)?;
         let reward_token_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let funder: Pubkey = crate::borsh_de_or_default(&mut reader)?;
@@ -477,8 +488,8 @@ impl CpAmmStatePoolRewardInfo {
         Ok(Self {
             initialized,
             reward_token_flag,
-            _padding_0,
-            _padding_1,
+            padding_0,
+            padding_1,
             mint,
             vault,
             funder,
@@ -596,8 +607,8 @@ impl DlmmRewardInfo {
 pub struct CpAmmRewardInfo {
     pub initialized: u8,
     pub reward_token_flag: u8,
-    pub _padding_0: [u8; 6],
-    pub _padding_1: [u8; 8],
+    pub padding_0: [u8; 6],
+    pub padding_1: [u8; 8],
     pub mint: Pubkey,
     pub vault: Pubkey,
     pub funder: Pubkey,
@@ -613,8 +624,8 @@ impl CpAmmRewardInfo {
         let mut reader: &[u8] = *__buf;
         let initialized: u8 = crate::borsh_de_or_default(&mut reader)?;
         let reward_token_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let funder: Pubkey = crate::borsh_de_or_default(&mut reader)?;
@@ -630,8 +641,8 @@ impl CpAmmRewardInfo {
         Ok(Self {
             initialized,
             reward_token_flag,
-            _padding_0,
-            _padding_1,
+            padding_0,
+            padding_1,
             mint,
             vault,
             funder,

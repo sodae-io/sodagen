@@ -102,9 +102,7 @@ pub enum PumpError {
     CpitializeMayhemFailed = 6047,
     #[error("MayhemModeDisabled")]
     MayhemModeDisabled = 6048,
-    #[error(
-        "creator has been migrated to sharing config, use pump_fees::reset_fee_sharing_config instead"
-    )]
+    #[error("creator has been migrated to sharing config")]
     CreatorMigratedToSharingConfig = 6049,
     #[error(
         "creator_vault has been migrated to sharing config, use pump:distribute_creator_fees instead"
@@ -140,7 +138,7 @@ pub enum PumpError {
     BuybackFeeRecipientMissing = 6062,
     #[error("Unsupported quote mint")]
     UnsupportedQuoteMint = 6063,
-    #[error("Create v2: quote token program must be legacy SPL Token")]
+    #[error("Create v2: quote token program must be SPL Token or Token-2022")]
     InvalidQuoteTokenProgram = 6064,
     #[error(
         "Create v2: associated quote bonding curve address does not match derivation"
@@ -158,6 +156,60 @@ pub enum PumpError {
     QuoteMintNotEligibleForWhitelist = 6069,
     #[error("Unable to distribute creator fees to uninitialized account")]
     UnableToDistributeCreatorFeesToUninitializedAccount = 6070,
+    #[error("Mayhem mode quote mint not allowed")]
+    MayhemModeQuoteMintNotAllowed = 6071,
+    #[error("Cashback trade is missing the required remaining accounts")]
+    MissingCashbackAccounts = 6072,
+    #[error("Cashback user_volume_accumulator account is invalid")]
+    InvalidCashbackAccumulator = 6073,
+    #[error("bonding_curve_v2 remaining account is missing or invalid")]
+    InvalidBondingCurveV2 = 6074,
+    #[error(
+        "quote_control remaining account does not match derivation or is uninitialized"
+    )]
+    InvalidQuoteControl = 6075,
+    #[error("Cashback recipient token account is not owned by user")]
+    InvalidCashbackRecipient = 6076,
+    #[error("Configurable creator fees are disabled")]
+    CreatorFeeNotConfigurable = 6077,
+    #[error("Creator fee basis points must be between 1 and the configured maximum")]
+    CreatorFeeBpsOutOfRange = 6078,
+    #[error("Creator fee is not editable for this bonding curve")]
+    CreatorFeeNotEditable = 6079,
+    #[error("Creator fee cannot be configured for a cashback coin")]
+    CreatorFeeNotAllowedForCashbackCoin = 6080,
+    #[error("Bonding curve has already migrated")]
+    BondingCurveAlreadyMigrated = 6081,
+    #[error("Cashback coins can no longer be created")]
+    CashbackDeprecated = 6082,
+    #[error("The creator of a holder-reward coin cannot be changed")]
+    HolderRewardCreatorImmutable = 6083,
+    #[error("Holder-reward coins are disabled")]
+    HolderRewardDisabled = 6084,
+    #[error("Holder-reward amounts and recipient accounts do not match")]
+    HolderRewardRecipientsMismatch = 6085,
+    #[error("The holder-rewards PDA cannot be left below its rent-exempt minimum")]
+    HolderRewardsRentFloor = 6086,
+    #[error("A holder-rewards token account is required on a token quote")]
+    HolderRewardTokenAccountMissing = 6087,
+    #[error("CTO is not allowed on a mayhem-mode coin")]
+    CtoNotAllowedForMayhemCoin = 6088,
+    #[error("new_creator is required unless converting to holder rewards")]
+    CtoNewCreatorRequired = 6089,
+    #[error("new_creator must be omitted when converting to holder rewards")]
+    CtoNewCreatorNotAllowed = 6090,
+    #[error(
+        "Creator fee is not configurable on a SOL or whitelisted quote; the fee schedule applies"
+    )]
+    CreatorFeeNotConfigurableForQuote = 6091,
+    #[error(
+        "current_creator must be passed writable so the outgoing creator can be paid"
+    )]
+    CtoCreatorAccountNotWritable = 6092,
+    #[error(
+        "A frozen sharing-config vault account holds a balance; thaw it before the holder conversion"
+    )]
+    CtoSharedVaultFrozen = 6093,
 }
 impl From<PumpError> for ProgramError {
     fn from(e: PumpError) -> Self {

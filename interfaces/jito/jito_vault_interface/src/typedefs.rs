@@ -155,20 +155,6 @@ impl DataV2 {
     serde::Serialize,
     serde::Deserialize
 )]
-pub enum ConfigAdminRole {
-    #[default]
-    FeeAdmin,
-}
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    BorshDeserialize,
-    BorshSerialize,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize
-)]
 pub enum VaultAdminRole {
     #[default]
     DelegationAdmin,
