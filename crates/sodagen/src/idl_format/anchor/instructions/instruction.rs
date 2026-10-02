@@ -7,7 +7,7 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 use syn::{LitBool, LitInt};
 
-use crate::idl_format::anchor::typedefs::{TypedefField, TypedefFieldType};
+use crate::idl_format::anchor::typedefs::{field_idents, TypedefField, TypedefFieldType};
 
 #[derive(Deserialize)]
 pub struct NamedInstruction {
@@ -920,20 +920,9 @@ impl IxAccount {
     }
 }
 
-/// Get the field ident for a TypedefField, preserving leading underscores
-/// that heck's to_snake_case strips.
-fn field_ident(field: &TypedefField) -> Ident {
-    let snake = field.name.to_snake_case();
-    if field.name.starts_with('_') && !snake.starts_with('_') {
-        format_ident!("_{}", snake)
-    } else {
-        format_ident!("{}", snake)
-    }
-}
-
 /// Generate field name idents from args
 pub fn gen_field_names(args: &[TypedefField]) -> Vec<Ident> {
-    args.iter().map(field_ident).collect()
+    field_idents(args)
 }
 
 /// Field-by-field deserialization over a `&[u8]` cursor. Default-able fields
@@ -946,8 +935,8 @@ pub fn gen_field_deserializations(
     struct_types: &HashSet<String>,
 ) -> Vec<TokenStream> {
     args.iter()
-        .map(|a| {
-            let field_name = field_ident(a);
+        .zip(field_idents(args))
+        .map(|(a, field_name)| {
             let field_type = &a.r#type;
             // Option<T>/Vec<T> always impl Default; otherwise the type must not
             // reference a no-default type and must not be a big array.
@@ -987,9 +976,9 @@ pub fn gen_field_deserializations(
 /// Generate field-by-field serialization statements:
 /// `prefix.field_name.serialize(&mut writer)?;`
 pub fn gen_field_serializations(args: &[TypedefField], prefix: TokenStream) -> Vec<TokenStream> {
-    args.iter()
-        .map(|a| {
-            let field_name = field_ident(a);
+    field_idents(args)
+        .into_iter()
+        .map(|field_name| {
             quote! {
                 borsh::BorshSerialize::serialize(&#prefix.#field_name, &mut writer)?;
             }

@@ -22,6 +22,22 @@ pub enum AccountsType {
     SupplementalTickArraysOne,
     SupplementalTickArraysTwo,
 }
+impl TryFrom<u8> for AccountsType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::TransferHookA),
+            1u8 => Ok(Self::TransferHookB),
+            2u8 => Ok(Self::TransferHookInput),
+            3u8 => Ok(Self::TransferHookIntermediate),
+            4u8 => Ok(Self::TransferHookOutput),
+            5u8 => Ok(Self::SupplementalTickArrays),
+            6u8 => Ok(Self::SupplementalTickArraysOne),
+            7u8 => Ok(Self::SupplementalTickArraysTwo),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -50,6 +66,15 @@ pub enum MaybeTick {
 pub enum PositionLockType {
     #[default]
     Permanent,
+}
+impl TryFrom<u8> for PositionLockType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Permanent),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

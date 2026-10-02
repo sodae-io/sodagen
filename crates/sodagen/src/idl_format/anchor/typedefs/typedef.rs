@@ -4,7 +4,7 @@ use std::collections::HashSet;
 use std::{fmt, str::FromStr};
 
 use heck::{ToPascalCase, ToSnakeCase};
-use proc_macro2::TokenStream;
+use proc_macro2::{Ident, TokenStream};
 use quote::{format_ident, quote, ToTokens};
 use serde::{de, Deserialize, Deserializer};
 use syn::Index;
@@ -75,12 +75,34 @@ impl NamedType {
                     };
                     (d, quote! {})
                 };
+                let all_unit = typedef_enum.variants.iter().all(|v| v.fields.is_none());
+                let try_from_u8 = if all_unit {
+                    let arms = typedef_enum.variants.iter().enumerate().map(|(i, v)| {
+                        let tag = i as u8;
+                        let ident = format_ident!("{}", v.name.to_pascal_case());
+                        quote! { #tag => Ok(Self::#ident) }
+                    });
+                    quote! {
+                        impl TryFrom<u8> for #name {
+                            type Error = std::io::Error;
+                            fn try_from(value: u8) -> Result<Self, Self::Error> {
+                                match value {
+                                    #(#arms,)*
+                                    _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    quote! {}
+                };
                 return quote! {
                     #derive
                     pub enum #name {
                         #default_attr
                         #typedef_enum
                     }
+                    #try_from_u8
                 };
             }
         };
@@ -321,13 +343,15 @@ pub struct EnumVariant {
 
 impl ToTokens for TypedefStruct {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let typedef_fields = self.fields.iter().map(|f| {
+        let idents = field_idents(&self.fields);
+        let typedef_fields = self.fields.iter().zip(idents).map(|(f, ident)| {
             let big_array_attr = if f.r#type.is_big_array() {
                 quote! { #[serde(with = "crate::big_array_serde")] }
             } else {
                 quote! {}
             };
-            quote! { #big_array_attr pub #f }
+            let ty = &f.r#type;
+            quote! { #big_array_attr pub #ident: #ty }
         });
         tokens.extend(quote! {
             #(#typedef_fields),*
@@ -335,15 +359,42 @@ impl ToTokens for TypedefStruct {
     }
 }
 
+pub fn underscored_field_name(field: &TypedefField) -> String {
+    let snake = field.name.to_snake_case();
+    if field.name.starts_with('_') && !snake.starts_with('_') {
+        format!("_{snake}")
+    } else {
+        snake
+    }
+}
+
+pub fn field_idents(fields: &[TypedefField]) -> Vec<Ident> {
+    let mut taken: HashSet<String> = fields
+        .iter()
+        .map(underscored_field_name)
+        .filter(|name| !name.starts_with('_'))
+        .collect();
+    fields
+        .iter()
+        .map(|field| {
+            let underscored = underscored_field_name(field);
+            let bare = underscored.trim_start_matches('_').to_owned();
+            let usable = !bare.is_empty()
+                && !bare.starts_with(|c: char| c.is_ascii_digit())
+                && !taken.contains(&bare);
+            if underscored.starts_with('_') && usable {
+                taken.insert(bare.clone());
+                format_ident!("{}", bare)
+            } else {
+                format_ident!("{}", underscored)
+            }
+        })
+        .collect()
+}
+
 impl ToTokens for TypedefField {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        let snake = self.name.to_snake_case();
-        // Preserve leading underscores that heck strips
-        let name = if self.name.starts_with('_') && !snake.starts_with('_') {
-            format_ident!("_{}", snake)
-        } else {
-            format_ident!("{}", snake)
-        };
+        let name = field_idents(std::slice::from_ref(self)).remove(0);
         let ty = &self.r#type;
         tokens.extend(quote! {
             #name: #ty

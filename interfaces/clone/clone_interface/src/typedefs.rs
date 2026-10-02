@@ -302,6 +302,17 @@ pub enum PaymentType {
     Collateral,
     CollateralFromWallet,
 }
+impl TryFrom<u8> for PaymentType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Onasset),
+            1u8 => Ok(Self::Collateral),
+            2u8 => Ok(Self::CollateralFromWallet),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -377,6 +388,19 @@ pub enum Status {
     Liquidation,
     Deprecation,
 }
+impl TryFrom<u8> for Status {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Active),
+            1u8 => Ok(Self::Frozen),
+            2u8 => Ok(Self::Extraction),
+            3u8 => Ok(Self::Liquidation),
+            4u8 => Ok(Self::Deprecation),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -391,4 +415,14 @@ pub enum OracleSource {
     #[default]
     Pyth,
     Switchboard,
+}
+impl TryFrom<u8> for OracleSource {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Pyth),
+            1u8 => Ok(Self::Switchboard),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

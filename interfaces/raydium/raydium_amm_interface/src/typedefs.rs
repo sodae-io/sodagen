@@ -165,7 +165,8 @@ pub struct AmmConfig {
     pub pnl_owner: Pubkey,
     pub cancel_owner: Pubkey,
     pub pending1: [u64; 28],
-    pub pending2: [u64; 32],
+    pub pending2: [u64; 31],
+    pub create_pool_fee: u64,
 }
 impl AmmConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -173,65 +174,15 @@ impl AmmConfig {
         let pnl_owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let cancel_owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let pending1: [u64; 28] = crate::borsh_de_or_default(&mut reader)?;
-        let pending2: [u64; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let pending2: [u64; 31] = crate::borsh_de_or_default(&mut reader)?;
+        let create_pool_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pnl_owner,
             cancel_owner,
             pending1,
             pending2,
-        })
-    }
-}
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    BorshDeserialize,
-    BorshSerialize,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize
-)]
-pub struct LastOrderDistance {
-    pub last_order_numerator: u64,
-    pub last_order_denominator: u64,
-}
-impl LastOrderDistance {
-    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
-        let mut reader: &[u8] = *__buf;
-        let last_order_numerator: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let last_order_denominator: u64 = crate::borsh_de_or_default(&mut reader)?;
-        *__buf = reader;
-        Ok(Self {
-            last_order_numerator,
-            last_order_denominator,
-        })
-    }
-}
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    BorshDeserialize,
-    BorshSerialize,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize
-)]
-pub struct NeedTake {
-    pub need_take_pc: u64,
-    pub need_take_coin: u64,
-}
-impl NeedTake {
-    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
-        let mut reader: &[u8] = *__buf;
-        let need_take_pc: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let need_take_coin: u64 = crate::borsh_de_or_default(&mut reader)?;
-        *__buf = reader;
-        Ok(Self {
-            need_take_pc,
-            need_take_coin,
+            create_pool_fee,
         })
     }
 }

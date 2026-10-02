@@ -24,6 +24,7 @@ pub enum KaminoLendingProgramIx {
     MarkObligationForDeleveraging(MarkObligationForDeleveragingIxArgs),
     RefreshReserve,
     RefreshReservesBatch(RefreshReservesBatchIxArgs),
+    CalculateCtokenExchangeRate,
     DepositReserveLiquidity(DepositReserveLiquidityIxArgs),
     RedeemReserveCollateral(RedeemReserveCollateralIxArgs),
     InitObligation(InitObligationIxArgs),
@@ -68,9 +69,11 @@ pub enum KaminoLendingProgramIx {
     DeleteReferrerStateAndShortUrl,
     SetObligationOrder(SetObligationOrderIxArgs),
     SetBorrowOrder(SetBorrowOrderIxArgs),
+    SetBorrowOrderV2(SetBorrowOrderV2IxArgs),
     UpdateObligationConfig(UpdateObligationConfigIxArgs),
     RolloverFixedTermBorrow,
     FillBorrowOrder,
+    FillBorrowOrderV2(FillBorrowOrderV2IxArgs),
     InitiateObligationOwnershipTransfer(InitiateObligationOwnershipTransferIxArgs),
     ApproveObligationOwnershipTransfer,
     AcceptObligationOwnership,
@@ -211,6 +214,9 @@ impl KaminoLendingProgramIx {
                     skip_price_updates,
                 }),
             );
+        }
+        if buf.starts_with(&CALCULATE_CTOKEN_EXCHANGE_RATE_IX_DISCM) {
+            return Ok(Self::CalculateCtokenExchangeRate);
         }
         if buf.starts_with(&DEPOSIT_RESERVE_LIQUIDITY_IX_DISCM) {
             let mut reader = &buf[DEPOSIT_RESERVE_LIQUIDITY_IX_DISCM.len()..];
@@ -538,6 +544,25 @@ impl KaminoLendingProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&SET_BORROW_ORDER_V2_IX_DISCM) {
+            let mut reader = &buf[SET_BORROW_ORDER_V2_IX_DISCM.len()..];
+            let order_idx: u8 = crate::borsh_de_or_default(&mut reader)?;
+            let order_config = if reader.is_empty() {
+                Default::default()
+            } else {
+                <BorrowOrderConfigArgs>::deserialize(&mut reader)?
+            };
+            let min_expected_current_remaining_debt_amount: u64 = crate::borsh_de_or_default(
+                &mut reader,
+            )?;
+            return Ok(
+                Self::SetBorrowOrderV2(SetBorrowOrderV2IxArgs {
+                    order_idx,
+                    order_config,
+                    min_expected_current_remaining_debt_amount,
+                }),
+            );
+        }
         if buf.starts_with(&UPDATE_OBLIGATION_CONFIG_IX_DISCM) {
             let mut reader = &buf[UPDATE_OBLIGATION_CONFIG_IX_DISCM.len()..];
             let mode: UpdateObligationConfigMode = crate::borsh_de_or_default(
@@ -556,6 +581,15 @@ impl KaminoLendingProgramIx {
         }
         if buf.starts_with(&FILL_BORROW_ORDER_IX_DISCM) {
             return Ok(Self::FillBorrowOrder);
+        }
+        if buf.starts_with(&FILL_BORROW_ORDER_V2_IX_DISCM) {
+            let mut reader = &buf[FILL_BORROW_ORDER_V2_IX_DISCM.len()..];
+            let order_idx: u8 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::FillBorrowOrderV2(FillBorrowOrderV2IxArgs {
+                    order_idx,
+                }),
+            );
         }
         if buf.starts_with(&INITIATE_OBLIGATION_OWNERSHIP_TRANSFER_IX_DISCM) {
             let mut reader = &buf[INITIATE_OBLIGATION_OWNERSHIP_TRANSFER_IX_DISCM
@@ -736,6 +770,9 @@ impl KaminoLendingProgramIx {
                 writer.write_all(&REFRESH_RESERVES_BATCH_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.skip_price_updates, &mut writer)?;
                 Ok(())
+            }
+            Self::CalculateCtokenExchangeRate => {
+                writer.write_all(&CALCULATE_CTOKEN_EXCHANGE_RATE_IX_DISCM)
             }
             Self::DepositReserveLiquidity(args) => {
                 writer.write_all(&DEPOSIT_RESERVE_LIQUIDITY_IX_DISCM)?;
@@ -938,6 +975,16 @@ impl KaminoLendingProgramIx {
                 )?;
                 Ok(())
             }
+            Self::SetBorrowOrderV2(args) => {
+                writer.write_all(&SET_BORROW_ORDER_V2_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.order_idx, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.order_config, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.min_expected_current_remaining_debt_amount,
+                    &mut writer,
+                )?;
+                Ok(())
+            }
             Self::UpdateObligationConfig(args) => {
                 writer.write_all(&UPDATE_OBLIGATION_CONFIG_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.mode, &mut writer)?;
@@ -948,6 +995,11 @@ impl KaminoLendingProgramIx {
                 writer.write_all(&ROLLOVER_FIXED_TERM_BORROW_IX_DISCM)
             }
             Self::FillBorrowOrder => writer.write_all(&FILL_BORROW_ORDER_IX_DISCM),
+            Self::FillBorrowOrderV2(args) => {
+                writer.write_all(&FILL_BORROW_ORDER_V2_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.order_idx, &mut writer)?;
+                Ok(())
+            }
             Self::InitiateObligationOwnershipTransfer(args) => {
                 writer.write_all(&INITIATE_OBLIGATION_OWNERSHIP_TRANSFER_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.new_owner, &mut writer)?;
@@ -1043,7 +1095,7 @@ fn invoke_instruction_signed<'info, A: Into<[AccountInfo<'info>; N]>, const N: u
     let account_info: [AccountInfo<'info>; N] = accounts.into();
     invoke_signed(ix, &account_info, seeds)
 }
-pub const INIT_LENDING_MARKET_IX_ACCOUNTS_LEN: usize = 5;
+pub const INIT_LENDING_MARKET_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
 pub struct InitLendingMarketAccounts<'me, 'info> {
     pub lending_market_owner: &'me AccountInfo<'info>,
@@ -1051,6 +1103,7 @@ pub struct InitLendingMarketAccounts<'me, 'info> {
     pub lending_market_authority: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
     pub rent: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InitLendingMarketKeys {
@@ -1059,6 +1112,7 @@ pub struct InitLendingMarketKeys {
     pub lending_market_authority: Pubkey,
     pub system_program: Pubkey,
     pub rent: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<InitLendingMarketAccounts<'_, '_>> for InitLendingMarketKeys {
     fn from(accounts: InitLendingMarketAccounts) -> Self {
@@ -1068,6 +1122,7 @@ impl From<InitLendingMarketAccounts<'_, '_>> for InitLendingMarketKeys {
             lending_market_authority: *accounts.lending_market_authority.key,
             system_program: *accounts.system_program.key,
             rent: *accounts.rent.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -1099,6 +1154,11 @@ impl From<InitLendingMarketKeys> for [AccountMeta; INIT_LENDING_MARKET_IX_ACCOUN
                 is_signer: false,
                 is_writable: false,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -1110,6 +1170,7 @@ impl From<[Pubkey; INIT_LENDING_MARKET_IX_ACCOUNTS_LEN]> for InitLendingMarketKe
             lending_market_authority: pubkeys[2],
             system_program: pubkeys[3],
             rent: pubkeys[4],
+            instruction_sysvar_account: pubkeys[5],
         }
     }
 }
@@ -1122,6 +1183,7 @@ for [AccountInfo<'info>; INIT_LENDING_MARKET_IX_ACCOUNTS_LEN] {
             accounts.lending_market_authority.clone(),
             accounts.system_program.clone(),
             accounts.rent.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -1136,6 +1198,7 @@ for InitLendingMarketAccounts<'me, 'info> {
             lending_market_authority: &arr[2],
             system_program: &arr[3],
             rent: &arr[4],
+            instruction_sysvar_account: &arr[5],
         }
     }
 }
@@ -1245,6 +1308,7 @@ pub fn init_lending_market_verify_account_keys(
         (*accounts.lending_market_authority.key, keys.lending_market_authority),
         (*accounts.system_program.key, keys.system_program),
         (*accounts.rent.key, keys.rent),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -1279,22 +1343,25 @@ pub fn init_lending_market_verify_account_privileges<'me, 'info>(
     init_lending_market_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_LENDING_MARKET_IX_ACCOUNTS_LEN: usize = 2;
+pub const UPDATE_LENDING_MARKET_IX_ACCOUNTS_LEN: usize = 3;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateLendingMarketAccounts<'me, 'info> {
     pub signer: &'me AccountInfo<'info>,
     pub lending_market: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UpdateLendingMarketKeys {
     pub signer: Pubkey,
     pub lending_market: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<UpdateLendingMarketAccounts<'_, '_>> for UpdateLendingMarketKeys {
     fn from(accounts: UpdateLendingMarketAccounts) -> Self {
         Self {
             signer: *accounts.signer.key,
             lending_market: *accounts.lending_market.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -1312,6 +1379,11 @@ for [AccountMeta; UPDATE_LENDING_MARKET_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -1320,13 +1392,18 @@ impl From<[Pubkey; UPDATE_LENDING_MARKET_IX_ACCOUNTS_LEN]> for UpdateLendingMark
         Self {
             signer: pubkeys[0],
             lending_market: pubkeys[1],
+            instruction_sysvar_account: pubkeys[2],
         }
     }
 }
 impl<'info> From<UpdateLendingMarketAccounts<'_, 'info>>
 for [AccountInfo<'info>; UPDATE_LENDING_MARKET_IX_ACCOUNTS_LEN] {
     fn from(accounts: UpdateLendingMarketAccounts<'_, 'info>) -> Self {
-        [accounts.signer.clone(), accounts.lending_market.clone()]
+        [
+            accounts.signer.clone(),
+            accounts.lending_market.clone(),
+            accounts.instruction_sysvar_account.clone(),
+        ]
     }
 }
 impl<'me, 'info> From<&'me [AccountInfo<'info>; UPDATE_LENDING_MARKET_IX_ACCOUNTS_LEN]>
@@ -1337,6 +1414,7 @@ for UpdateLendingMarketAccounts<'me, 'info> {
         Self {
             signer: &arr[0],
             lending_market: &arr[1],
+            instruction_sysvar_account: &arr[2],
         }
     }
 }
@@ -1454,6 +1532,7 @@ pub fn update_lending_market_verify_account_keys(
     for (actual, expected) in [
         (*accounts.signer.key, keys.signer),
         (*accounts.lending_market.key, keys.lending_market),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -1488,22 +1567,25 @@ pub fn update_lending_market_verify_account_privileges<'me, 'info>(
     update_lending_market_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_LENDING_MARKET_OWNER_IX_ACCOUNTS_LEN: usize = 2;
+pub const UPDATE_LENDING_MARKET_OWNER_IX_ACCOUNTS_LEN: usize = 3;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateLendingMarketOwnerAccounts<'me, 'info> {
     pub lending_market_owner_cached: &'me AccountInfo<'info>,
     pub lending_market: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UpdateLendingMarketOwnerKeys {
     pub lending_market_owner_cached: Pubkey,
     pub lending_market: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<UpdateLendingMarketOwnerAccounts<'_, '_>> for UpdateLendingMarketOwnerKeys {
     fn from(accounts: UpdateLendingMarketOwnerAccounts) -> Self {
         Self {
             lending_market_owner_cached: *accounts.lending_market_owner_cached.key,
             lending_market: *accounts.lending_market.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -1521,6 +1603,11 @@ for [AccountMeta; UPDATE_LENDING_MARKET_OWNER_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -1530,13 +1617,18 @@ for UpdateLendingMarketOwnerKeys {
         Self {
             lending_market_owner_cached: pubkeys[0],
             lending_market: pubkeys[1],
+            instruction_sysvar_account: pubkeys[2],
         }
     }
 }
 impl<'info> From<UpdateLendingMarketOwnerAccounts<'_, 'info>>
 for [AccountInfo<'info>; UPDATE_LENDING_MARKET_OWNER_IX_ACCOUNTS_LEN] {
     fn from(accounts: UpdateLendingMarketOwnerAccounts<'_, 'info>) -> Self {
-        [accounts.lending_market_owner_cached.clone(), accounts.lending_market.clone()]
+        [
+            accounts.lending_market_owner_cached.clone(),
+            accounts.lending_market.clone(),
+            accounts.instruction_sysvar_account.clone(),
+        ]
     }
 }
 impl<
@@ -1550,6 +1642,7 @@ for UpdateLendingMarketOwnerAccounts<'me, 'info> {
         Self {
             lending_market_owner_cached: &arr[0],
             lending_market: &arr[1],
+            instruction_sysvar_account: &arr[2],
         }
     }
 }
@@ -1635,6 +1728,7 @@ pub fn update_lending_market_owner_verify_account_keys(
     for (actual, expected) in [
         (*accounts.lending_market_owner_cached.key, keys.lending_market_owner_cached),
         (*accounts.lending_market.key, keys.lending_market),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -1669,7 +1763,7 @@ pub fn update_lending_market_owner_verify_account_privileges<'me, 'info>(
     update_lending_market_owner_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const INIT_RESERVE_IX_ACCOUNTS_LEN: usize = 14;
+pub const INIT_RESERVE_IX_ACCOUNTS_LEN: usize = 15;
 #[derive(Copy, Clone, Debug)]
 pub struct InitReserveAccounts<'me, 'info> {
     pub signer: &'me AccountInfo<'info>,
@@ -1686,6 +1780,7 @@ pub struct InitReserveAccounts<'me, 'info> {
     pub liquidity_token_program: &'me AccountInfo<'info>,
     pub collateral_token_program: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InitReserveKeys {
@@ -1703,6 +1798,7 @@ pub struct InitReserveKeys {
     pub liquidity_token_program: Pubkey,
     pub collateral_token_program: Pubkey,
     pub system_program: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<InitReserveAccounts<'_, '_>> for InitReserveKeys {
     fn from(accounts: InitReserveAccounts) -> Self {
@@ -1721,6 +1817,7 @@ impl From<InitReserveAccounts<'_, '_>> for InitReserveKeys {
             liquidity_token_program: *accounts.liquidity_token_program.key,
             collateral_token_program: *accounts.collateral_token_program.key,
             system_program: *accounts.system_program.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -1797,6 +1894,11 @@ impl From<InitReserveKeys> for [AccountMeta; INIT_RESERVE_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: false,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -1817,6 +1919,7 @@ impl From<[Pubkey; INIT_RESERVE_IX_ACCOUNTS_LEN]> for InitReserveKeys {
             liquidity_token_program: pubkeys[11],
             collateral_token_program: pubkeys[12],
             system_program: pubkeys[13],
+            instruction_sysvar_account: pubkeys[14],
         }
     }
 }
@@ -1838,6 +1941,7 @@ for [AccountInfo<'info>; INIT_RESERVE_IX_ACCOUNTS_LEN] {
             accounts.liquidity_token_program.clone(),
             accounts.collateral_token_program.clone(),
             accounts.system_program.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -1859,6 +1963,7 @@ for InitReserveAccounts<'me, 'info> {
             liquidity_token_program: &arr[11],
             collateral_token_program: &arr[12],
             system_program: &arr[13],
+            instruction_sysvar_account: &arr[14],
         }
     }
 }
@@ -1947,6 +2052,7 @@ pub fn init_reserve_verify_account_keys(
         (*accounts.liquidity_token_program.key, keys.liquidity_token_program),
         (*accounts.collateral_token_program.key, keys.collateral_token_program),
         (*accounts.system_program.key, keys.system_program),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -1989,13 +2095,14 @@ pub fn init_reserve_verify_account_privileges<'me, 'info>(
     init_reserve_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const CLONE_RESERVE_CONFIG_IX_ACCOUNTS_LEN: usize = 4;
+pub const CLONE_RESERVE_CONFIG_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
 pub struct CloneReserveConfigAccounts<'me, 'info> {
     pub signer: &'me AccountInfo<'info>,
     pub target_lending_market: &'me AccountInfo<'info>,
     pub source_reserve: &'me AccountInfo<'info>,
     pub target_reserve: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CloneReserveConfigKeys {
@@ -2003,6 +2110,7 @@ pub struct CloneReserveConfigKeys {
     pub target_lending_market: Pubkey,
     pub source_reserve: Pubkey,
     pub target_reserve: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<CloneReserveConfigAccounts<'_, '_>> for CloneReserveConfigKeys {
     fn from(accounts: CloneReserveConfigAccounts) -> Self {
@@ -2011,6 +2119,7 @@ impl From<CloneReserveConfigAccounts<'_, '_>> for CloneReserveConfigKeys {
             target_lending_market: *accounts.target_lending_market.key,
             source_reserve: *accounts.source_reserve.key,
             target_reserve: *accounts.target_reserve.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -2038,6 +2147,11 @@ for [AccountMeta; CLONE_RESERVE_CONFIG_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -2048,6 +2162,7 @@ impl From<[Pubkey; CLONE_RESERVE_CONFIG_IX_ACCOUNTS_LEN]> for CloneReserveConfig
             target_lending_market: pubkeys[1],
             source_reserve: pubkeys[2],
             target_reserve: pubkeys[3],
+            instruction_sysvar_account: pubkeys[4],
         }
     }
 }
@@ -2059,6 +2174,7 @@ for [AccountInfo<'info>; CLONE_RESERVE_CONFIG_IX_ACCOUNTS_LEN] {
             accounts.target_lending_market.clone(),
             accounts.source_reserve.clone(),
             accounts.target_reserve.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -2072,6 +2188,7 @@ for CloneReserveConfigAccounts<'me, 'info> {
             target_lending_market: &arr[1],
             source_reserve: &arr[2],
             target_reserve: &arr[3],
+            instruction_sysvar_account: &arr[4],
         }
     }
 }
@@ -2188,6 +2305,7 @@ pub fn clone_reserve_config_verify_account_keys(
         (*accounts.target_lending_market.key, keys.target_lending_market),
         (*accounts.source_reserve.key, keys.source_reserve),
         (*accounts.target_reserve.key, keys.target_reserve),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -2222,7 +2340,7 @@ pub fn clone_reserve_config_verify_account_privileges<'me, 'info>(
     clone_reserve_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const INIT_FARMS_FOR_RESERVE_IX_ACCOUNTS_LEN: usize = 10;
+pub const INIT_FARMS_FOR_RESERVE_IX_ACCOUNTS_LEN: usize = 11;
 #[derive(Copy, Clone, Debug)]
 pub struct InitFarmsForReserveAccounts<'me, 'info> {
     pub lending_market_owner: &'me AccountInfo<'info>,
@@ -2235,6 +2353,7 @@ pub struct InitFarmsForReserveAccounts<'me, 'info> {
     pub farms_vault_authority: &'me AccountInfo<'info>,
     pub rent: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InitFarmsForReserveKeys {
@@ -2248,6 +2367,7 @@ pub struct InitFarmsForReserveKeys {
     pub farms_vault_authority: Pubkey,
     pub rent: Pubkey,
     pub system_program: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<InitFarmsForReserveAccounts<'_, '_>> for InitFarmsForReserveKeys {
     fn from(accounts: InitFarmsForReserveAccounts) -> Self {
@@ -2262,6 +2382,7 @@ impl From<InitFarmsForReserveAccounts<'_, '_>> for InitFarmsForReserveKeys {
             farms_vault_authority: *accounts.farms_vault_authority.key,
             rent: *accounts.rent.key,
             system_program: *accounts.system_program.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -2319,6 +2440,11 @@ for [AccountMeta; INIT_FARMS_FOR_RESERVE_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: false,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -2335,6 +2461,7 @@ impl From<[Pubkey; INIT_FARMS_FOR_RESERVE_IX_ACCOUNTS_LEN]> for InitFarmsForRese
             farms_vault_authority: pubkeys[7],
             rent: pubkeys[8],
             system_program: pubkeys[9],
+            instruction_sysvar_account: pubkeys[10],
         }
     }
 }
@@ -2352,6 +2479,7 @@ for [AccountInfo<'info>; INIT_FARMS_FOR_RESERVE_IX_ACCOUNTS_LEN] {
             accounts.farms_vault_authority.clone(),
             accounts.rent.clone(),
             accounts.system_program.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -2371,6 +2499,7 @@ for InitFarmsForReserveAccounts<'me, 'info> {
             farms_vault_authority: &arr[7],
             rent: &arr[8],
             system_program: &arr[9],
+            instruction_sysvar_account: &arr[10],
         }
     }
 }
@@ -2485,6 +2614,7 @@ pub fn init_farms_for_reserve_verify_account_keys(
         (*accounts.farms_vault_authority.key, keys.farms_vault_authority),
         (*accounts.rent.key, keys.rent),
         (*accounts.system_program.key, keys.system_program),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -2523,13 +2653,14 @@ pub fn init_farms_for_reserve_verify_account_privileges<'me, 'info>(
     init_farms_for_reserve_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_RESERVE_CONFIG_IX_ACCOUNTS_LEN: usize = 4;
+pub const UPDATE_RESERVE_CONFIG_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateReserveConfigAccounts<'me, 'info> {
     pub signer: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
     pub lending_market: &'me AccountInfo<'info>,
     pub reserve: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UpdateReserveConfigKeys {
@@ -2537,6 +2668,7 @@ pub struct UpdateReserveConfigKeys {
     pub global_config: Pubkey,
     pub lending_market: Pubkey,
     pub reserve: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<UpdateReserveConfigAccounts<'_, '_>> for UpdateReserveConfigKeys {
     fn from(accounts: UpdateReserveConfigAccounts) -> Self {
@@ -2545,6 +2677,7 @@ impl From<UpdateReserveConfigAccounts<'_, '_>> for UpdateReserveConfigKeys {
             global_config: *accounts.global_config.key,
             lending_market: *accounts.lending_market.key,
             reserve: *accounts.reserve.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -2572,6 +2705,11 @@ for [AccountMeta; UPDATE_RESERVE_CONFIG_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -2582,6 +2720,7 @@ impl From<[Pubkey; UPDATE_RESERVE_CONFIG_IX_ACCOUNTS_LEN]> for UpdateReserveConf
             global_config: pubkeys[1],
             lending_market: pubkeys[2],
             reserve: pubkeys[3],
+            instruction_sysvar_account: pubkeys[4],
         }
     }
 }
@@ -2593,6 +2732,7 @@ for [AccountInfo<'info>; UPDATE_RESERVE_CONFIG_IX_ACCOUNTS_LEN] {
             accounts.global_config.clone(),
             accounts.lending_market.clone(),
             accounts.reserve.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -2606,6 +2746,7 @@ for UpdateReserveConfigAccounts<'me, 'info> {
             global_config: &arr[1],
             lending_market: &arr[2],
             reserve: &arr[3],
+            instruction_sysvar_account: &arr[4],
         }
     }
 }
@@ -2731,6 +2872,7 @@ pub fn update_reserve_config_verify_account_keys(
         (*accounts.global_config.key, keys.global_config),
         (*accounts.lending_market.key, keys.lending_market),
         (*accounts.reserve.key, keys.reserve),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -2985,7 +3127,7 @@ pub fn redeem_fees_verify_account_privileges<'me, 'info>(
     redeem_fees_verify_writable_privileges(accounts)?;
     Ok(())
 }
-pub const WITHDRAW_PROTOCOL_FEE_IX_ACCOUNTS_LEN: usize = 8;
+pub const WITHDRAW_PROTOCOL_FEE_IX_ACCOUNTS_LEN: usize = 9;
 #[derive(Copy, Clone, Debug)]
 pub struct WithdrawProtocolFeeAccounts<'me, 'info> {
     pub global_config: &'me AccountInfo<'info>,
@@ -2996,6 +3138,7 @@ pub struct WithdrawProtocolFeeAccounts<'me, 'info> {
     pub fee_vault: &'me AccountInfo<'info>,
     pub fee_collector_ata: &'me AccountInfo<'info>,
     pub token_program: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WithdrawProtocolFeeKeys {
@@ -3007,6 +3150,7 @@ pub struct WithdrawProtocolFeeKeys {
     pub fee_vault: Pubkey,
     pub fee_collector_ata: Pubkey,
     pub token_program: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<WithdrawProtocolFeeAccounts<'_, '_>> for WithdrawProtocolFeeKeys {
     fn from(accounts: WithdrawProtocolFeeAccounts) -> Self {
@@ -3019,6 +3163,7 @@ impl From<WithdrawProtocolFeeAccounts<'_, '_>> for WithdrawProtocolFeeKeys {
             fee_vault: *accounts.fee_vault.key,
             fee_collector_ata: *accounts.fee_collector_ata.key,
             token_program: *accounts.token_program.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -3066,6 +3211,11 @@ for [AccountMeta; WITHDRAW_PROTOCOL_FEE_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: false,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -3080,6 +3230,7 @@ impl From<[Pubkey; WITHDRAW_PROTOCOL_FEE_IX_ACCOUNTS_LEN]> for WithdrawProtocolF
             fee_vault: pubkeys[5],
             fee_collector_ata: pubkeys[6],
             token_program: pubkeys[7],
+            instruction_sysvar_account: pubkeys[8],
         }
     }
 }
@@ -3095,6 +3246,7 @@ for [AccountInfo<'info>; WITHDRAW_PROTOCOL_FEE_IX_ACCOUNTS_LEN] {
             accounts.fee_vault.clone(),
             accounts.fee_collector_ata.clone(),
             accounts.token_program.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -3112,6 +3264,7 @@ for WithdrawProtocolFeeAccounts<'me, 'info> {
             fee_vault: &arr[5],
             fee_collector_ata: &arr[6],
             token_program: &arr[7],
+            instruction_sysvar_account: &arr[8],
         }
     }
 }
@@ -3228,6 +3381,7 @@ pub fn withdraw_protocol_fee_verify_account_keys(
         (*accounts.fee_vault.key, keys.fee_vault),
         (*accounts.fee_collector_ata.key, keys.fee_collector_ata),
         (*accounts.token_program.key, keys.token_program),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -4322,18 +4476,20 @@ pub fn socialize_loss_v2_verify_account_privileges<'me, 'info>(
     socialize_loss_v2_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const MARK_OBLIGATION_FOR_DELEVERAGING_IX_ACCOUNTS_LEN: usize = 3;
+pub const MARK_OBLIGATION_FOR_DELEVERAGING_IX_ACCOUNTS_LEN: usize = 4;
 #[derive(Copy, Clone, Debug)]
 pub struct MarkObligationForDeleveragingAccounts<'me, 'info> {
     pub lending_market_owner: &'me AccountInfo<'info>,
     pub obligation: &'me AccountInfo<'info>,
     pub lending_market: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MarkObligationForDeleveragingKeys {
     pub lending_market_owner: Pubkey,
     pub obligation: Pubkey,
     pub lending_market: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<MarkObligationForDeleveragingAccounts<'_, '_>>
 for MarkObligationForDeleveragingKeys {
@@ -4342,6 +4498,7 @@ for MarkObligationForDeleveragingKeys {
             lending_market_owner: *accounts.lending_market_owner.key,
             obligation: *accounts.obligation.key,
             lending_market: *accounts.lending_market.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -4364,6 +4521,11 @@ for [AccountMeta; MARK_OBLIGATION_FOR_DELEVERAGING_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: false,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -4376,6 +4538,7 @@ for MarkObligationForDeleveragingKeys {
             lending_market_owner: pubkeys[0],
             obligation: pubkeys[1],
             lending_market: pubkeys[2],
+            instruction_sysvar_account: pubkeys[3],
         }
     }
 }
@@ -4386,6 +4549,7 @@ for [AccountInfo<'info>; MARK_OBLIGATION_FOR_DELEVERAGING_IX_ACCOUNTS_LEN] {
             accounts.lending_market_owner.clone(),
             accounts.obligation.clone(),
             accounts.lending_market.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -4401,6 +4565,7 @@ for MarkObligationForDeleveragingAccounts<'me, 'info> {
             lending_market_owner: &arr[0],
             obligation: &arr[1],
             lending_market: &arr[2],
+            instruction_sysvar_account: &arr[3],
         }
     }
 }
@@ -4528,6 +4693,7 @@ pub fn mark_obligation_for_deleveraging_verify_account_keys(
         (*accounts.lending_market_owner.key, keys.lending_market_owner),
         (*accounts.obligation.key, keys.obligation),
         (*accounts.lending_market.key, keys.lending_market),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -4852,6 +5018,145 @@ pub fn refresh_reserves_batch_invoke_signed(
         args,
         seeds,
     )
+}
+pub const CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN: usize = 1;
+#[derive(Copy, Clone, Debug)]
+pub struct CalculateCtokenExchangeRateAccounts<'me, 'info> {
+    pub reserve: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CalculateCtokenExchangeRateKeys {
+    pub reserve: Pubkey,
+}
+impl From<CalculateCtokenExchangeRateAccounts<'_, '_>>
+for CalculateCtokenExchangeRateKeys {
+    fn from(accounts: CalculateCtokenExchangeRateAccounts) -> Self {
+        Self {
+            reserve: *accounts.reserve.key,
+        }
+    }
+}
+impl From<CalculateCtokenExchangeRateKeys>
+for [AccountMeta; CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN] {
+    fn from(keys: CalculateCtokenExchangeRateKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.reserve,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN]>
+for CalculateCtokenExchangeRateKeys {
+    fn from(pubkeys: [Pubkey; CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN]) -> Self {
+        Self { reserve: pubkeys[0] }
+    }
+}
+impl<'info> From<CalculateCtokenExchangeRateAccounts<'_, 'info>>
+for [AccountInfo<'info>; CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CalculateCtokenExchangeRateAccounts<'_, 'info>) -> Self {
+        [accounts.reserve.clone()]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN]>
+for CalculateCtokenExchangeRateAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self { reserve: &arr[0] }
+    }
+}
+pub const CALCULATE_CTOKEN_EXCHANGE_RATE_IX_DISCM: [u8; 8usize] = [
+    32, 253, 220, 13, 19, 165, 131, 188,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CalculateCtokenExchangeRateIxData;
+impl CalculateCtokenExchangeRateIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CALCULATE_CTOKEN_EXCHANGE_RATE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CALCULATE_CTOKEN_EXCHANGE_RATE_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn calculate_ctoken_exchange_rate_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CalculateCtokenExchangeRateKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CALCULATE_CTOKEN_EXCHANGE_RATE_IX_ACCOUNTS_LEN] = keys
+        .into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CalculateCtokenExchangeRateIxData.try_to_vec()?,
+    })
+}
+pub fn calculate_ctoken_exchange_rate_ix(
+    keys: CalculateCtokenExchangeRateKeys,
+) -> std::io::Result<Instruction> {
+    calculate_ctoken_exchange_rate_ix_with_program_id(KAMINO_LENDING_PROGRAM_ID, keys)
+}
+pub fn calculate_ctoken_exchange_rate_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CalculateCtokenExchangeRateAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CalculateCtokenExchangeRateKeys = accounts.into();
+    let ix = calculate_ctoken_exchange_rate_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn calculate_ctoken_exchange_rate_invoke(
+    accounts: CalculateCtokenExchangeRateAccounts<'_, '_>,
+) -> ProgramResult {
+    calculate_ctoken_exchange_rate_invoke_with_program_id(
+        KAMINO_LENDING_PROGRAM_ID,
+        accounts,
+    )
+}
+pub fn calculate_ctoken_exchange_rate_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CalculateCtokenExchangeRateAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CalculateCtokenExchangeRateKeys = accounts.into();
+    let ix = calculate_ctoken_exchange_rate_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn calculate_ctoken_exchange_rate_invoke_signed(
+    accounts: CalculateCtokenExchangeRateAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    calculate_ctoken_exchange_rate_invoke_signed_with_program_id(
+        KAMINO_LENDING_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn calculate_ctoken_exchange_rate_verify_account_keys(
+    accounts: CalculateCtokenExchangeRateAccounts<'_, '_>,
+    keys: CalculateCtokenExchangeRateKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [(*accounts.reserve.key, keys.reserve)] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
 }
 pub const DEPOSIT_RESERVE_LIQUIDITY_IX_ACCOUNTS_LEN: usize = 12;
 #[derive(Copy, Clone, Debug)]
@@ -16708,6 +17013,307 @@ pub fn set_borrow_order_verify_account_privileges<'me, 'info>(
     set_borrow_order_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN: usize = 9;
+#[derive(Copy, Clone, Debug)]
+pub struct SetBorrowOrderV2Accounts<'me, 'info> {
+    pub owner: &'me AccountInfo<'info>,
+    pub obligation: &'me AccountInfo<'info>,
+    pub lending_market: &'me AccountInfo<'info>,
+    pub reserve: &'me AccountInfo<'info>,
+    pub filled_debt_destination: &'me AccountInfo<'info>,
+    pub debt_liquidity_mint: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct SetBorrowOrderV2Keys {
+    pub owner: Pubkey,
+    pub obligation: Pubkey,
+    pub lending_market: Pubkey,
+    pub reserve: Pubkey,
+    pub filled_debt_destination: Pubkey,
+    pub debt_liquidity_mint: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<SetBorrowOrderV2Accounts<'_, '_>> for SetBorrowOrderV2Keys {
+    fn from(accounts: SetBorrowOrderV2Accounts) -> Self {
+        Self {
+            owner: *accounts.owner.key,
+            obligation: *accounts.obligation.key,
+            lending_market: *accounts.lending_market.key,
+            reserve: *accounts.reserve.key,
+            filled_debt_destination: *accounts.filled_debt_destination.key,
+            debt_liquidity_mint: *accounts.debt_liquidity_mint.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<SetBorrowOrderV2Keys> for [AccountMeta; SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN] {
+    fn from(keys: SetBorrowOrderV2Keys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.owner,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.obligation,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.lending_market,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.reserve,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.filled_debt_destination,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.debt_liquidity_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN]> for SetBorrowOrderV2Keys {
+    fn from(pubkeys: [Pubkey; SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            owner: pubkeys[0],
+            obligation: pubkeys[1],
+            lending_market: pubkeys[2],
+            reserve: pubkeys[3],
+            filled_debt_destination: pubkeys[4],
+            debt_liquidity_mint: pubkeys[5],
+            instruction_sysvar_account: pubkeys[6],
+            event_authority: pubkeys[7],
+            program: pubkeys[8],
+        }
+    }
+}
+impl<'info> From<SetBorrowOrderV2Accounts<'_, 'info>>
+for [AccountInfo<'info>; SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN] {
+    fn from(accounts: SetBorrowOrderV2Accounts<'_, 'info>) -> Self {
+        [
+            accounts.owner.clone(),
+            accounts.obligation.clone(),
+            accounts.lending_market.clone(),
+            accounts.reserve.clone(),
+            accounts.filled_debt_destination.clone(),
+            accounts.debt_liquidity_mint.clone(),
+            accounts.instruction_sysvar_account.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN]>
+for SetBorrowOrderV2Accounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            owner: &arr[0],
+            obligation: &arr[1],
+            lending_market: &arr[2],
+            reserve: &arr[3],
+            filled_debt_destination: &arr[4],
+            debt_liquidity_mint: &arr[5],
+            instruction_sysvar_account: &arr[6],
+            event_authority: &arr[7],
+            program: &arr[8],
+        }
+    }
+}
+pub const SET_BORROW_ORDER_V2_IX_DISCM: [u8; 8usize] = [
+    87, 255, 30, 4, 156, 230, 167, 126,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct SetBorrowOrderV2IxArgs {
+    pub order_idx: u8,
+    pub order_config: BorrowOrderConfigArgs,
+    pub min_expected_current_remaining_debt_amount: u64,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct SetBorrowOrderV2IxData(pub SetBorrowOrderV2IxArgs);
+impl From<SetBorrowOrderV2IxArgs> for SetBorrowOrderV2IxData {
+    fn from(args: SetBorrowOrderV2IxArgs) -> Self {
+        Self(args)
+    }
+}
+impl SetBorrowOrderV2IxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != SET_BORROW_ORDER_V2_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let order_idx: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let order_config = if reader.is_empty() {
+            Default::default()
+        } else {
+            <BorrowOrderConfigArgs>::deserialize(&mut reader)?
+        };
+        let min_expected_current_remaining_debt_amount: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        Ok(
+            Self(SetBorrowOrderV2IxArgs {
+                order_idx,
+                order_config,
+                min_expected_current_remaining_debt_amount,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&SET_BORROW_ORDER_V2_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.order_idx, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.order_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.0.min_expected_current_remaining_debt_amount,
+            &mut writer,
+        )?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn set_borrow_order_v2_ix_with_program_id(
+    program_id: Pubkey,
+    keys: SetBorrowOrderV2Keys,
+    args: SetBorrowOrderV2IxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; SET_BORROW_ORDER_V2_IX_ACCOUNTS_LEN] = keys.into();
+    let data: SetBorrowOrderV2IxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn set_borrow_order_v2_ix(
+    keys: SetBorrowOrderV2Keys,
+    args: SetBorrowOrderV2IxArgs,
+) -> std::io::Result<Instruction> {
+    set_borrow_order_v2_ix_with_program_id(KAMINO_LENDING_PROGRAM_ID, keys, args)
+}
+pub fn set_borrow_order_v2_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: SetBorrowOrderV2Accounts<'_, '_>,
+    args: SetBorrowOrderV2IxArgs,
+) -> ProgramResult {
+    let keys: SetBorrowOrderV2Keys = accounts.into();
+    let ix = set_borrow_order_v2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn set_borrow_order_v2_invoke(
+    accounts: SetBorrowOrderV2Accounts<'_, '_>,
+    args: SetBorrowOrderV2IxArgs,
+) -> ProgramResult {
+    set_borrow_order_v2_invoke_with_program_id(KAMINO_LENDING_PROGRAM_ID, accounts, args)
+}
+pub fn set_borrow_order_v2_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: SetBorrowOrderV2Accounts<'_, '_>,
+    args: SetBorrowOrderV2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: SetBorrowOrderV2Keys = accounts.into();
+    let ix = set_borrow_order_v2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn set_borrow_order_v2_invoke_signed(
+    accounts: SetBorrowOrderV2Accounts<'_, '_>,
+    args: SetBorrowOrderV2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    set_borrow_order_v2_invoke_signed_with_program_id(
+        KAMINO_LENDING_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn set_borrow_order_v2_verify_account_keys(
+    accounts: SetBorrowOrderV2Accounts<'_, '_>,
+    keys: SetBorrowOrderV2Keys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.owner.key, keys.owner),
+        (*accounts.obligation.key, keys.obligation),
+        (*accounts.lending_market.key, keys.lending_market),
+        (*accounts.reserve.key, keys.reserve),
+        (*accounts.filled_debt_destination.key, keys.filled_debt_destination),
+        (*accounts.debt_liquidity_mint.key, keys.debt_liquidity_mint),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn set_borrow_order_v2_verify_writable_privileges<'me, 'info>(
+    accounts: SetBorrowOrderV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.obligation] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn set_borrow_order_v2_verify_signer_privileges<'me, 'info>(
+    accounts: SetBorrowOrderV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.owner] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn set_borrow_order_v2_verify_account_privileges<'me, 'info>(
+    accounts: SetBorrowOrderV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    set_borrow_order_v2_verify_writable_privileges(accounts)?;
+    set_borrow_order_v2_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const UPDATE_OBLIGATION_CONFIG_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateObligationConfigAccounts<'me, 'info> {
@@ -17780,6 +18386,454 @@ pub fn fill_borrow_order_verify_account_privileges<'me, 'info>(
     fill_borrow_order_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN: usize = 17;
+#[derive(Copy, Clone, Debug)]
+pub struct FillBorrowOrderV2Accounts<'me, 'info> {
+    pub borrow_accounts_payer: &'me AccountInfo<'info>,
+    pub borrow_accounts_obligation: &'me AccountInfo<'info>,
+    pub borrow_accounts_lending_market: &'me AccountInfo<'info>,
+    pub borrow_accounts_lending_market_authority: &'me AccountInfo<'info>,
+    pub borrow_accounts_borrow_reserve: &'me AccountInfo<'info>,
+    pub borrow_accounts_borrow_reserve_liquidity_mint: &'me AccountInfo<'info>,
+    pub borrow_accounts_reserve_source_liquidity: &'me AccountInfo<'info>,
+    pub borrow_accounts_borrow_reserve_liquidity_fee_receiver: &'me AccountInfo<'info>,
+    pub borrow_accounts_user_destination_liquidity: &'me AccountInfo<'info>,
+    pub borrow_accounts_referrer_token_state: &'me AccountInfo<'info>,
+    pub borrow_accounts_token_program: &'me AccountInfo<'info>,
+    pub borrow_accounts_instruction_sysvar_account: &'me AccountInfo<'info>,
+    pub farms_accounts_obligation_farm_user_state: &'me AccountInfo<'info>,
+    pub farms_accounts_reserve_farm_state: &'me AccountInfo<'info>,
+    pub farms_program: &'me AccountInfo<'info>,
+    pub event_authority: &'me AccountInfo<'info>,
+    pub program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct FillBorrowOrderV2Keys {
+    pub borrow_accounts_payer: Pubkey,
+    pub borrow_accounts_obligation: Pubkey,
+    pub borrow_accounts_lending_market: Pubkey,
+    pub borrow_accounts_lending_market_authority: Pubkey,
+    pub borrow_accounts_borrow_reserve: Pubkey,
+    pub borrow_accounts_borrow_reserve_liquidity_mint: Pubkey,
+    pub borrow_accounts_reserve_source_liquidity: Pubkey,
+    pub borrow_accounts_borrow_reserve_liquidity_fee_receiver: Pubkey,
+    pub borrow_accounts_user_destination_liquidity: Pubkey,
+    pub borrow_accounts_referrer_token_state: Pubkey,
+    pub borrow_accounts_token_program: Pubkey,
+    pub borrow_accounts_instruction_sysvar_account: Pubkey,
+    pub farms_accounts_obligation_farm_user_state: Pubkey,
+    pub farms_accounts_reserve_farm_state: Pubkey,
+    pub farms_program: Pubkey,
+    pub event_authority: Pubkey,
+    pub program: Pubkey,
+}
+impl From<FillBorrowOrderV2Accounts<'_, '_>> for FillBorrowOrderV2Keys {
+    fn from(accounts: FillBorrowOrderV2Accounts) -> Self {
+        Self {
+            borrow_accounts_payer: *accounts.borrow_accounts_payer.key,
+            borrow_accounts_obligation: *accounts.borrow_accounts_obligation.key,
+            borrow_accounts_lending_market: *accounts.borrow_accounts_lending_market.key,
+            borrow_accounts_lending_market_authority: *accounts
+                .borrow_accounts_lending_market_authority
+                .key,
+            borrow_accounts_borrow_reserve: *accounts.borrow_accounts_borrow_reserve.key,
+            borrow_accounts_borrow_reserve_liquidity_mint: *accounts
+                .borrow_accounts_borrow_reserve_liquidity_mint
+                .key,
+            borrow_accounts_reserve_source_liquidity: *accounts
+                .borrow_accounts_reserve_source_liquidity
+                .key,
+            borrow_accounts_borrow_reserve_liquidity_fee_receiver: *accounts
+                .borrow_accounts_borrow_reserve_liquidity_fee_receiver
+                .key,
+            borrow_accounts_user_destination_liquidity: *accounts
+                .borrow_accounts_user_destination_liquidity
+                .key,
+            borrow_accounts_referrer_token_state: *accounts
+                .borrow_accounts_referrer_token_state
+                .key,
+            borrow_accounts_token_program: *accounts.borrow_accounts_token_program.key,
+            borrow_accounts_instruction_sysvar_account: *accounts
+                .borrow_accounts_instruction_sysvar_account
+                .key,
+            farms_accounts_obligation_farm_user_state: *accounts
+                .farms_accounts_obligation_farm_user_state
+                .key,
+            farms_accounts_reserve_farm_state: *accounts
+                .farms_accounts_reserve_farm_state
+                .key,
+            farms_program: *accounts.farms_program.key,
+            event_authority: *accounts.event_authority.key,
+            program: *accounts.program.key,
+        }
+    }
+}
+impl From<FillBorrowOrderV2Keys>
+for [AccountMeta; FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN] {
+    fn from(keys: FillBorrowOrderV2Keys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.borrow_accounts_payer,
+                is_signer: true,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_obligation,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_lending_market,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_lending_market_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_borrow_reserve,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_borrow_reserve_liquidity_mint,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_reserve_source_liquidity,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_borrow_reserve_liquidity_fee_receiver,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_user_destination_liquidity,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_referrer_token_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.borrow_accounts_instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.farms_accounts_obligation_farm_user_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.farms_accounts_reserve_farm_state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.farms_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.event_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN]> for FillBorrowOrderV2Keys {
+    fn from(pubkeys: [Pubkey; FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            borrow_accounts_payer: pubkeys[0],
+            borrow_accounts_obligation: pubkeys[1],
+            borrow_accounts_lending_market: pubkeys[2],
+            borrow_accounts_lending_market_authority: pubkeys[3],
+            borrow_accounts_borrow_reserve: pubkeys[4],
+            borrow_accounts_borrow_reserve_liquidity_mint: pubkeys[5],
+            borrow_accounts_reserve_source_liquidity: pubkeys[6],
+            borrow_accounts_borrow_reserve_liquidity_fee_receiver: pubkeys[7],
+            borrow_accounts_user_destination_liquidity: pubkeys[8],
+            borrow_accounts_referrer_token_state: pubkeys[9],
+            borrow_accounts_token_program: pubkeys[10],
+            borrow_accounts_instruction_sysvar_account: pubkeys[11],
+            farms_accounts_obligation_farm_user_state: pubkeys[12],
+            farms_accounts_reserve_farm_state: pubkeys[13],
+            farms_program: pubkeys[14],
+            event_authority: pubkeys[15],
+            program: pubkeys[16],
+        }
+    }
+}
+impl<'info> From<FillBorrowOrderV2Accounts<'_, 'info>>
+for [AccountInfo<'info>; FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN] {
+    fn from(accounts: FillBorrowOrderV2Accounts<'_, 'info>) -> Self {
+        [
+            accounts.borrow_accounts_payer.clone(),
+            accounts.borrow_accounts_obligation.clone(),
+            accounts.borrow_accounts_lending_market.clone(),
+            accounts.borrow_accounts_lending_market_authority.clone(),
+            accounts.borrow_accounts_borrow_reserve.clone(),
+            accounts.borrow_accounts_borrow_reserve_liquidity_mint.clone(),
+            accounts.borrow_accounts_reserve_source_liquidity.clone(),
+            accounts.borrow_accounts_borrow_reserve_liquidity_fee_receiver.clone(),
+            accounts.borrow_accounts_user_destination_liquidity.clone(),
+            accounts.borrow_accounts_referrer_token_state.clone(),
+            accounts.borrow_accounts_token_program.clone(),
+            accounts.borrow_accounts_instruction_sysvar_account.clone(),
+            accounts.farms_accounts_obligation_farm_user_state.clone(),
+            accounts.farms_accounts_reserve_farm_state.clone(),
+            accounts.farms_program.clone(),
+            accounts.event_authority.clone(),
+            accounts.program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN]>
+for FillBorrowOrderV2Accounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            borrow_accounts_payer: &arr[0],
+            borrow_accounts_obligation: &arr[1],
+            borrow_accounts_lending_market: &arr[2],
+            borrow_accounts_lending_market_authority: &arr[3],
+            borrow_accounts_borrow_reserve: &arr[4],
+            borrow_accounts_borrow_reserve_liquidity_mint: &arr[5],
+            borrow_accounts_reserve_source_liquidity: &arr[6],
+            borrow_accounts_borrow_reserve_liquidity_fee_receiver: &arr[7],
+            borrow_accounts_user_destination_liquidity: &arr[8],
+            borrow_accounts_referrer_token_state: &arr[9],
+            borrow_accounts_token_program: &arr[10],
+            borrow_accounts_instruction_sysvar_account: &arr[11],
+            farms_accounts_obligation_farm_user_state: &arr[12],
+            farms_accounts_reserve_farm_state: &arr[13],
+            farms_program: &arr[14],
+            event_authority: &arr[15],
+            program: &arr[16],
+        }
+    }
+}
+pub const FILL_BORROW_ORDER_V2_IX_DISCM: [u8; 8usize] = [
+    197, 85, 193, 139, 40, 94, 194, 143,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct FillBorrowOrderV2IxArgs {
+    pub order_idx: u8,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct FillBorrowOrderV2IxData(pub FillBorrowOrderV2IxArgs);
+impl From<FillBorrowOrderV2IxArgs> for FillBorrowOrderV2IxData {
+    fn from(args: FillBorrowOrderV2IxArgs) -> Self {
+        Self(args)
+    }
+}
+impl FillBorrowOrderV2IxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != FILL_BORROW_ORDER_V2_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let order_idx: u8 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(FillBorrowOrderV2IxArgs {
+                order_idx,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&FILL_BORROW_ORDER_V2_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.order_idx, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn fill_borrow_order_v2_ix_with_program_id(
+    program_id: Pubkey,
+    keys: FillBorrowOrderV2Keys,
+    args: FillBorrowOrderV2IxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; FILL_BORROW_ORDER_V2_IX_ACCOUNTS_LEN] = keys.into();
+    let data: FillBorrowOrderV2IxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn fill_borrow_order_v2_ix(
+    keys: FillBorrowOrderV2Keys,
+    args: FillBorrowOrderV2IxArgs,
+) -> std::io::Result<Instruction> {
+    fill_borrow_order_v2_ix_with_program_id(KAMINO_LENDING_PROGRAM_ID, keys, args)
+}
+pub fn fill_borrow_order_v2_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: FillBorrowOrderV2Accounts<'_, '_>,
+    args: FillBorrowOrderV2IxArgs,
+) -> ProgramResult {
+    let keys: FillBorrowOrderV2Keys = accounts.into();
+    let ix = fill_borrow_order_v2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn fill_borrow_order_v2_invoke(
+    accounts: FillBorrowOrderV2Accounts<'_, '_>,
+    args: FillBorrowOrderV2IxArgs,
+) -> ProgramResult {
+    fill_borrow_order_v2_invoke_with_program_id(
+        KAMINO_LENDING_PROGRAM_ID,
+        accounts,
+        args,
+    )
+}
+pub fn fill_borrow_order_v2_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: FillBorrowOrderV2Accounts<'_, '_>,
+    args: FillBorrowOrderV2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: FillBorrowOrderV2Keys = accounts.into();
+    let ix = fill_borrow_order_v2_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn fill_borrow_order_v2_invoke_signed(
+    accounts: FillBorrowOrderV2Accounts<'_, '_>,
+    args: FillBorrowOrderV2IxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    fill_borrow_order_v2_invoke_signed_with_program_id(
+        KAMINO_LENDING_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn fill_borrow_order_v2_verify_account_keys(
+    accounts: FillBorrowOrderV2Accounts<'_, '_>,
+    keys: FillBorrowOrderV2Keys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.borrow_accounts_payer.key, keys.borrow_accounts_payer),
+        (*accounts.borrow_accounts_obligation.key, keys.borrow_accounts_obligation),
+        (
+            *accounts.borrow_accounts_lending_market.key,
+            keys.borrow_accounts_lending_market,
+        ),
+        (
+            *accounts.borrow_accounts_lending_market_authority.key,
+            keys.borrow_accounts_lending_market_authority,
+        ),
+        (
+            *accounts.borrow_accounts_borrow_reserve.key,
+            keys.borrow_accounts_borrow_reserve,
+        ),
+        (
+            *accounts.borrow_accounts_borrow_reserve_liquidity_mint.key,
+            keys.borrow_accounts_borrow_reserve_liquidity_mint,
+        ),
+        (
+            *accounts.borrow_accounts_reserve_source_liquidity.key,
+            keys.borrow_accounts_reserve_source_liquidity,
+        ),
+        (
+            *accounts.borrow_accounts_borrow_reserve_liquidity_fee_receiver.key,
+            keys.borrow_accounts_borrow_reserve_liquidity_fee_receiver,
+        ),
+        (
+            *accounts.borrow_accounts_user_destination_liquidity.key,
+            keys.borrow_accounts_user_destination_liquidity,
+        ),
+        (
+            *accounts.borrow_accounts_referrer_token_state.key,
+            keys.borrow_accounts_referrer_token_state,
+        ),
+        (
+            *accounts.borrow_accounts_token_program.key,
+            keys.borrow_accounts_token_program,
+        ),
+        (
+            *accounts.borrow_accounts_instruction_sysvar_account.key,
+            keys.borrow_accounts_instruction_sysvar_account,
+        ),
+        (
+            *accounts.farms_accounts_obligation_farm_user_state.key,
+            keys.farms_accounts_obligation_farm_user_state,
+        ),
+        (
+            *accounts.farms_accounts_reserve_farm_state.key,
+            keys.farms_accounts_reserve_farm_state,
+        ),
+        (*accounts.farms_program.key, keys.farms_program),
+        (*accounts.event_authority.key, keys.event_authority),
+        (*accounts.program.key, keys.program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn fill_borrow_order_v2_verify_writable_privileges<'me, 'info>(
+    accounts: FillBorrowOrderV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.borrow_accounts_obligation,
+        accounts.borrow_accounts_borrow_reserve,
+        accounts.borrow_accounts_reserve_source_liquidity,
+        accounts.borrow_accounts_borrow_reserve_liquidity_fee_receiver,
+        accounts.borrow_accounts_user_destination_liquidity,
+        accounts.borrow_accounts_referrer_token_state,
+        accounts.farms_accounts_obligation_farm_user_state,
+        accounts.farms_accounts_reserve_farm_state,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn fill_borrow_order_v2_verify_signer_privileges<'me, 'info>(
+    accounts: FillBorrowOrderV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.borrow_accounts_payer] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn fill_borrow_order_v2_verify_account_privileges<'me, 'info>(
+    accounts: FillBorrowOrderV2Accounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    fill_borrow_order_v2_verify_writable_privileges(accounts)?;
+    fill_borrow_order_v2_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const INITIATE_OBLIGATION_OWNERSHIP_TRANSFER_IX_ACCOUNTS_LEN: usize = 3;
 #[derive(Copy, Clone, Debug)]
 pub struct InitiateObligationOwnershipTransferAccounts<'me, 'info> {
@@ -18022,13 +19076,14 @@ pub fn initiate_obligation_ownership_transfer_verify_account_privileges<'me, 'in
     initiate_obligation_ownership_transfer_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const APPROVE_OBLIGATION_OWNERSHIP_TRANSFER_IX_ACCOUNTS_LEN: usize = 4;
+pub const APPROVE_OBLIGATION_OWNERSHIP_TRANSFER_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
 pub struct ApproveObligationOwnershipTransferAccounts<'me, 'info> {
     pub global_admin: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
     pub obligation: &'me AccountInfo<'info>,
     pub pending_owner: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ApproveObligationOwnershipTransferKeys {
@@ -18036,6 +19091,7 @@ pub struct ApproveObligationOwnershipTransferKeys {
     pub global_config: Pubkey,
     pub obligation: Pubkey,
     pub pending_owner: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<ApproveObligationOwnershipTransferAccounts<'_, '_>>
 for ApproveObligationOwnershipTransferKeys {
@@ -18045,6 +19101,7 @@ for ApproveObligationOwnershipTransferKeys {
             global_config: *accounts.global_config.key,
             obligation: *accounts.obligation.key,
             pending_owner: *accounts.pending_owner.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -18072,6 +19129,11 @@ for [AccountMeta; APPROVE_OBLIGATION_OWNERSHIP_TRANSFER_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: false,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -18085,6 +19147,7 @@ for ApproveObligationOwnershipTransferKeys {
             global_config: pubkeys[1],
             obligation: pubkeys[2],
             pending_owner: pubkeys[3],
+            instruction_sysvar_account: pubkeys[4],
         }
     }
 }
@@ -18096,6 +19159,7 @@ for [AccountInfo<'info>; APPROVE_OBLIGATION_OWNERSHIP_TRANSFER_IX_ACCOUNTS_LEN] 
             accounts.global_config.clone(),
             accounts.obligation.clone(),
             accounts.pending_owner.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -18114,6 +19178,7 @@ for ApproveObligationOwnershipTransferAccounts<'me, 'info> {
             global_config: &arr[1],
             obligation: &arr[2],
             pending_owner: &arr[3],
+            instruction_sysvar_account: &arr[4],
         }
     }
 }
@@ -18205,6 +19270,7 @@ pub fn approve_obligation_ownership_transfer_verify_account_keys(
         (*accounts.global_config.key, keys.global_config),
         (*accounts.obligation.key, keys.obligation),
         (*accounts.pending_owner.key, keys.pending_owner),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -20080,7 +21146,7 @@ pub fn cancel_withdraw_ticket_verify_account_privileges<'me, 'info>(
     cancel_withdraw_ticket_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const INIT_GLOBAL_CONFIG_IX_ACCOUNTS_LEN: usize = 5;
+pub const INIT_GLOBAL_CONFIG_IX_ACCOUNTS_LEN: usize = 6;
 #[derive(Copy, Clone, Debug)]
 pub struct InitGlobalConfigAccounts<'me, 'info> {
     pub payer: &'me AccountInfo<'info>,
@@ -20088,6 +21154,7 @@ pub struct InitGlobalConfigAccounts<'me, 'info> {
     pub program_data: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
     pub rent: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InitGlobalConfigKeys {
@@ -20096,6 +21163,7 @@ pub struct InitGlobalConfigKeys {
     pub program_data: Pubkey,
     pub system_program: Pubkey,
     pub rent: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<InitGlobalConfigAccounts<'_, '_>> for InitGlobalConfigKeys {
     fn from(accounts: InitGlobalConfigAccounts) -> Self {
@@ -20105,6 +21173,7 @@ impl From<InitGlobalConfigAccounts<'_, '_>> for InitGlobalConfigKeys {
             program_data: *accounts.program_data.key,
             system_program: *accounts.system_program.key,
             rent: *accounts.rent.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -20136,6 +21205,11 @@ impl From<InitGlobalConfigKeys> for [AccountMeta; INIT_GLOBAL_CONFIG_IX_ACCOUNTS
                 is_signer: false,
                 is_writable: false,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -20147,6 +21221,7 @@ impl From<[Pubkey; INIT_GLOBAL_CONFIG_IX_ACCOUNTS_LEN]> for InitGlobalConfigKeys
             program_data: pubkeys[2],
             system_program: pubkeys[3],
             rent: pubkeys[4],
+            instruction_sysvar_account: pubkeys[5],
         }
     }
 }
@@ -20159,6 +21234,7 @@ for [AccountInfo<'info>; INIT_GLOBAL_CONFIG_IX_ACCOUNTS_LEN] {
             accounts.program_data.clone(),
             accounts.system_program.clone(),
             accounts.rent.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -20171,6 +21247,7 @@ for InitGlobalConfigAccounts<'me, 'info> {
             program_data: &arr[2],
             system_program: &arr[3],
             rent: &arr[4],
+            instruction_sysvar_account: &arr[5],
         }
     }
 }
@@ -20256,6 +21333,7 @@ pub fn init_global_config_verify_account_keys(
         (*accounts.program_data.key, keys.program_data),
         (*accounts.system_program.key, keys.system_program),
         (*accounts.rent.key, keys.rent),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -20290,22 +21368,25 @@ pub fn init_global_config_verify_account_privileges<'me, 'info>(
     init_global_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_GLOBAL_CONFIG_IX_ACCOUNTS_LEN: usize = 2;
+pub const UPDATE_GLOBAL_CONFIG_IX_ACCOUNTS_LEN: usize = 3;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateGlobalConfigAccounts<'me, 'info> {
     pub global_admin: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UpdateGlobalConfigKeys {
     pub global_admin: Pubkey,
     pub global_config: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<UpdateGlobalConfigAccounts<'_, '_>> for UpdateGlobalConfigKeys {
     fn from(accounts: UpdateGlobalConfigAccounts) -> Self {
         Self {
             global_admin: *accounts.global_admin.key,
             global_config: *accounts.global_config.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -20323,6 +21404,11 @@ for [AccountMeta; UPDATE_GLOBAL_CONFIG_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -20331,13 +21417,18 @@ impl From<[Pubkey; UPDATE_GLOBAL_CONFIG_IX_ACCOUNTS_LEN]> for UpdateGlobalConfig
         Self {
             global_admin: pubkeys[0],
             global_config: pubkeys[1],
+            instruction_sysvar_account: pubkeys[2],
         }
     }
 }
 impl<'info> From<UpdateGlobalConfigAccounts<'_, 'info>>
 for [AccountInfo<'info>; UPDATE_GLOBAL_CONFIG_IX_ACCOUNTS_LEN] {
     fn from(accounts: UpdateGlobalConfigAccounts<'_, 'info>) -> Self {
-        [accounts.global_admin.clone(), accounts.global_config.clone()]
+        [
+            accounts.global_admin.clone(),
+            accounts.global_config.clone(),
+            accounts.instruction_sysvar_account.clone(),
+        ]
     }
 }
 impl<'me, 'info> From<&'me [AccountInfo<'info>; UPDATE_GLOBAL_CONFIG_IX_ACCOUNTS_LEN]>
@@ -20348,6 +21439,7 @@ for UpdateGlobalConfigAccounts<'me, 'info> {
         Self {
             global_admin: &arr[0],
             global_config: &arr[1],
+            instruction_sysvar_account: &arr[2],
         }
     }
 }
@@ -20462,6 +21554,7 @@ pub fn update_global_config_verify_account_keys(
     for (actual, expected) in [
         (*accounts.global_admin.key, keys.global_admin),
         (*accounts.global_config.key, keys.global_config),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -20496,22 +21589,25 @@ pub fn update_global_config_verify_account_privileges<'me, 'info>(
     update_global_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_GLOBAL_CONFIG_ADMIN_IX_ACCOUNTS_LEN: usize = 2;
+pub const UPDATE_GLOBAL_CONFIG_ADMIN_IX_ACCOUNTS_LEN: usize = 3;
 #[derive(Copy, Clone, Debug)]
 pub struct UpdateGlobalConfigAdminAccounts<'me, 'info> {
     pub pending_admin: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UpdateGlobalConfigAdminKeys {
     pub pending_admin: Pubkey,
     pub global_config: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<UpdateGlobalConfigAdminAccounts<'_, '_>> for UpdateGlobalConfigAdminKeys {
     fn from(accounts: UpdateGlobalConfigAdminAccounts) -> Self {
         Self {
             pending_admin: *accounts.pending_admin.key,
             global_config: *accounts.global_config.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -20529,6 +21625,11 @@ for [AccountMeta; UPDATE_GLOBAL_CONFIG_ADMIN_IX_ACCOUNTS_LEN] {
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -20538,13 +21639,18 @@ for UpdateGlobalConfigAdminKeys {
         Self {
             pending_admin: pubkeys[0],
             global_config: pubkeys[1],
+            instruction_sysvar_account: pubkeys[2],
         }
     }
 }
 impl<'info> From<UpdateGlobalConfigAdminAccounts<'_, 'info>>
 for [AccountInfo<'info>; UPDATE_GLOBAL_CONFIG_ADMIN_IX_ACCOUNTS_LEN] {
     fn from(accounts: UpdateGlobalConfigAdminAccounts<'_, 'info>) -> Self {
-        [accounts.pending_admin.clone(), accounts.global_config.clone()]
+        [
+            accounts.pending_admin.clone(),
+            accounts.global_config.clone(),
+            accounts.instruction_sysvar_account.clone(),
+        ]
     }
 }
 impl<
@@ -20558,6 +21664,7 @@ for UpdateGlobalConfigAdminAccounts<'me, 'info> {
         Self {
             pending_admin: &arr[0],
             global_config: &arr[1],
+            instruction_sysvar_account: &arr[2],
         }
     }
 }
@@ -20643,6 +21750,7 @@ pub fn update_global_config_admin_verify_account_keys(
     for (actual, expected) in [
         (*accounts.pending_admin.key, keys.pending_admin),
         (*accounts.global_config.key, keys.global_config),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -20677,13 +21785,14 @@ pub fn update_global_config_admin_verify_account_privileges<'me, 'info>(
     update_global_config_admin_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const IDL_MISSING_TYPES_IX_ACCOUNTS_LEN: usize = 4;
+pub const IDL_MISSING_TYPES_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
 pub struct IdlMissingTypesAccounts<'me, 'info> {
     pub signer: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
     pub lending_market: &'me AccountInfo<'info>,
     pub reserve: &'me AccountInfo<'info>,
+    pub instruction_sysvar_account: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IdlMissingTypesKeys {
@@ -20691,6 +21800,7 @@ pub struct IdlMissingTypesKeys {
     pub global_config: Pubkey,
     pub lending_market: Pubkey,
     pub reserve: Pubkey,
+    pub instruction_sysvar_account: Pubkey,
 }
 impl From<IdlMissingTypesAccounts<'_, '_>> for IdlMissingTypesKeys {
     fn from(accounts: IdlMissingTypesAccounts) -> Self {
@@ -20699,6 +21809,7 @@ impl From<IdlMissingTypesAccounts<'_, '_>> for IdlMissingTypesKeys {
             global_config: *accounts.global_config.key,
             lending_market: *accounts.lending_market.key,
             reserve: *accounts.reserve.key,
+            instruction_sysvar_account: *accounts.instruction_sysvar_account.key,
         }
     }
 }
@@ -20725,6 +21836,11 @@ impl From<IdlMissingTypesKeys> for [AccountMeta; IDL_MISSING_TYPES_IX_ACCOUNTS_L
                 is_signer: false,
                 is_writable: true,
             },
+            AccountMeta {
+                pubkey: keys.instruction_sysvar_account,
+                is_signer: false,
+                is_writable: false,
+            },
         ]
     }
 }
@@ -20735,6 +21851,7 @@ impl From<[Pubkey; IDL_MISSING_TYPES_IX_ACCOUNTS_LEN]> for IdlMissingTypesKeys {
             global_config: pubkeys[1],
             lending_market: pubkeys[2],
             reserve: pubkeys[3],
+            instruction_sysvar_account: pubkeys[4],
         }
     }
 }
@@ -20746,6 +21863,7 @@ for [AccountInfo<'info>; IDL_MISSING_TYPES_IX_ACCOUNTS_LEN] {
             accounts.global_config.clone(),
             accounts.lending_market.clone(),
             accounts.reserve.clone(),
+            accounts.instruction_sysvar_account.clone(),
         ]
     }
 }
@@ -20757,6 +21875,7 @@ for IdlMissingTypesAccounts<'me, 'info> {
             global_config: &arr[1],
             lending_market: &arr[2],
             reserve: &arr[3],
+            instruction_sysvar_account: &arr[4],
         }
     }
 }
@@ -20899,6 +22018,7 @@ pub fn idl_missing_types_verify_account_keys(
         (*accounts.global_config.key, keys.global_config),
         (*accounts.lending_market.key, keys.lending_market),
         (*accounts.reserve.key, keys.reserve),
+        (*accounts.instruction_sysvar_account.key, keys.instruction_sysvar_account),
     ] {
         if actual != expected {
             return Err((actual, expected));

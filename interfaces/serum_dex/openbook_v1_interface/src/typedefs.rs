@@ -240,6 +240,16 @@ pub enum Side {
     Bid,
     Ask,
 }
+impl TryFrom<u8> for Side {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Bid),
+            1u8 => Ok(Self::Ask),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -256,6 +266,17 @@ pub enum OrderType {
     ImmediateOrCancel,
     PostOnly,
 }
+impl TryFrom<u8> for OrderType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Limit),
+            1u8 => Ok(Self::ImmediateOrCancel),
+            2u8 => Ok(Self::PostOnly),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -271,6 +292,17 @@ pub enum SelfTradeBehavior {
     DecrementTake,
     CancelProvide,
     AbortTransaction,
+}
+impl TryFrom<u8> for SelfTradeBehavior {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::DecrementTake),
+            1u8 => Ok(Self::CancelProvide),
+            2u8 => Ok(Self::AbortTransaction),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -292,4 +324,20 @@ pub enum FeeTier {
     Srm6,
     Msrm,
     Stable,
+}
+impl TryFrom<u8> for FeeTier {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Base),
+            1u8 => Ok(Self::Srm2),
+            2u8 => Ok(Self::Srm3),
+            3u8 => Ok(Self::Srm4),
+            4u8 => Ok(Self::Srm5),
+            5u8 => Ok(Self::Srm6),
+            6u8 => Ok(Self::Msrm),
+            7u8 => Ok(Self::Stable),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

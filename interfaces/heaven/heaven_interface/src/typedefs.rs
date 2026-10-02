@@ -203,6 +203,17 @@ pub enum CreatorTradingFeeClaimStatus {
     Submitted,
     Processed,
 }
+impl TryFrom<u8> for CreatorTradingFeeClaimStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Unclaimed),
+            1u8 => Ok(Self::Submitted),
+            2u8 => Ok(Self::Processed),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -219,6 +230,18 @@ pub enum CreatorTradingFeeDistribution {
     Creator,
     Blocked,
     Shared,
+}
+impl TryFrom<u8> for CreatorTradingFeeDistribution {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Community),
+            1u8 => Ok(Self::Creator),
+            2u8 => Ok(Self::Blocked),
+            3u8 => Ok(Self::Shared),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -262,16 +285,16 @@ impl FeeBracket {
 pub struct FeeBrackets {
     pub brackets: [FeeBracket; 4],
     pub count: u8,
-    pub _padding: [u8; 7],
+    pub padding: [u8; 7],
 }
 impl FeeBrackets {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let brackets: [FeeBracket; 4] = crate::borsh_de_or_default(&mut reader)?;
         let count: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
-        Ok(Self { brackets, count, _padding })
+        Ok(Self { brackets, count, padding })
     }
 }
 #[derive(
@@ -312,6 +335,16 @@ pub enum FeeConfigurationMode {
     Global,
     Local,
 }
+impl TryFrom<u8> for FeeConfigurationMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Global),
+            1u8 => Ok(Self::Local),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -329,6 +362,19 @@ pub enum FeeType {
     CreatorFee,
     CreatorFeeProtocolFee,
     ReflectionFee,
+}
+impl TryFrom<u8> for FeeType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::ProtocolFee),
+            1u8 => Ok(Self::LiquidityProviderFee),
+            2u8 => Ok(Self::CreatorFee),
+            3u8 => Ok(Self::CreatorFeeProtocolFee),
+            4u8 => Ok(Self::ReflectionFee),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -413,7 +459,7 @@ pub struct LiquidityPoolInfo {
     pub r_type: u8,
     pub pool_authority_bump: u8,
     pub temp_sol_holder_bump: u8,
-    pub _pad: [u8; 3],
+    pub pad: [u8; 3],
 }
 impl LiquidityPoolInfo {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -426,7 +472,7 @@ impl LiquidityPoolInfo {
         let r_type: u8 = crate::borsh_de_or_default(&mut reader)?;
         let pool_authority_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
         let temp_sol_holder_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
+        let pad: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             creator,
@@ -437,7 +483,7 @@ impl LiquidityPoolInfo {
             r_type,
             pool_authority_bump,
             temp_sol_holder_bump,
-            _pad,
+            pad,
         })
     }
 }
@@ -454,7 +500,7 @@ impl LiquidityPoolInfo {
 pub struct LiquidityPoolLpTokenInfo {
     pub supply: LiquidityPoolLpTokenSupply,
     pub decimals: u8,
-    pub _pad: [u8; 7],
+    pub pad: [u8; 7],
 }
 impl LiquidityPoolLpTokenInfo {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -465,9 +511,9 @@ impl LiquidityPoolLpTokenInfo {
             <LiquidityPoolLpTokenSupply>::deserialize(&mut reader)?
         };
         let decimals: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let pad: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
-        Ok(Self { supply, decimals, _pad })
+        Ok(Self { supply, decimals, pad })
     }
 }
 #[derive(
@@ -580,7 +626,7 @@ pub struct LiquidityPoolReserve {
     pub initial_a: u64,
     pub initial_b: u64,
     pub leader_slot_window: u8,
-    pub _pad: [u8; 7],
+    pub pad: [u8; 7],
 }
 impl LiquidityPoolReserve {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -594,7 +640,7 @@ impl LiquidityPoolReserve {
         let initial_a: u64 = crate::borsh_de_or_default(&mut reader)?;
         let initial_b: u64 = crate::borsh_de_or_default(&mut reader)?;
         let leader_slot_window: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let pad: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             token_a,
@@ -606,7 +652,7 @@ impl LiquidityPoolReserve {
             initial_a,
             initial_b,
             leader_slot_window,
-            _pad,
+            pad,
         })
     }
 }
@@ -625,7 +671,7 @@ pub struct LiquidityPoolSlotOffsetBasedFees {
     pub creator_trading_fee: SlotFeeBrackets,
     pub creator_trading_fee_protocol_fee: SlotFeeBrackets,
     pub reflection_trading_fee: SlotFeeBrackets,
-    pub _pad: [u8; 6],
+    pub pad: [u8; 6],
 }
 impl LiquidityPoolSlotOffsetBasedFees {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -639,7 +685,7 @@ impl LiquidityPoolSlotOffsetBasedFees {
             &mut reader,
         )?;
         let reflection_trading_fee = <SlotFeeBrackets>::deserialize(&mut reader)?;
-        let _pad: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let pad: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             protocol_trading_fee,
@@ -647,7 +693,7 @@ impl LiquidityPoolSlotOffsetBasedFees {
             creator_trading_fee,
             creator_trading_fee_protocol_fee,
             reflection_trading_fee,
-            _pad,
+            pad,
         })
     }
 }
@@ -691,6 +737,17 @@ pub enum LiquidityPoolType {
     None,
     Pro,
     Standard,
+}
+impl TryFrom<u8> for LiquidityPoolType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::Pro),
+            2u8 => Ok(Self::Standard),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -875,7 +932,7 @@ pub struct SlotFeeBrackets {
     pub max_fee_bps: u16,
     pub count: u8,
     pub enabled: u8,
-    pub _padding: [u8; 4],
+    pub padding: [u8; 4],
 }
 impl SlotFeeBrackets {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -887,7 +944,7 @@ impl SlotFeeBrackets {
         let max_fee_bps: u16 = crate::borsh_de_or_default(&mut reader)?;
         let count: u8 = crate::borsh_de_or_default(&mut reader)?;
         let enabled: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             brackets,
@@ -895,7 +952,7 @@ impl SlotFeeBrackets {
             max_fee_bps,
             count,
             enabled,
-            _padding,
+            padding,
         })
     }
 }

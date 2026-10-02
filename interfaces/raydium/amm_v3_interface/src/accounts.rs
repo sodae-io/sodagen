@@ -462,6 +462,58 @@ impl OperationStateAccount {
         Ok(data)
     }
 }
+pub const PERMISSION_ACCOUNT_DISCM: [u8; 8] = [224, 83, 28, 79, 10, 253, 161, 28];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct Permission {
+    pub authority: Pubkey,
+    pub padding: [u64; 30],
+}
+impl Permission {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 30] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { authority, padding })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.authority, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct PermissionAccount(pub Permission);
+impl PermissionAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != PERMISSION_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(Permission::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&PERMISSION_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const PERSONAL_POSITION_STATE_ACCOUNT_DISCM: [u8; 8] = [
     70, 111, 150, 126, 230, 15, 25, 117,
 ];
@@ -609,7 +661,8 @@ pub struct PoolState {
     pub padding5: [u128; 4],
     pub status: u8,
     pub fee_on: u8,
-    pub padding: [u8; 6],
+    pub seed_index: [u8; 2],
+    pub padding: [u8; 4],
     pub reward_infos: [RewardInfo; 3],
     pub tick_array_bitmap: [u64; 16],
     pub padding6: [u64; 4],
@@ -647,7 +700,8 @@ impl PoolState {
         let padding5: [u128; 4] = crate::borsh_de_or_default(&mut reader)?;
         let status: u8 = crate::borsh_de_or_default(&mut reader)?;
         let fee_on: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let padding: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let seed_index: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let reward_infos: [RewardInfo; 3] = crate::borsh_de_or_default(&mut reader)?;
         let tick_array_bitmap: [u64; 16] = crate::borsh_de_or_default(&mut reader)?;
         let padding6: [u64; 4] = crate::borsh_de_or_default(&mut reader)?;
@@ -683,6 +737,7 @@ impl PoolState {
             padding5,
             status,
             fee_on,
+            seed_index,
             padding,
             reward_infos,
             tick_array_bitmap,
@@ -720,6 +775,7 @@ impl PoolState {
         borsh::BorshSerialize::serialize(&self.padding5, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.status, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_on, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.seed_index, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.reward_infos, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.tick_array_bitmap, &mut writer)?;

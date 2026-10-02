@@ -295,6 +295,16 @@ pub enum Side {
     Bid,
     Ask,
 }
+impl TryFrom<u8> for Side {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Bid),
+            1u8 => Ok(Self::Ask),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -310,6 +320,17 @@ pub enum OrderType {
     Default,
     ImmediateOrCancel,
     PostOnly,
+}
+impl TryFrom<u8> for OrderType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Default),
+            1u8 => Ok(Self::ImmediateOrCancel),
+            2u8 => Ok(Self::PostOnly),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -328,6 +349,18 @@ pub enum MarketFeeTier {
     Stable,
     Classic,
 }
+impl TryFrom<u8> for MarketFeeTier {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Default),
+            1u8 => Ok(Self::None),
+            2u8 => Ok(Self::Stable),
+            3u8 => Ok(Self::Classic),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -345,6 +378,18 @@ pub enum UserFeeTier {
     Partner,
     Referrer,
 }
+impl TryFrom<u8> for UserFeeTier {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Default),
+            1u8 => Ok(Self::None),
+            2u8 => Ok(Self::Partner),
+            3u8 => Ok(Self::Referrer),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -360,4 +405,15 @@ pub enum FeeRole {
     Taker,
     Maker,
     Both,
+}
+impl TryFrom<u8> for FeeRole {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Taker),
+            1u8 => Ok(Self::Maker),
+            2u8 => Ok(Self::Both),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

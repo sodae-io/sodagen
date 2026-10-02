@@ -570,6 +570,17 @@ pub enum Market {
     Pass,
     Fail,
 }
+impl TryFrom<u8> for Market {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Spot),
+            1u8 => Ok(Self::Pass),
+            2u8 => Ok(Self::Fail),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -584,6 +595,16 @@ pub enum SwapType {
     #[default]
     Buy,
     Sell,
+}
+impl TryFrom<u8> for SwapType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Buy),
+            1u8 => Ok(Self::Sell),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -600,6 +621,16 @@ pub enum Token {
     Base,
     Quote,
 }
+impl TryFrom<u8> for Token {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Base),
+            1u8 => Ok(Self::Quote),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -615,4 +646,25 @@ pub enum ProposalState {
     Passed,
     Failed,
     Removed,
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct AdminApproveMultisigProposalArgs {
+    pub transaction_index: u64,
+}
+impl AdminApproveMultisigProposalArgs {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let transaction_index: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { transaction_index })
+    }
 }

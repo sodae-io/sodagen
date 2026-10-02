@@ -32,6 +32,8 @@ pub enum RaydiumCpSwapError {
     InvalidFeeModel = 6013,
     #[error("Fee is zero")]
     NoFeeCollect = 6014,
+    #[error("Lamports calculate error")]
+    LamportsCalculateError = 6015,
 }
 impl From<RaydiumCpSwapError> for ProgramError {
     fn from(e: RaydiumCpSwapError) -> Self {

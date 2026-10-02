@@ -302,6 +302,16 @@ pub enum SwapDirection {
     SellBase,
     SellQuote,
 }
+impl TryFrom<u8> for SwapDirection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::SellBase),
+            1u8 => Ok(Self::SellQuote),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -317,4 +327,15 @@ pub enum SwapType {
     NormalSwap,
     StableSwap,
     SerumSwap,
+}
+impl TryFrom<u8> for SwapType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::NormalSwap),
+            1u8 => Ok(Self::StableSwap),
+            2u8 => Ok(Self::SerumSwap),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

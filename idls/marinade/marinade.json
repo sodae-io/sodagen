@@ -1602,6 +1602,100 @@
           "type": "u32"
         }
       ]
+    },
+    {
+      "name": "redelegate",
+      "accounts": [
+        {
+          "name": "state",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "validatorList",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeList",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "stakeDepositAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "reservePda",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "splitStakeAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "splitStakeRentPayer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "destValidatorAccount",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "redelegateStakeAccount",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "clock",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeHistory",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "stakeProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "stakeIndex",
+          "type": "u32"
+        },
+        {
+          "name": "sourceValidatorIndex",
+          "type": "u32"
+        },
+        {
+          "name": "destValidatorIndex",
+          "type": "u32"
+        }
+      ]
     }
   ],
   "accounts": [

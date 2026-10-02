@@ -110,6 +110,10 @@ pub enum AmmV3Error {
     MissingMintAccount = 6049,
     #[error("Token-2022 program is required but not provided")]
     MissingTokenProgram2022 = 6050,
+    #[error("TickArrayBitmapExtension account does not belong to this pool")]
+    InvalidTickArrayBitmapExtensionAccount = 6051,
+    #[error("Lamports calculate error")]
+    LamportsCalculateError = 6052,
 }
 impl From<AmmV3Error> for ProgramError {
     fn from(e: AmmV3Error) -> Self {

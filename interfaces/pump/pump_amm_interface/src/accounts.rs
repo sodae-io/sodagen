@@ -102,6 +102,7 @@ pub struct FeeConfig {
     pub flat_fees: Fees,
     pub fee_tiers: Vec<FeeTier>,
     pub stable_fee_tiers: Vec<FeeTier>,
+    pub exotic_flat_fees: Fees,
 }
 impl FeeConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -115,6 +116,11 @@ impl FeeConfig {
         };
         let fee_tiers: Vec<FeeTier> = crate::borsh_de_or_default(&mut reader)?;
         let stable_fee_tiers: Vec<FeeTier> = crate::borsh_de_or_default(&mut reader)?;
+        let exotic_flat_fees = if reader.is_empty() {
+            Default::default()
+        } else {
+            <Fees>::deserialize(&mut reader)?
+        };
         *__buf = reader;
         Ok(Self {
             bump,
@@ -122,6 +128,7 @@ impl FeeConfig {
             flat_fees,
             fee_tiers,
             stable_fee_tiers,
+            exotic_flat_fees,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -130,6 +137,7 @@ impl FeeConfig {
         borsh::BorshSerialize::serialize(&self.flat_fees, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_tiers, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.stable_fee_tiers, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.exotic_flat_fees, &mut writer)?;
         Ok(())
     }
 }
@@ -184,6 +192,8 @@ pub struct GlobalConfig {
     pub buyback_basis_points: u64,
     pub boost_authority: Pubkey,
     pub boost_enabled: bool,
+    pub creator_fee_configurable: bool,
+    pub max_configurable_creator_fee_bps: u64,
 }
 impl GlobalConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -214,6 +224,10 @@ impl GlobalConfig {
         let buyback_basis_points: u64 = crate::borsh_de_or_default(&mut reader)?;
         let boost_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let boost_enabled: bool = crate::borsh_de_or_default(&mut reader)?;
+        let creator_fee_configurable: bool = crate::borsh_de_or_default(&mut reader)?;
+        let max_configurable_creator_fee_bps: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         *__buf = reader;
         Ok(Self {
             admin,
@@ -232,6 +246,8 @@ impl GlobalConfig {
             buyback_basis_points,
             boost_authority,
             boost_enabled,
+            creator_fee_configurable,
+            max_configurable_creator_fee_bps,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -257,6 +273,11 @@ impl GlobalConfig {
         borsh::BorshSerialize::serialize(&self.buyback_basis_points, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.boost_authority, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.boost_enabled, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.creator_fee_configurable, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.max_configurable_creator_fee_bps,
+            &mut writer,
+        )?;
         Ok(())
     }
 }
@@ -381,6 +402,8 @@ pub struct Pool {
     pub is_mayhem_mode: bool,
     pub is_cashback_coin: bool,
     pub virtual_quote_reserves: i128,
+    pub creator_fee_bps: u64,
+    pub can_edit_creator_fee: bool,
 }
 impl Pool {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -398,6 +421,8 @@ impl Pool {
         let is_mayhem_mode: bool = crate::borsh_de_or_default(&mut reader)?;
         let is_cashback_coin: bool = crate::borsh_de_or_default(&mut reader)?;
         let virtual_quote_reserves: i128 = crate::borsh_de_or_default(&mut reader)?;
+        let creator_fee_bps: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let can_edit_creator_fee: bool = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pool_bump,
@@ -413,6 +438,8 @@ impl Pool {
             is_mayhem_mode,
             is_cashback_coin,
             virtual_quote_reserves,
+            creator_fee_bps,
+            can_edit_creator_fee,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -429,6 +456,8 @@ impl Pool {
         borsh::BorshSerialize::serialize(&self.is_mayhem_mode, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.is_cashback_coin, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.virtual_quote_reserves, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.creator_fee_bps, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.can_edit_creator_fee, &mut writer)?;
         Ok(())
     }
 }

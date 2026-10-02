@@ -2119,6 +2119,16 @@ pub enum PriceImpactMechanism {
     TradeSize,
     DeltaImbalance,
 }
+impl TryFrom<u8> for PriceImpactMechanism {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::TradeSize),
+            1u8 => Ok(Self::DeltaImbalance),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2134,6 +2144,17 @@ pub enum OracleType {
     None,
     Test,
     Pyth,
+}
+impl TryFrom<u8> for OracleType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::Test),
+            2u8 => Ok(Self::Pyth),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2151,6 +2172,17 @@ pub enum PriceCalcMode {
     Max,
     Ignore,
 }
+impl TryFrom<u8> for PriceCalcMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Min),
+            1u8 => Ok(Self::Max),
+            2u8 => Ok(Self::Ignore),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2165,6 +2197,16 @@ pub enum PriceStaleTolerance {
     #[default]
     Strict,
     Loose,
+}
+impl TryFrom<u8> for PriceStaleTolerance {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Strict),
+            1u8 => Ok(Self::Loose),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2181,6 +2223,16 @@ pub enum TradePoolType {
     Increase,
     Decrease,
 }
+impl TryFrom<u8> for TradePoolType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Increase),
+            1u8 => Ok(Self::Decrease),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2195,6 +2247,16 @@ pub enum RequestType {
     #[default]
     Market,
     Trigger,
+}
+impl TryFrom<u8> for RequestType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Market),
+            1u8 => Ok(Self::Trigger),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -2212,6 +2274,17 @@ pub enum RequestChange {
     Increase,
     Decrease,
 }
+impl TryFrom<u8> for RequestChange {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::Increase),
+            2u8 => Ok(Self::Decrease),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -2227,4 +2300,15 @@ pub enum Side {
     None,
     Long,
     Short,
+}
+impl TryFrom<u8> for Side {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::None),
+            1u8 => Ok(Self::Long),
+            2u8 => Ok(Self::Short),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

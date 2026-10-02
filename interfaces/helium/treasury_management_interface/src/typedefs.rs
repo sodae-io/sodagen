@@ -90,6 +90,16 @@ pub enum ThresholdType {
     Percent,
     Absolute,
 }
+impl TryFrom<u8> for ThresholdType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Percent),
+            1u8 => Ok(Self::Absolute),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,

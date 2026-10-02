@@ -2,7 +2,7 @@ use borsh::{BorshDeserialize, BorshSerialize};
 use solana_pubkey::Pubkey;
 #[allow(unused_imports)]
 use crate::*;
-pub const ENDO_AVS_ACCOUNT_DISCM: [u8; 8] = [169, 223, 251, 169, 163, 99, 77, 37];
+pub const ENDO_AVS_ACCOUNT_DISCM: [u8; 8] = [66, 168, 41, 177, 187, 11, 173, 123];
 #[derive(
     Clone,
     Debug,

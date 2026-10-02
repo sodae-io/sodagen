@@ -735,7 +735,7 @@ impl ProtocolIfSharesTransferConfigAccount {
         Ok(data)
     }
 }
-pub const LP_POOL_ACCOUNT_DISCM: [u8; 8] = [185, 127, 131, 141, 197, 198, 170, 147];
+pub const LP_POOL_ACCOUNT_DISCM: [u8; 8] = [228, 152, 141, 224, 161, 170, 11, 89];
 #[derive(
     Clone,
     Debug,

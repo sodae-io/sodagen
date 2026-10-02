@@ -266,13 +266,18 @@ impl DummyParams {
 )]
 pub struct DynamicConfigParameters {
     pub pool_creator_authority: Pubkey,
+    pub permission: u128,
 }
 impl DynamicConfigParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let pool_creator_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let permission: u128 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
-        Ok(Self { pool_creator_authority })
+        Ok(Self {
+            pool_creator_authority,
+            permission,
+        })
     }
 }
 #[derive(
@@ -797,8 +802,8 @@ impl RemoveLiquidityParameters {
 pub struct RewardInfo {
     pub initialized: u8,
     pub reward_token_flag: u8,
-    pub _padding_0: [u8; 6],
-    pub _padding_1: [u8; 8],
+    pub padding_0: [u8; 6],
+    pub dead_liquidity_reward_checkpoint: u64,
     pub mint: Pubkey,
     pub vault: Pubkey,
     pub funder: Pubkey,
@@ -814,8 +819,10 @@ impl RewardInfo {
         let mut reader: &[u8] = *__buf;
         let initialized: u8 = crate::borsh_de_or_default(&mut reader)?;
         let reward_token_flag: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let dead_liquidity_reward_checkpoint: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
         let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let funder: Pubkey = crate::borsh_de_or_default(&mut reader)?;
@@ -831,8 +838,8 @@ impl RewardInfo {
         Ok(Self {
             initialized,
             reward_token_flag,
-            _padding_0,
-            _padding_1,
+            padding_0,
+            dead_liquidity_reward_checkpoint,
             mint,
             vault,
             funder,
@@ -1151,6 +1158,7 @@ pub struct StaticConfigParameters {
     pub pool_creator_authority: Pubkey,
     pub activation_type: u8,
     pub collect_fee_mode: u8,
+    pub permission: u128,
 }
 impl StaticConfigParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1166,6 +1174,7 @@ impl StaticConfigParameters {
         let pool_creator_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let activation_type: u8 = crate::borsh_de_or_default(&mut reader)?;
         let collect_fee_mode: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let permission: u128 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pool_fees,
@@ -1175,6 +1184,7 @@ impl StaticConfigParameters {
             pool_creator_authority,
             activation_type,
             collect_fee_mode,
+            permission,
         })
     }
 }
@@ -1293,6 +1303,7 @@ impl SwapResult2 {
 pub struct UpdatePoolFeesParameters {
     pub cliff_fee_numerator: Option<u64>,
     pub dynamic_fee: Option<DynamicFeeParameters>,
+    pub compounding_fee_bps: Option<u16>,
 }
 impl UpdatePoolFeesParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1301,10 +1312,12 @@ impl UpdatePoolFeesParameters {
         let dynamic_fee: Option<DynamicFeeParameters> = crate::borsh_de_or_default(
             &mut reader,
         )?;
+        let compounding_fee_bps: Option<u16> = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             cliff_fee_numerator,
             dynamic_fee,
+            compounding_fee_bps,
         })
     }
 }

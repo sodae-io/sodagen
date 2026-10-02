@@ -778,6 +778,19 @@ pub enum OracleType {
     SwitchboardV2,
     RaydiumClmm,
 }
+impl TryFrom<u8> for OracleType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Pyth),
+            1u8 => Ok(Self::Stub),
+            2u8 => Ok(Self::SwitchboardV1),
+            3u8 => Ok(Self::SwitchboardV2),
+            4u8 => Ok(Self::RaydiumClmm),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -794,6 +807,17 @@ pub enum OrderState {
     Invalid,
     Skipped,
 }
+impl TryFrom<u8> for OrderState {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Valid),
+            1u8 => Ok(Self::Invalid),
+            2u8 => Ok(Self::Skipped),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -809,6 +833,16 @@ pub enum BookSideOrderTree {
     Fixed,
     OraclePegged,
 }
+impl TryFrom<u8> for BookSideOrderTree {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Fixed),
+            1u8 => Ok(Self::OraclePegged),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -823,6 +857,16 @@ pub enum EventType {
     #[default]
     Fill,
     Out,
+}
+impl TryFrom<u8> for EventType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Fill),
+            1u8 => Ok(Self::Out),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -841,6 +885,19 @@ pub enum NodeTag {
     LeafNode,
     FreeNode,
     LastFreeNode,
+}
+impl TryFrom<u8> for NodeTag {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::InnerNode),
+            2u8 => Ok(Self::LeafNode),
+            3u8 => Ok(Self::FreeNode),
+            4u8 => Ok(Self::LastFreeNode),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -861,6 +918,20 @@ pub enum PlaceOrderType {
     PostOnlySlide,
     FillOrKill,
 }
+impl TryFrom<u8> for PlaceOrderType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Limit),
+            1u8 => Ok(Self::ImmediateOrCancel),
+            2u8 => Ok(Self::PostOnly),
+            3u8 => Ok(Self::Market),
+            4u8 => Ok(Self::PostOnlySlide),
+            5u8 => Ok(Self::FillOrKill),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -876,6 +947,17 @@ pub enum PostOrderType {
     Limit,
     PostOnly,
     PostOnlySlide,
+}
+impl TryFrom<u8> for PostOrderType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Limit),
+            1u8 => Ok(Self::PostOnly),
+            2u8 => Ok(Self::PostOnlySlide),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -893,6 +975,17 @@ pub enum SelfTradeBehavior {
     CancelProvide,
     AbortTransaction,
 }
+impl TryFrom<u8> for SelfTradeBehavior {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::DecrementTake),
+            1u8 => Ok(Self::CancelProvide),
+            2u8 => Ok(Self::AbortTransaction),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -907,6 +1000,16 @@ pub enum Side {
     #[default]
     Bid,
     Ask,
+}
+impl TryFrom<u8> for Side {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Bid),
+            1u8 => Ok(Self::Ask),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -924,6 +1027,18 @@ pub enum SideAndOrderTree {
     AskFixed,
     BidOraclePegged,
     AskOraclePegged,
+}
+impl TryFrom<u8> for SideAndOrderTree {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::BidFixed),
+            1u8 => Ok(Self::AskFixed),
+            2u8 => Ok(Self::BidOraclePegged),
+            3u8 => Ok(Self::AskOraclePegged),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -957,4 +1072,14 @@ pub enum OrderTreeType {
     #[default]
     Bids,
     Asks,
+}
+impl TryFrom<u8> for OrderTreeType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Bids),
+            1u8 => Ok(Self::Asks),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

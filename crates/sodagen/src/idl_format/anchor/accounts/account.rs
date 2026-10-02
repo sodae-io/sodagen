@@ -1,6 +1,6 @@
 use std::collections::HashSet;
 
-use heck::{ToPascalCase, ToShoutySnakeCase};
+use heck::ToShoutySnakeCase;
 use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use serde::Deserialize;
@@ -20,10 +20,16 @@ impl NamedAccount {
         let name = &self.0.name;
         // discriminant
         let account_discm_ident = format_ident!("{}_ACCOUNT_DISCM", name.to_shouty_snake_case());
-        // pre-image: "account:{AccountStructName}"
+        // pre-image: "account:{AccountStructName}", where the struct name is
+        // the one we actually emit below. `to_pascal_case()` is wrong here: it
+        // rewrites consecutive capitals, so an IDL account called
+        // `SSTradingPair` hashed as `SsTradingPair` and produced a
+        // discriminator matching nothing on-chain (Obric v2: 0 of 42 live
+        // accounts, against 37 that carry the correct one). Anchor hashes the
+        // Rust struct name verbatim, which is `conditional_pascal_case`.
         let discm = <[u8; 8]>::try_from(
-            &Sha256::digest(format!("account:{}", name.to_pascal_case()).as_bytes()).as_slice()
-                [..8],
+            &Sha256::digest(format!("account:{}", conditional_pascal_case(name)).as_bytes())
+                .as_slice()[..8],
         )
         .unwrap();
         let discm_tokens: TokenStream = format!("{:?}", discm).parse().unwrap();

@@ -412,6 +412,9 @@ pub struct RebalanceAutodriftParams {
     pub staking_rate_a_source: StakingRateSource,
     pub staking_rate_b_source: StakingRateSource,
     pub init_drift_direction: DriftDirection,
+    pub enforce_initial_drift_direction: u8,
+    pub max_ticks_per_rebalance: u32,
+    pub max_ticks_per_epoch: u32,
 }
 impl RebalanceAutodriftParams {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -429,6 +432,11 @@ impl RebalanceAutodriftParams {
         let init_drift_direction: DriftDirection = crate::borsh_de_or_default(
             &mut reader,
         )?;
+        let enforce_initial_drift_direction: u8 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let max_ticks_per_rebalance: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let max_ticks_per_epoch: u32 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             init_drift_ticks_per_epoch,
@@ -438,6 +446,9 @@ impl RebalanceAutodriftParams {
             staking_rate_a_source,
             staking_rate_b_source,
             init_drift_direction,
+            enforce_initial_drift_direction,
+            max_ticks_per_rebalance,
+            max_ticks_per_epoch,
         })
     }
 }
@@ -486,10 +497,34 @@ impl RebalanceAutodriftWindow {
     serde::Serialize,
     serde::Deserialize
 )]
+pub struct RebalanceAutodriftEpochCapAnchor {
+    pub epoch: u64,
+    pub strat_mid_tick: i32,
+}
+impl RebalanceAutodriftEpochCapAnchor {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let strat_mid_tick: i32 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { epoch, strat_mid_tick })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub struct RebalanceAutodriftState {
     pub last_window: RebalanceAutodriftWindow,
     pub current_window: RebalanceAutodriftWindow,
     pub step: RebalanceAutodriftStep,
+    pub epoch_cap_anchor: RebalanceAutodriftEpochCapAnchor,
 }
 impl RebalanceAutodriftState {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -505,11 +540,17 @@ impl RebalanceAutodriftState {
             <RebalanceAutodriftWindow>::deserialize(&mut reader)?
         };
         let step: RebalanceAutodriftStep = crate::borsh_de_or_default(&mut reader)?;
+        let epoch_cap_anchor = if reader.is_empty() {
+            Default::default()
+        } else {
+            <RebalanceAutodriftEpochCapAnchor>::deserialize(&mut reader)?
+        };
         *__buf = reader;
         Ok(Self {
             last_window,
             current_window,
             step,
+            epoch_cap_anchor,
         })
     }
 }
@@ -802,6 +843,16 @@ pub enum WithdrawalCapAccumulatorAction {
     KeepAccumulator,
     ResetAccumulator,
 }
+impl TryFrom<u8> for WithdrawalCapAccumulatorAction {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::KeepAccumulator),
+            1u8 => Ok(Self::ResetAccumulator),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -843,6 +894,16 @@ pub enum MintingMethod {
     PriceBased,
     Proportional,
 }
+impl TryFrom<u8> for MintingMethod {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::PriceBased),
+            1u8 => Ok(Self::Proportional),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -867,7 +928,7 @@ pub enum GlobalConfigOption {
     DeprecatedSwapDiscountBps,
     ActionsAuthority,
     DeprecatedTreasuryFeeVaults,
-    AdminAuthority,
+    DeprecatedAdminAuthority,
     BlockEmergencySwap,
     BlockLocalAdmin,
     UpdateTokenInfos,
@@ -880,8 +941,69 @@ pub enum GlobalConfigOption {
     TreasuryFeeVaultReceiver,
     AddScopePriceId,
     MaxDeviationFromRefPriceOnInvestBps,
-    InvestCooldownSlots,
+    InvestCooldownSeconds,
     MinInvestTriggerValueUsd,
+    PendingAdminAuthority,
+    CapMaxDeviationFromRefPriceOnInvestBps,
+    CapMaxPriceDeviationBps,
+    EmergencyCouncil,
+    UnfreezeAuthority,
+    DepositMaxPoolPriceOracleDeviationBps,
+    MaxInvestBpsPerOperation,
+    MaxInvestUsdPerOperation,
+    MaxPoolDeviationFromTwapBps,
+    RefPriceMaxTtlSeconds,
+    MaxDeviationFromSnapshotPriceBps,
+    CapMaxDeviationFromSnapshotPriceBps,
+    MinRefPriceAgeSeconds,
+}
+impl TryFrom<u8> for GlobalConfigOption {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::EmergencyMode),
+            1u8 => Ok(Self::BlockDeposit),
+            2u8 => Ok(Self::BlockInvest),
+            3u8 => Ok(Self::BlockWithdraw),
+            4u8 => Ok(Self::BlockCollectFees),
+            5u8 => Ok(Self::BlockCollectRewards),
+            6u8 => Ok(Self::BlockSwapRewards),
+            7u8 => Ok(Self::BlockSwapUnevenVaults),
+            8u8 => Ok(Self::WithdrawalFeeBps),
+            9u8 => Ok(Self::DeprecatedSwapDiscountBps),
+            10u8 => Ok(Self::ActionsAuthority),
+            11u8 => Ok(Self::DeprecatedTreasuryFeeVaults),
+            12u8 => Ok(Self::DeprecatedAdminAuthority),
+            13u8 => Ok(Self::BlockEmergencySwap),
+            14u8 => Ok(Self::BlockLocalAdmin),
+            15u8 => Ok(Self::UpdateTokenInfos),
+            16u8 => Ok(Self::ScopeProgramId),
+            17u8 => Ok(Self::UpdateScopePriceId),
+            18u8 => Ok(Self::MinPerformanceFeeBps),
+            19u8 => Ok(Self::MinSwapUnevenSlippageToleranceBps),
+            20u8 => Ok(Self::MinReferencePriceSlippageToleranceBps),
+            21u8 => Ok(Self::ActionsAfterRebalanceDelaySeconds),
+            22u8 => Ok(Self::TreasuryFeeVaultReceiver),
+            23u8 => Ok(Self::AddScopePriceId),
+            24u8 => Ok(Self::MaxDeviationFromRefPriceOnInvestBps),
+            25u8 => Ok(Self::InvestCooldownSeconds),
+            26u8 => Ok(Self::MinInvestTriggerValueUsd),
+            27u8 => Ok(Self::PendingAdminAuthority),
+            28u8 => Ok(Self::CapMaxDeviationFromRefPriceOnInvestBps),
+            29u8 => Ok(Self::CapMaxPriceDeviationBps),
+            30u8 => Ok(Self::EmergencyCouncil),
+            31u8 => Ok(Self::UnfreezeAuthority),
+            32u8 => Ok(Self::DepositMaxPoolPriceOracleDeviationBps),
+            33u8 => Ok(Self::MaxInvestBpsPerOperation),
+            34u8 => Ok(Self::MaxInvestUsdPerOperation),
+            35u8 => Ok(Self::MaxPoolDeviationFromTwapBps),
+            36u8 => Ok(Self::RefPriceMaxTtlSeconds),
+            37u8 => Ok(Self::MaxDeviationFromSnapshotPriceBps),
+            38u8 => Ok(Self::CapMaxDeviationFromSnapshotPriceBps),
+            39u8 => Ok(Self::MinRefPriceAgeSeconds),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -948,6 +1070,81 @@ pub enum StrategyConfigOption {
     DeprecatedUpdateSwapUnevenAuthority,
     UpdatePendingStrategyAdmin,
     UpdateMaxDeviationFromRefPriceOnInvestBps,
+    UpdatePendingRange,
+    ResetPendingRange,
+    UpdateStrategyEmergencyMode,
+    UpdateDepositMaxPoolPriceOracleDeviationBps,
+    UpdateRewardDiscountBps,
+    UpdateMaxPoolDeviationFromTwapBps,
+    UpdateMaxDeviationFromSnapshotPriceBps,
+}
+impl TryFrom<u8> for StrategyConfigOption {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UpdateDepositCap),
+            1u8 => Ok(Self::UpdateDepositCapIxn),
+            2u8 => Ok(Self::UpdateWithdrawalCapACapacity),
+            3u8 => Ok(Self::UpdateWithdrawalCapAInterval),
+            4u8 => Ok(Self::UpdateWithdrawalCapACurrentTotal),
+            5u8 => Ok(Self::UpdateWithdrawalCapBCapacity),
+            6u8 => Ok(Self::UpdateWithdrawalCapBInterval),
+            7u8 => Ok(Self::UpdateWithdrawalCapBCurrentTotal),
+            8u8 => Ok(Self::UpdateMaxDeviationBps),
+            9u8 => Ok(Self::UpdateSwapVaultMaxSlippage),
+            10u8 => Ok(Self::UpdateStrategyType),
+            11u8 => Ok(Self::UpdateDepositFee),
+            12u8 => Ok(Self::UpdateWithdrawFee),
+            13u8 => Ok(Self::UpdateCollectFeesFee),
+            14u8 => Ok(Self::UpdateReward0Fee),
+            15u8 => Ok(Self::UpdateReward1Fee),
+            16u8 => Ok(Self::UpdateReward2Fee),
+            17u8 => Ok(Self::UpdateAdminAuthority),
+            18u8 => Ok(Self::KaminoRewardIndex0Ts),
+            19u8 => Ok(Self::KaminoRewardIndex1Ts),
+            20u8 => Ok(Self::KaminoRewardIndex2Ts),
+            21u8 => Ok(Self::KaminoRewardIndex0RewardPerSecond),
+            22u8 => Ok(Self::KaminoRewardIndex1RewardPerSecond),
+            23u8 => Ok(Self::KaminoRewardIndex2RewardPerSecond),
+            24u8 => Ok(Self::UpdateDepositBlocked),
+            25u8 => Ok(Self::UpdateRaydiumProtocolPositionOrBaseVaultAuthority),
+            26u8 => Ok(Self::UpdateRaydiumPoolConfigOrBaseVaultAuthority),
+            27u8 => Ok(Self::UpdateInvestBlocked),
+            28u8 => Ok(Self::UpdateWithdrawBlocked),
+            29u8 => Ok(Self::UpdateLocalAdminBlocked),
+            30u8 => Ok(Self::DeprecatedUpdateCollateralIdA),
+            31u8 => Ok(Self::DeprecatedUpdateCollateralIdB),
+            32u8 => Ok(Self::UpdateFlashVaultSwap),
+            33u8 => Ok(Self::AllowDepositWithoutInvest),
+            34u8 => Ok(Self::UpdateSwapVaultMaxSlippageFromRef),
+            35u8 => Ok(Self::ResetReferencePrices),
+            36u8 => Ok(Self::UpdateStrategyCreationState),
+            37u8 => Ok(Self::UpdateIsCommunity),
+            38u8 => Ok(Self::UpdateRebalanceType),
+            39u8 => Ok(Self::UpdateRebalanceParams),
+            40u8 => Ok(Self::UpdateDepositMintingMethod),
+            41u8 => Ok(Self::UpdateLookupTable),
+            42u8 => Ok(Self::UpdateReferencePriceType),
+            43u8 => Ok(Self::UpdateReward0Amount),
+            44u8 => Ok(Self::UpdateReward1Amount),
+            45u8 => Ok(Self::UpdateReward2Amount),
+            46u8 => Ok(Self::UpdateFarm),
+            47u8 => Ok(Self::UpdateRebalancesCapCapacity),
+            48u8 => Ok(Self::UpdateRebalancesCapInterval),
+            49u8 => Ok(Self::UpdateRebalancesCapCurrentTotal),
+            50u8 => Ok(Self::DeprecatedUpdateSwapUnevenAuthority),
+            51u8 => Ok(Self::UpdatePendingStrategyAdmin),
+            52u8 => Ok(Self::UpdateMaxDeviationFromRefPriceOnInvestBps),
+            53u8 => Ok(Self::UpdatePendingRange),
+            54u8 => Ok(Self::ResetPendingRange),
+            55u8 => Ok(Self::UpdateStrategyEmergencyMode),
+            56u8 => Ok(Self::UpdateDepositMaxPoolPriceOracleDeviationBps),
+            57u8 => Ok(Self::UpdateRewardDiscountBps),
+            58u8 => Ok(Self::UpdateMaxPoolDeviationFromTwapBps),
+            59u8 => Ok(Self::UpdateMaxDeviationFromSnapshotPriceBps),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -967,6 +1164,19 @@ pub enum StrategyStatus {
     Rebalancing,
     NoPosition,
 }
+impl TryFrom<u8> for StrategyStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::Active),
+            2u8 => Ok(Self::Frozen),
+            3u8 => Ok(Self::Rebalancing),
+            4u8 => Ok(Self::NoPosition),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -982,6 +1192,17 @@ pub enum StrategyType {
     Stable,
     Pegged,
     Volatile,
+}
+impl TryFrom<u8> for StrategyType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Stable),
+            1u8 => Ok(Self::Pegged),
+            2u8 => Ok(Self::Volatile),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1001,6 +1222,19 @@ pub enum CreationStatus {
     Deprecated,
     Staging,
 }
+impl TryFrom<u8> for CreationStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Ignored),
+            1u8 => Ok(Self::Shadow),
+            2u8 => Ok(Self::Live),
+            3u8 => Ok(Self::Deprecated),
+            4u8 => Ok(Self::Staging),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1017,6 +1251,17 @@ pub enum ExecutiveWithdrawAction {
     Unfreeze,
     Rebalance,
 }
+impl TryFrom<u8> for ExecutiveWithdrawAction {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Freeze),
+            1u8 => Ok(Self::Unfreeze),
+            2u8 => Ok(Self::Rebalance),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1032,6 +1277,16 @@ pub enum ReferencePriceType {
     Pool,
     Twap,
 }
+impl TryFrom<u8> for ReferencePriceType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Pool),
+            1u8 => Ok(Self::Twap),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1046,6 +1301,16 @@ pub enum LiquidityCalculationMode {
     #[default]
     Deposit,
     Withdraw,
+}
+impl TryFrom<u8> for LiquidityCalculationMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Deposit),
+            1u8 => Ok(Self::Withdraw),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1074,6 +1339,28 @@ pub enum UpdateCollateralInfoMode {
     UpdateMaxIgnorableAmountAsReward,
     UpdateScopeFeed,
 }
+impl TryFrom<u8> for UpdateCollateralInfoMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::CollateralId),
+            1u8 => Ok(Self::LowerHeuristic),
+            2u8 => Ok(Self::UpperHeuristic),
+            3u8 => Ok(Self::ExpHeuristic),
+            4u8 => Ok(Self::TwapDivergence),
+            5u8 => Ok(Self::UpdateScopeTwap),
+            6u8 => Ok(Self::UpdateScopeChain),
+            7u8 => Ok(Self::UpdateName),
+            8u8 => Ok(Self::UpdatePriceMaxAge),
+            9u8 => Ok(Self::UpdateTwapMaxAge),
+            10u8 => Ok(Self::UpdateDisabled),
+            11u8 => Ok(Self::UpdateStakingRateChain),
+            12u8 => Ok(Self::UpdateMaxIgnorableAmountAsReward),
+            13u8 => Ok(Self::UpdateScopeFeed),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1088,6 +1375,16 @@ pub enum BalanceStatus {
     #[default]
     Balanced,
     Unbalanced,
+}
+impl TryFrom<u8> for BalanceStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Balanced),
+            1u8 => Ok(Self::Unbalanced),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1104,6 +1401,16 @@ pub enum RebalanceAutodriftStep {
     Uninitialized,
     Autodrifting,
 }
+impl TryFrom<u8> for RebalanceAutodriftStep {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::Autodrifting),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1118,6 +1425,16 @@ pub enum StakingRateSource {
     #[default]
     Constant,
     Scope,
+}
+impl TryFrom<u8> for StakingRateSource {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Constant),
+            1u8 => Ok(Self::Scope),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1134,6 +1451,16 @@ pub enum DriftDirection {
     Increasing,
     Decreasing,
 }
+impl TryFrom<u8> for DriftDirection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Increasing),
+            1u8 => Ok(Self::Decreasing),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1148,6 +1475,16 @@ pub enum RebalanceDriftStep {
     #[default]
     Uninitialized,
     Drifting,
+}
+impl TryFrom<u8> for RebalanceDriftStep {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::Drifting),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1177,6 +1514,16 @@ pub enum RebalanceTakeProfitToken {
     A,
     B,
 }
+impl TryFrom<u8> for RebalanceTakeProfitToken {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::A),
+            1u8 => Ok(Self::B),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1192,6 +1539,17 @@ pub enum RebalanceTakeProfitStep {
     Uninitialized,
     TakingProfit,
     Finished,
+}
+impl TryFrom<u8> for RebalanceTakeProfitStep {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Uninitialized),
+            1u8 => Ok(Self::TakingProfit),
+            2u8 => Ok(Self::Finished),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1227,6 +1585,22 @@ pub enum RebalanceType {
     PeriodicRebalance,
     Expander,
     Autodrift,
+}
+impl TryFrom<u8> for RebalanceType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Manual),
+            1u8 => Ok(Self::PricePercentage),
+            2u8 => Ok(Self::PricePercentageWithReset),
+            3u8 => Ok(Self::Drift),
+            4u8 => Ok(Self::TakeProfit),
+            5u8 => Ok(Self::PeriodicRebalance),
+            6u8 => Ok(Self::Expander),
+            7u8 => Ok(Self::Autodrift),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1268,6 +1642,42 @@ pub enum CollateralTestToken {
     Samo,
     LaineSol,
     Bsol,
+}
+impl TryFrom<u8> for CollateralTestToken {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Usdc),
+            1u8 => Ok(Self::Usdh),
+            2u8 => Ok(Self::Sol),
+            3u8 => Ok(Self::Eth),
+            4u8 => Ok(Self::Btc),
+            5u8 => Ok(Self::Msol),
+            6u8 => Ok(Self::Stsol),
+            7u8 => Ok(Self::Usdt),
+            8u8 => Ok(Self::Orca),
+            9u8 => Ok(Self::Mnde),
+            10u8 => Ok(Self::Hbb),
+            11u8 => Ok(Self::Jsol),
+            12u8 => Ok(Self::Ush),
+            13u8 => Ok(Self::Dai),
+            14u8 => Ok(Self::Ldo),
+            15u8 => Ok(Self::Scnsol),
+            16u8 => Ok(Self::Uxd),
+            17u8 => Ok(Self::Hdg),
+            18u8 => Ok(Self::Dust),
+            19u8 => Ok(Self::Usdr),
+            20u8 => Ok(Self::Ratio),
+            21u8 => Ok(Self::Uxp),
+            22u8 => Ok(Self::Jitosol),
+            23u8 => Ok(Self::Ray),
+            24u8 => Ok(Self::Bonk),
+            25u8 => Ok(Self::Samo),
+            26u8 => Ok(Self::LaineSol),
+            27u8 => Ok(Self::Bsol),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1352,6 +1762,84 @@ pub enum ScopePriceIdTest {
     Bsol,
     LaineSol,
 }
+impl TryFrom<u8> for ScopePriceIdTest {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Sol),
+            1u8 => Ok(Self::Eth),
+            2u8 => Ok(Self::Btc),
+            3u8 => Ok(Self::Srm),
+            4u8 => Ok(Self::Ray),
+            5u8 => Ok(Self::Ftt),
+            6u8 => Ok(Self::Msol),
+            7u8 => Ok(Self::ScnSolSol),
+            8u8 => Ok(Self::Bnb),
+            9u8 => Ok(Self::Avax),
+            10u8 => Ok(Self::DaoSolSol),
+            11u8 => Ok(Self::SaberMsolSol),
+            12u8 => Ok(Self::Usdh),
+            13u8 => Ok(Self::StSol),
+            14u8 => Ok(Self::CsolSol),
+            15u8 => Ok(Self::CethEth),
+            16u8 => Ok(Self::CbtcBtc),
+            17u8 => Ok(Self::CmsolSol),
+            18u8 => Ok(Self::WstEth),
+            19u8 => Ok(Self::Ldo),
+            20u8 => Ok(Self::Usdc),
+            21u8 => Ok(Self::CusdcUsdc),
+            22u8 => Ok(Self::Usdt),
+            23u8 => Ok(Self::Orca),
+            24u8 => Ok(Self::Mnde),
+            25u8 => Ok(Self::Hbb),
+            26u8 => Ok(Self::CorcaOrca),
+            27u8 => Ok(Self::CslndSlnd),
+            28u8 => Ok(Self::CsrmSrm),
+            29u8 => Ok(Self::CrayRay),
+            30u8 => Ok(Self::CfttFtt),
+            31u8 => Ok(Self::CstsolStsol),
+            32u8 => Ok(Self::Slnd),
+            33u8 => Ok(Self::Dai),
+            34u8 => Ok(Self::JsolSol),
+            35u8 => Ok(Self::Ush),
+            36u8 => Ok(Self::Uxd),
+            37u8 => Ok(Self::UsdhTwap),
+            38u8 => Ok(Self::UshTwap),
+            39u8 => Ok(Self::UxdTwap),
+            40u8 => Ok(Self::Hdg),
+            41u8 => Ok(Self::Dust),
+            42u8 => Ok(Self::Usdr),
+            43u8 => Ok(Self::UsdrTwap),
+            44u8 => Ok(Self::Ratio),
+            45u8 => Ok(Self::Uxp),
+            46u8 => Ok(Self::Kuxdusdcorca),
+            47u8 => Ok(Self::JitosolSol),
+            48u8 => Ok(Self::SolEma),
+            49u8 => Ok(Self::EthEma),
+            50u8 => Ok(Self::BtcEma),
+            51u8 => Ok(Self::SrmEma),
+            52u8 => Ok(Self::RayEma),
+            53u8 => Ok(Self::FttEma),
+            54u8 => Ok(Self::MsolEma),
+            55u8 => Ok(Self::BnbEma),
+            56u8 => Ok(Self::AvaxEma),
+            57u8 => Ok(Self::StsolEma),
+            58u8 => Ok(Self::UsdcEma),
+            59u8 => Ok(Self::UsdtEma),
+            60u8 => Ok(Self::SlndEma),
+            61u8 => Ok(Self::DaiEma),
+            62u8 => Ok(Self::WstEthTwap),
+            63u8 => Ok(Self::DustTwap),
+            64u8 => Ok(Self::Bonk),
+            65u8 => Ok(Self::BonkTwap),
+            66u8 => Ok(Self::Samo),
+            67u8 => Ok(Self::SamoTwap),
+            68u8 => Ok(Self::Bsol),
+            69u8 => Ok(Self::LaineSol),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1367,4 +1855,15 @@ pub enum DEX {
     Orca,
     Raydium,
     Meteora,
+}
+impl TryFrom<u8> for DEX {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Orca),
+            1u8 => Ok(Self::Raydium),
+            2u8 => Ok(Self::Meteora),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

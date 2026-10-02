@@ -113,26 +113,6 @@
           "isSigner": false
         },
         {
-          "name": "sourceMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "destinationMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
           "isMut": false,
           "isSigner": false
@@ -198,26 +178,6 @@
         {
           "name": "destination",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "tokenAMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenBMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenAProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenBProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -298,27 +258,7 @@
           "isSigner": false
         },
         {
-          "name": "tokenAMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenBMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenAProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenBProgram",
           "isMut": false,
           "isSigner": false
         }
@@ -382,16 +322,6 @@
         {
           "name": "destination",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "sourceMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -460,16 +390,6 @@
         {
           "name": "feeAccount",
           "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "destinationMint",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "tokenProgram",
-          "isMut": false,
           "isSigner": false
         },
         {
@@ -643,6 +563,18 @@
           }
         ]
       }
+    },
+    {
+      "name": "StableCurve",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amp",
+            "type": "u64"
+          }
+        ]
+      }
     }
   ],
   "types": [
@@ -656,6 +588,9 @@
           },
           {
             "name": "ConstantPrice"
+          },
+          {
+            "name": "Stable"
           },
           {
             "name": "Offset"

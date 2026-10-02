@@ -17,7 +17,7 @@ pub struct BinArray {
     #[serde(with = "crate::big_array_serde")]
     pub bins: [Bin; 256],
     pub index: u32,
-    pub _space: [u8; 12],
+    pub space: [u8; 12],
 }
 impl BinArray {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -27,15 +27,15 @@ impl BinArray {
             &mut reader,
         )?;
         let index: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let _space: [u8; 12] = crate::borsh_de_or_default(&mut reader)?;
+        let space: [u8; 12] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
-        Ok(Self { pair, bins, index, _space })
+        Ok(Self { pair, bins, index, space })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.pair, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bins, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.index, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._space, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.space, &mut writer)?;
         Ok(())
     }
 }
@@ -316,7 +316,7 @@ pub struct Position {
     pub liquidity_shares: [u128; 64],
     pub lower_bin_id: u32,
     pub upper_bin_id: u32,
-    pub _space: [u8; 8],
+    pub space: [u8; 8],
 }
 impl Position {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -328,7 +328,7 @@ impl Position {
         )?;
         let lower_bin_id: u32 = crate::borsh_de_or_default(&mut reader)?;
         let upper_bin_id: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let _space: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let space: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pair,
@@ -336,7 +336,7 @@ impl Position {
             liquidity_shares,
             lower_bin_id,
             upper_bin_id,
-            _space,
+            space,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -345,7 +345,7 @@ impl Position {
         borsh::BorshSerialize::serialize(&self.liquidity_shares, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lower_bin_id, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.upper_bin_id, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._space, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.space, &mut writer)?;
         Ok(())
     }
 }

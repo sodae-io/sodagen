@@ -268,7 +268,7 @@ pub enum KaminoLendingError {
     RepayTooSmallForFullLiquidation = 6121,
     #[error("Liquidator provided repay amount lower than required by liquidation rules")]
     InsufficientRepayAmount = 6122,
-    #[error("Obligation order of the given index cannot exist")]
+    #[error("Order of the given index cannot exist")]
     OrderIndexOutOfBounds = 6123,
     #[error("Given order configuration has wrong parameters")]
     InvalidOrderConfiguration = 6124,
@@ -430,6 +430,10 @@ pub enum KaminoLendingError {
         "Reserve rewards are disabled on this market (reserve_rewards_max_apr_bps is 0)"
     )]
     ReserveRewardsDisabled = 6184,
+    #[error(
+        "Transaction includes a nonce instruction, which is not allowed for admin operations"
+    )]
+    TransactionIncludesNonceInstruction = 6185,
 }
 impl From<KaminoLendingError> for ProgramError {
     fn from(e: KaminoLendingError) -> Self {

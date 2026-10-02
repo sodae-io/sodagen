@@ -17,7 +17,7 @@ pub struct Bank {
     pub mint: Pubkey,
     pub mint_decimals: u8,
     pub group: Pubkey,
-    pub _pad0: [u8; 7],
+    pub pad0: [u8; 7],
     pub asset_share_value: WrappedI80F48,
     pub liability_share_value: WrappedI80F48,
     pub liquidity_vault: Pubkey,
@@ -26,12 +26,12 @@ pub struct Bank {
     pub insurance_vault: Pubkey,
     pub insurance_vault_bump: u8,
     pub insurance_vault_authority_bump: u8,
-    pub _pad1: [u8; 4],
+    pub pad1: [u8; 4],
     pub collected_insurance_fees_outstanding: WrappedI80F48,
     pub fee_vault: Pubkey,
     pub fee_vault_bump: u8,
     pub fee_vault_authority_bump: u8,
-    pub _pad2: [u8; 6],
+    pub pad2: [u8; 6],
     pub collected_group_fees_outstanding: WrappedI80F48,
     pub total_liability_shares: WrappedI80F48,
     pub total_asset_shares: WrappedI80F48,
@@ -47,13 +47,13 @@ pub struct Bank {
     pub cache: BankCache,
     pub lending_position_count: i32,
     pub borrowing_position_count: i32,
-    pub _padding_0: [u8; 16],
+    pub padding_0: [u8; 16],
     pub integration_acc_1: Pubkey,
     pub integration_acc_2: Pubkey,
     pub integration_acc_3: Pubkey,
     pub rate_limiter: BankRateLimiter,
-    pub _pad_0: [u8; 16],
-    pub _padding_1: [[u64; 2]; 7],
+    pub pad_0: [u8; 16],
+    pub padding_1: [[u64; 2]; 7],
 }
 impl Bank {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -61,7 +61,7 @@ impl Bank {
         let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let mint_decimals: u8 = crate::borsh_de_or_default(&mut reader)?;
         let group: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         let asset_share_value = if reader.is_empty() {
             Default::default()
         } else {
@@ -82,7 +82,7 @@ impl Bank {
         let insurance_vault_authority_bump: u8 = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let _pad1: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let pad1: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let collected_insurance_fees_outstanding = if reader.is_empty() {
             Default::default()
         } else {
@@ -91,7 +91,7 @@ impl Bank {
         let fee_vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let fee_vault_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
         let fee_vault_authority_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad2: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let pad2: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
         let collected_group_fees_outstanding = if reader.is_empty() {
             Default::default()
         } else {
@@ -139,7 +139,7 @@ impl Bank {
         };
         let lending_position_count: i32 = crate::borsh_de_or_default(&mut reader)?;
         let borrowing_position_count: i32 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
         let integration_acc_1: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let integration_acc_2: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let integration_acc_3: Pubkey = crate::borsh_de_or_default(&mut reader)?;
@@ -148,14 +148,14 @@ impl Bank {
         } else {
             <BankRateLimiter>::deserialize(&mut reader)?
         };
-        let _pad_0: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [[u64; 2]; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let pad_0: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [[u64; 2]; 7] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             mint,
             mint_decimals,
             group,
-            _pad0,
+            pad0,
             asset_share_value,
             liability_share_value,
             liquidity_vault,
@@ -164,12 +164,12 @@ impl Bank {
             insurance_vault,
             insurance_vault_bump,
             insurance_vault_authority_bump,
-            _pad1,
+            pad1,
             collected_insurance_fees_outstanding,
             fee_vault,
             fee_vault_bump,
             fee_vault_authority_bump,
-            _pad2,
+            pad2,
             collected_group_fees_outstanding,
             total_liability_shares,
             total_asset_shares,
@@ -185,20 +185,20 @@ impl Bank {
             cache,
             lending_position_count,
             borrowing_position_count,
-            _padding_0,
+            padding_0,
             integration_acc_1,
             integration_acc_2,
             integration_acc_3,
             rate_limiter,
-            _pad_0,
-            _padding_1,
+            pad_0,
+            padding_1,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.mint, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.mint_decimals, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.group, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._pad0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.asset_share_value, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.liability_share_value, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.liquidity_vault, &mut writer)?;
@@ -213,7 +213,7 @@ impl Bank {
             &self.insurance_vault_authority_bump,
             &mut writer,
         )?;
-        borsh::BorshSerialize::serialize(&self._pad1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad1, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.collected_insurance_fees_outstanding,
             &mut writer,
@@ -221,7 +221,7 @@ impl Bank {
         borsh::BorshSerialize::serialize(&self.fee_vault, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_vault_bump, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_vault_authority_bump, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._pad2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad2, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.collected_group_fees_outstanding,
             &mut writer,
@@ -243,13 +243,13 @@ impl Bank {
         borsh::BorshSerialize::serialize(&self.cache, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lending_position_count, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.borrowing_position_count, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.integration_acc_1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.integration_acc_2, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.integration_acc_3, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.rate_limiter, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._pad_0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_1, &mut writer)?;
         Ok(())
     }
 }
@@ -299,7 +299,7 @@ pub struct BankMetadata {
     pub end_data_blob: u16,
     pub end_ticker_byte: u8,
     pub bump: u8,
-    pub _pad0: [u8; 2],
+    pub pad0: [u8; 2],
 }
 impl BankMetadata {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -319,7 +319,7 @@ impl BankMetadata {
         let end_data_blob: u16 = crate::borsh_de_or_default(&mut reader)?;
         let end_ticker_byte: u8 = crate::borsh_de_or_default(&mut reader)?;
         let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 2] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             bank,
@@ -331,7 +331,7 @@ impl BankMetadata {
             end_data_blob,
             end_ticker_byte,
             bump,
-            _pad0,
+            pad0,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -344,7 +344,7 @@ impl BankMetadata {
         borsh::BorshSerialize::serialize(&self.end_data_blob, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.end_ticker_byte, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bump, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._pad0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad0, &mut writer)?;
         Ok(())
     }
 }
@@ -390,7 +390,7 @@ pub struct ExecuteOrderRecord {
     pub balance_states: [ExecuteOrderBalanceRecord; 14],
     pub active_balance_count: u8,
     pub inactive_balance_count: u8,
-    pub _reserved0: [u8; 6],
+    pub reserved0: [u8; 6],
     pub order_start_health: WrappedI80F48,
 }
 impl ExecuteOrderRecord {
@@ -403,7 +403,7 @@ impl ExecuteOrderRecord {
         )?;
         let active_balance_count: u8 = crate::borsh_de_or_default(&mut reader)?;
         let inactive_balance_count: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved0: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
         let order_start_health = if reader.is_empty() {
             Default::default()
         } else {
@@ -416,7 +416,7 @@ impl ExecuteOrderRecord {
             balance_states,
             active_balance_count,
             inactive_balance_count,
-            _reserved0,
+            reserved0,
             order_start_health,
         })
     }
@@ -426,7 +426,7 @@ impl ExecuteOrderRecord {
         borsh::BorshSerialize::serialize(&self.balance_states, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.active_balance_count, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.inactive_balance_count, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.order_start_health, &mut writer)?;
         Ok(())
     }
@@ -472,7 +472,7 @@ pub struct FeeState {
     pub placeholder0: u64,
     pub bank_init_flat_sol_fee: u32,
     pub bump_seed: u8,
-    pub _padding0: [u8; 3],
+    pub padding0: [u8; 3],
     pub liquidation_max_fee: WrappedI80F48,
     pub program_fee_fixed: WrappedI80F48,
     pub program_fee_rate: WrappedI80F48,
@@ -481,7 +481,7 @@ pub struct FeeState {
     pub liquidation_flat_sol_fee: u32,
     pub order_init_flat_sol_fee: u32,
     pub order_execution_max_fee: WrappedI80F48,
-    pub _reserved1: [u8; 32],
+    pub reserved1: [u8; 32],
 }
 impl FeeState {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -492,7 +492,7 @@ impl FeeState {
         let placeholder0: u64 = crate::borsh_de_or_default(&mut reader)?;
         let bank_init_flat_sol_fee: u32 = crate::borsh_de_or_default(&mut reader)?;
         let bump_seed: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding0: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
+        let padding0: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
         let liquidation_max_fee = if reader.is_empty() {
             Default::default()
         } else {
@@ -521,7 +521,7 @@ impl FeeState {
         } else {
             <WrappedI80F48>::deserialize(&mut reader)?
         };
-        let _reserved1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             key,
@@ -530,7 +530,7 @@ impl FeeState {
             placeholder0,
             bank_init_flat_sol_fee,
             bump_seed,
-            _padding0,
+            padding0,
             liquidation_max_fee,
             program_fee_fixed,
             program_fee_rate,
@@ -539,7 +539,7 @@ impl FeeState {
             liquidation_flat_sol_fee,
             order_init_flat_sol_fee,
             order_execution_max_fee,
-            _reserved1,
+            reserved1,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -549,7 +549,7 @@ impl FeeState {
         borsh::BorshSerialize::serialize(&self.placeholder0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bank_init_flat_sol_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bump_seed, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.liquidation_max_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.program_fee_fixed, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.program_fee_rate, &mut writer)?;
@@ -558,7 +558,7 @@ impl FeeState {
         borsh::BorshSerialize::serialize(&self.liquidation_flat_sol_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.order_init_flat_sol_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.order_execution_max_fee, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved1, &mut writer)?;
         Ok(())
     }
 }
@@ -701,9 +701,9 @@ pub struct LiquidationRecord {
     pub entries: [LiquidationEntry; 4],
     pub cache: LiquidationCache,
     #[serde(with = "crate::big_array_serde")]
-    pub _reserved0: [u8; 64],
-    pub _reserved2: [u8; 16],
-    pub _reserved3: [u8; 8],
+    pub reserved0: [u8; 64],
+    pub reserved2: [u8; 16],
+    pub reserved3: [u8; 8],
 }
 impl LiquidationRecord {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -718,11 +718,11 @@ impl LiquidationRecord {
         } else {
             <LiquidationCache>::deserialize(&mut reader)?
         };
-        let _reserved0 = <[u8; 64] as borsh::BorshDeserialize>::deserialize_reader(
+        let reserved0 = <[u8; 64] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
-        let _reserved2: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved2: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved3: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             key,
@@ -731,9 +731,9 @@ impl LiquidationRecord {
             liquidation_receiver,
             entries,
             cache,
-            _reserved0,
-            _reserved2,
-            _reserved3,
+            reserved0,
+            reserved2,
+            reserved3,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -743,9 +743,9 @@ impl LiquidationRecord {
         borsh::BorshSerialize::serialize(&self.liquidation_receiver, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.entries, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.cache, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved2, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved3, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved3, &mut writer)?;
         Ok(())
     }
 }
@@ -798,9 +798,9 @@ pub struct MarginfiAccount {
     pub account_index: u16,
     pub third_party_index: u16,
     pub bump: u8,
-    pub _pad0: [u8; 3],
+    pub pad0: [u8; 3],
     pub liquidation_record: Pubkey,
-    pub _padding0: [u64; 7],
+    pub padding0: [u64; 7],
 }
 impl MarginfiAccount {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -827,9 +827,9 @@ impl MarginfiAccount {
         let account_index: u16 = crate::borsh_de_or_default(&mut reader)?;
         let third_party_index: u16 = crate::borsh_de_or_default(&mut reader)?;
         let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
+        let pad0: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
         let liquidation_record: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let _padding0: [u64; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let padding0: [u64; 7] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             group,
@@ -844,9 +844,9 @@ impl MarginfiAccount {
             account_index,
             third_party_index,
             bump,
-            _pad0,
+            pad0,
             liquidation_record,
-            _padding0,
+            padding0,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -865,9 +865,9 @@ impl MarginfiAccount {
         borsh::BorshSerialize::serialize(&self.account_index, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.third_party_index, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bump, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._pad0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.liquidation_record, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding0, &mut writer)?;
         Ok(())
     }
 }
@@ -921,15 +921,15 @@ pub struct MarginfiGroup {
     pub metadata_admin: Pubkey,
     pub emode_max_init_leverage: u32,
     pub emode_max_maint_leverage: u32,
-    pub _padding: [u8; 8],
+    pub padding: [u8; 8],
     pub rate_limiter: GroupRateLimiter,
     pub rate_limiter_last_admin_update_slot: u64,
     pub rate_limiter_last_admin_update_seq: u64,
     pub deleverage_withdraw_last_admin_update_slot: u64,
     pub deleverage_withdraw_last_admin_update_seq: u64,
     pub delegate_flow_admin: Pubkey,
-    pub _padding_0: [[u64; 2]; 2],
-    pub _padding_1: [[u64; 2]; 32],
+    pub padding_0: [[u64; 2]; 2],
+    pub padding_1: [[u64; 2]; 32],
 }
 impl MarginfiGroup {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -961,7 +961,7 @@ impl MarginfiGroup {
         let metadata_admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let emode_max_init_leverage: u32 = crate::borsh_de_or_default(&mut reader)?;
         let emode_max_maint_leverage: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let rate_limiter = if reader.is_empty() {
             Default::default()
         } else {
@@ -980,8 +980,8 @@ impl MarginfiGroup {
             &mut reader,
         )?;
         let delegate_flow_admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: [[u64; 2]; 2] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [[u64; 2]; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [[u64; 2]; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [[u64; 2]; 32] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             admin,
@@ -999,15 +999,15 @@ impl MarginfiGroup {
             metadata_admin,
             emode_max_init_leverage,
             emode_max_maint_leverage,
-            _padding,
+            padding,
             rate_limiter,
             rate_limiter_last_admin_update_slot,
             rate_limiter_last_admin_update_seq,
             deleverage_withdraw_last_admin_update_slot,
             deleverage_withdraw_last_admin_update_seq,
             delegate_flow_admin,
-            _padding_0,
-            _padding_1,
+            padding_0,
+            padding_1,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1029,7 +1029,7 @@ impl MarginfiGroup {
         borsh::BorshSerialize::serialize(&self.metadata_admin, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.emode_max_init_leverage, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.emode_max_maint_leverage, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.rate_limiter, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.rate_limiter_last_admin_update_slot,
@@ -1048,8 +1048,8 @@ impl MarginfiGroup {
             &mut writer,
         )?;
         borsh::BorshSerialize::serialize(&self.delegate_flow_admin, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding_1, &mut writer)?;
         Ok(())
     }
 }
@@ -1521,21 +1521,21 @@ pub struct MinimalSpotMarket {
     pub oracle: Pubkey,
     pub mint: Pubkey,
     pub vault: Pubkey,
-    pub _padding1: [[u64; 4]; 9],
-    pub _padding2: [u8; 8],
+    pub padding1: [[u64; 4]; 9],
+    pub padding2: [u8; 8],
     pub deposit_balance: [u8; 16],
     pub borrow_balance: [u8; 16],
     pub cumulative_deposit_interest: [u8; 16],
     pub cumulative_borrow_interest: [u8; 16],
-    pub _padding3: [u64; 9],
+    pub padding3: [u64; 9],
     pub last_interest_ts: u64,
-    pub _padding4: [u64; 13],
+    pub padding4: [u64; 13],
     pub decimals: u32,
     pub market_index: u16,
-    pub _padding5: [u16; 24],
-    pub _padding6: [u8; 1],
+    pub padding5: [u16; 24],
+    pub padding6: [u8; 1],
     pub pool_id: u8,
-    pub _padding7: [u64; 5],
+    pub padding7: [u64; 5],
 }
 impl MinimalSpotMarket {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1544,8 +1544,8 @@ impl MinimalSpotMarket {
         let oracle: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let _padding1: [[u64; 4]; 9] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding2: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding1: [[u64; 4]; 9] = crate::borsh_de_or_default(&mut reader)?;
+        let padding2: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let deposit_balance: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
         let borrow_balance: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
         let cumulative_deposit_interest: [u8; 16] = crate::borsh_de_or_default(
@@ -1554,36 +1554,36 @@ impl MinimalSpotMarket {
         let cumulative_borrow_interest: [u8; 16] = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let _padding3: [u64; 9] = crate::borsh_de_or_default(&mut reader)?;
+        let padding3: [u64; 9] = crate::borsh_de_or_default(&mut reader)?;
         let last_interest_ts: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding4: [u64; 13] = crate::borsh_de_or_default(&mut reader)?;
+        let padding4: [u64; 13] = crate::borsh_de_or_default(&mut reader)?;
         let decimals: u32 = crate::borsh_de_or_default(&mut reader)?;
         let market_index: u16 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding5: [u16; 24] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding6: [u8; 1] = crate::borsh_de_or_default(&mut reader)?;
+        let padding5: [u16; 24] = crate::borsh_de_or_default(&mut reader)?;
+        let padding6: [u8; 1] = crate::borsh_de_or_default(&mut reader)?;
         let pool_id: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding7: [u64; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let padding7: [u64; 5] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pubkey,
             oracle,
             mint,
             vault,
-            _padding1,
-            _padding2,
+            padding1,
+            padding2,
             deposit_balance,
             borrow_balance,
             cumulative_deposit_interest,
             cumulative_borrow_interest,
-            _padding3,
+            padding3,
             last_interest_ts,
-            _padding4,
+            padding4,
             decimals,
             market_index,
-            _padding5,
-            _padding6,
+            padding5,
+            padding6,
             pool_id,
-            _padding7,
+            padding7,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1591,8 +1591,8 @@ impl MinimalSpotMarket {
         borsh::BorshSerialize::serialize(&self.oracle, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.mint, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.vault, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding2, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.deposit_balance, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.borrow_balance, &mut writer)?;
         borsh::BorshSerialize::serialize(
@@ -1600,15 +1600,15 @@ impl MinimalSpotMarket {
             &mut writer,
         )?;
         borsh::BorshSerialize::serialize(&self.cumulative_borrow_interest, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding3, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding3, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.last_interest_ts, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding4, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding4, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.decimals, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.market_index, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding5, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding6, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding5, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding6, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pool_id, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding7, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding7, &mut writer)?;
         Ok(())
     }
 }
@@ -1651,18 +1651,18 @@ pub struct MinimalUser {
     pub name: [u8; 32],
     pub spot_positions: [SpotPosition; 8],
     #[serde(with = "crate::big_array_serde")]
-    pub _padding1: [u64; 256],
+    pub padding1: [u64; 256],
     #[serde(with = "crate::big_array_serde")]
-    pub _padding2: [u64; 128],
+    pub padding2: [u64; 128],
     #[serde(with = "crate::big_array_serde")]
-    pub _padding3: [u64; 64],
-    pub _padding4: [u64; 32],
-    pub _padding5: [u64; 8],
-    pub _padding6: [u64; 2],
-    pub _padding7: [u16; 1],
+    pub padding3: [u64; 64],
+    pub padding4: [u64; 32],
+    pub padding5: [u64; 8],
+    pub padding6: [u64; 2],
+    pub padding7: [u16; 1],
     pub sub_account_id: u16,
     pub status: UserStatus,
-    pub _padding8: [u8; 27],
+    pub padding8: [u8; 27],
 }
 impl MinimalUser {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1671,38 +1671,38 @@ impl MinimalUser {
         let delegate: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let name: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let spot_positions: [SpotPosition; 8] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding1 = <[u64; 256] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding1 = <[u64; 256] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
-        let _padding2 = <[u64; 128] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding2 = <[u64; 128] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
-        let _padding3 = <[u64; 64] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding3 = <[u64; 64] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
-        let _padding4: [u64; 32] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding5: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding6: [u64; 2] = crate::borsh_de_or_default(&mut reader)?;
-        let _padding7: [u16; 1] = crate::borsh_de_or_default(&mut reader)?;
+        let padding4: [u64; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let padding5: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding6: [u64; 2] = crate::borsh_de_or_default(&mut reader)?;
+        let padding7: [u16; 1] = crate::borsh_de_or_default(&mut reader)?;
         let sub_account_id: u16 = crate::borsh_de_or_default(&mut reader)?;
         let status: UserStatus = crate::borsh_de_or_default(&mut reader)?;
-        let _padding8: [u8; 27] = crate::borsh_de_or_default(&mut reader)?;
+        let padding8: [u8; 27] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             authority,
             delegate,
             name,
             spot_positions,
-            _padding1,
-            _padding2,
-            _padding3,
-            _padding4,
-            _padding5,
-            _padding6,
-            _padding7,
+            padding1,
+            padding2,
+            padding3,
+            padding4,
+            padding5,
+            padding6,
+            padding7,
             sub_account_id,
             status,
-            _padding8,
+            padding8,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1710,16 +1710,16 @@ impl MinimalUser {
         borsh::BorshSerialize::serialize(&self.delegate, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.name, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.spot_positions, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding2, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding3, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding4, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding5, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding6, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding7, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding3, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding4, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding5, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding6, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding7, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.sub_account_id, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.status, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding8, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding8, &mut writer)?;
         Ok(())
     }
 }
@@ -1766,11 +1766,11 @@ pub struct Order {
     pub pad0: [u8; 4],
     pub tags: [u16; 2],
     pub pad1: [u8; 4],
-    pub _tags_padding: [u8; 32],
+    pub tags_padding: [u8; 32],
     pub trigger: OrderTriggerType,
     pub bump: u8,
     pub pad2: [u8; 6],
-    pub _reserved1: [[u8; 32]; 4],
+    pub reserved1: [[u8; 32]; 4],
 }
 impl Order {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1791,11 +1791,11 @@ impl Order {
         let pad0: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let tags: [u16; 2] = crate::borsh_de_or_default(&mut reader)?;
         let pad1: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
-        let _tags_padding: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let tags_padding: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let trigger: OrderTriggerType = crate::borsh_de_or_default(&mut reader)?;
         let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
         let pad2: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved1: [[u8; 32]; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved1: [[u8; 32]; 4] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             marginfi_account,
@@ -1806,11 +1806,11 @@ impl Order {
             pad0,
             tags,
             pad1,
-            _tags_padding,
+            tags_padding,
             trigger,
             bump,
             pad2,
-            _reserved1,
+            reserved1,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1822,11 +1822,11 @@ impl Order {
         borsh::BorshSerialize::serialize(&self.pad0, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.tags, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pad1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._tags_padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tags_padding, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.trigger, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bump, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pad2, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved1, &mut writer)?;
         Ok(())
     }
 }
@@ -1873,11 +1873,11 @@ pub struct StakedSettings {
     pub total_asset_value_init_limit: u64,
     pub oracle_max_age: u16,
     pub risk_tier: RiskTier,
-    pub _pad0: [u8; 5],
-    pub _reserved0: [u8; 8],
-    pub _reserved1: [u8; 32],
+    pub pad0: [u8; 5],
+    pub reserved0: [u8; 8],
+    pub reserved1: [u8; 32],
     #[serde(with = "crate::big_array_serde")]
-    pub _reserved2: [u8; 64],
+    pub reserved2: [u8; 64],
 }
 impl StakedSettings {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1899,10 +1899,10 @@ impl StakedSettings {
         let total_asset_value_init_limit: u64 = crate::borsh_de_or_default(&mut reader)?;
         let oracle_max_age: u16 = crate::borsh_de_or_default(&mut reader)?;
         let risk_tier: RiskTier = crate::borsh_de_or_default(&mut reader)?;
-        let _pad0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved0: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
-        let _reserved2 = <[u8; 64] as borsh::BorshDeserialize>::deserialize_reader(
+        let pad0: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved0: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved1: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved2 = <[u8; 64] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
@@ -1916,10 +1916,10 @@ impl StakedSettings {
             total_asset_value_init_limit,
             oracle_max_age,
             risk_tier,
-            _pad0,
-            _reserved0,
-            _reserved1,
-            _reserved2,
+            pad0,
+            reserved0,
+            reserved1,
+            reserved2,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -1935,10 +1935,10 @@ impl StakedSettings {
         )?;
         borsh::BorshSerialize::serialize(&self.oracle_max_age, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.risk_tier, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._pad0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved0, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.pad0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved0, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved2, &mut writer)?;
         Ok(())
     }
 }

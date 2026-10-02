@@ -30,8 +30,7 @@ pub struct GlobalConfig {
     pub migrate_fee_owner: Pubkey,
     pub migrate_to_amm_wallet: Pubkey,
     pub migrate_to_cpswap_wallet: Pubkey,
-    pub requires_platform_auth: u8,
-    pub padding_alignment: [u8; 7],
+    pub padding_alignment: [u8; 8],
     pub padding: [u64; 15],
 }
 impl GlobalConfig {
@@ -53,8 +52,7 @@ impl GlobalConfig {
         let migrate_fee_owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let migrate_to_amm_wallet: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let migrate_to_cpswap_wallet: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let requires_platform_auth: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let padding_alignment: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_alignment: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         let padding: [u64; 15] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
@@ -74,7 +72,6 @@ impl GlobalConfig {
             migrate_fee_owner,
             migrate_to_amm_wallet,
             migrate_to_cpswap_wallet,
-            requires_platform_auth,
             padding_alignment,
             padding,
         })
@@ -96,7 +93,6 @@ impl GlobalConfig {
         borsh::BorshSerialize::serialize(&self.migrate_fee_owner, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.migrate_to_amm_wallet, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.migrate_to_cpswap_wallet, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.requires_platform_auth, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding_alignment, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
@@ -117,6 +113,71 @@ impl GlobalConfigAccount {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&GLOBAL_CONFIG_ACCOUNT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const PLATFORM_ALLOW_CONFIG_ACCOUNT_DISCM: [u8; 8] = [
+    248, 57, 34, 138, 222, 238, 186, 75,
+];
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct PlatformAllowConfig {
+    pub bump: u8,
+    pub platform_config: Pubkey,
+    pub global_config: Pubkey,
+    pub padding: [u64; 8],
+}
+impl PlatformAllowConfig {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let platform_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let global_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            bump,
+            platform_config,
+            global_config,
+            padding,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.bump, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.platform_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.global_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct PlatformAllowConfigAccount(pub PlatformAllowConfig);
+impl PlatformAllowConfigAccount {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != PLATFORM_ALLOW_CONFIG_ACCOUNT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self(PlatformAllowConfig::deserialize(&mut reader)?))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&PLATFORM_ALLOW_CONFIG_ACCOUNT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -155,9 +216,11 @@ pub struct PlatformConfig {
     pub platform_vesting_wallet: Pubkey,
     pub platform_vesting_scale: u64,
     pub platform_cp_creator: Pubkey,
+    pub restrict_global_config: u8,
+    pub restrict_curve_param: u8,
+    pub curve_rule_manager: Pubkey,
     #[serde(with = "crate::big_array_serde")]
-    pub padding: [u8; 108],
-    pub curve_params: Vec<PlatformCurveParam>,
+    pub padding: [u8; 78],
 }
 impl PlatformConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -186,10 +249,10 @@ impl PlatformConfig {
         let platform_vesting_wallet: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let platform_vesting_scale: u64 = crate::borsh_de_or_default(&mut reader)?;
         let platform_cp_creator: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let padding = <[u8; 108] as borsh::BorshDeserialize>::deserialize_reader(
-            &mut reader,
-        )?;
-        let curve_params: Vec<PlatformCurveParam> = crate::borsh_de_or_default(
+        let restrict_global_config: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let restrict_curve_param: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let curve_rule_manager: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let padding = <[u8; 78] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
@@ -210,8 +273,10 @@ impl PlatformConfig {
             platform_vesting_wallet,
             platform_vesting_scale,
             platform_cp_creator,
+            restrict_global_config,
+            restrict_curve_param,
+            curve_rule_manager,
             padding,
-            curve_params,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -234,8 +299,10 @@ impl PlatformConfig {
         borsh::BorshSerialize::serialize(&self.platform_vesting_wallet, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.platform_vesting_scale, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.platform_cp_creator, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.restrict_global_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.restrict_curve_param, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.curve_rule_manager, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.curve_params, &mut writer)?;
         Ok(())
     }
 }
@@ -262,8 +329,8 @@ impl PlatformConfigAccount {
         Ok(data)
     }
 }
-pub const PLATFORM_GLOBAL_ACCESS_ACCOUNT_DISCM: [u8; 8] = [
-    174, 147, 132, 240, 137, 219, 243, 16,
+pub const PLATFORM_CURVE_RULE_ACCOUNT_DISCM: [u8; 8] = [
+    12, 20, 122, 169, 247, 155, 104, 234,
 ];
 #[derive(
     Clone,
@@ -275,50 +342,62 @@ pub const PLATFORM_GLOBAL_ACCESS_ACCOUNT_DISCM: [u8; 8] = [
     serde::Serialize,
     serde::Deserialize
 )]
-pub struct PlatformGlobalAccess {
+pub struct PlatformCurveRule {
     pub bump: u8,
-    pub global_config: Pubkey,
+    pub version: u8,
     pub platform_config: Pubkey,
+    pub global_config: Pubkey,
+    pub epoch: u64,
     pub padding: [u64; 8],
+    pub groups: Vec<CurveRuleGroup>,
 }
-impl PlatformGlobalAccess {
+impl PlatformCurveRule {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let global_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let version: u8 = crate::borsh_de_or_default(&mut reader)?;
         let platform_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let global_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
         let padding: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let groups: Vec<CurveRuleGroup> = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             bump,
-            global_config,
+            version,
             platform_config,
+            global_config,
+            epoch,
             padding,
+            groups,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.bump, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.global_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.version, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.platform_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.global_config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.epoch, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.groups, &mut writer)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct PlatformGlobalAccessAccount(pub PlatformGlobalAccess);
-impl PlatformGlobalAccessAccount {
+pub struct PlatformCurveRuleAccount(pub PlatformCurveRule);
+impl PlatformCurveRuleAccount {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         use std::io::Read;
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != PLATFORM_GLOBAL_ACCESS_ACCOUNT_DISCM {
+        if maybe_discm != PLATFORM_CURVE_RULE_ACCOUNT_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        Ok(Self(PlatformGlobalAccess::deserialize(&mut reader)?))
+        Ok(Self(PlatformCurveRule::deserialize(&mut reader)?))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&PLATFORM_GLOBAL_ACCESS_ACCOUNT_DISCM)?;
+        writer.write_all(&PLATFORM_CURVE_RULE_ACCOUNT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

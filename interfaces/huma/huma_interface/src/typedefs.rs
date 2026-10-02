@@ -16,6 +16,15 @@ pub enum AsyncDeploymentStrategyType {
     #[default]
     HumaInstitutional,
 }
+impl TryFrom<u8> for AsyncDeploymentStrategyType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::HumaInstitutional),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -31,6 +40,17 @@ pub enum DeploymentStrategyType {
     Manual,
     JupLend,
     KaminoLend,
+}
+impl TryFrom<u8> for DeploymentStrategyType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Manual),
+            1u8 => Ok(Self::JupLend),
+            2u8 => Ok(Self::KaminoLend),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -319,6 +339,18 @@ pub enum PoolStatus {
     On,
     PreClosure,
     Closed,
+}
+impl TryFrom<u8> for PoolStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Off),
+            1u8 => Ok(Self::On),
+            2u8 => Ok(Self::PreClosure),
+            3u8 => Ok(Self::Closed),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

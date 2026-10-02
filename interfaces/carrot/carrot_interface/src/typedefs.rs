@@ -1197,6 +1197,22 @@ pub enum StrategyTypeSelection {
     Chest,
     ClendSupply,
 }
+impl TryFrom<u8> for StrategyTypeSelection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::MarginfiSupply),
+            1u8 => Ok(Self::KlendSupply),
+            2u8 => Ok(Self::SolendSupply),
+            3u8 => Ok(Self::MangoSupply),
+            4u8 => Ok(Self::DriftSupply),
+            5u8 => Ok(Self::DriftInsuranceFund),
+            6u8 => Ok(Self::Chest),
+            7u8 => Ok(Self::ClendSupply),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1230,4 +1246,15 @@ pub enum RoundingMode {
     RoundUp,
     RoundDown,
     Avg,
+}
+impl TryFrom<u8> for RoundingMode {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::RoundUp),
+            1u8 => Ok(Self::RoundDown),
+            2u8 => Ok(Self::Avg),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

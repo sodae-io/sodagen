@@ -15,7 +15,7 @@ use solana_pubkey::Pubkey;
 pub struct MarketFees {
     pub staking_fee_share: u16,
     pub creator_fee_share: u16,
-    pub _space: u32,
+    pub space: u32,
     pub pending_staking_fees: u64,
     pub pending_creator_fees: u64,
 }
@@ -24,14 +24,14 @@ impl MarketFees {
         let mut reader: &[u8] = *__buf;
         let staking_fee_share: u16 = crate::borsh_de_or_default(&mut reader)?;
         let creator_fee_share: u16 = crate::borsh_de_or_default(&mut reader)?;
-        let _space: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let space: u32 = crate::borsh_de_or_default(&mut reader)?;
         let pending_staking_fees: u64 = crate::borsh_de_or_default(&mut reader)?;
         let pending_creator_fees: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             staking_fee_share,
             creator_fee_share,
-            _space,
+            space,
             pending_staking_fees,
             pending_creator_fees,
         })
@@ -52,6 +52,16 @@ pub enum QuoteTokenBadgeStatus {
     Disabled,
     Enabled,
 }
+impl TryFrom<u8> for QuoteTokenBadgeStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Disabled),
+            1u8 => Ok(Self::Enabled),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -67,6 +77,16 @@ pub enum SwapAmountType {
     ExactInput,
     ExactOutput,
 }
+impl TryFrom<u8> for SwapAmountType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::ExactInput),
+            1u8 => Ok(Self::ExactOutput),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -81,6 +101,16 @@ pub enum SwapType {
     #[default]
     Buy,
     Sell,
+}
+impl TryFrom<u8> for SwapType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Buy),
+            1u8 => Ok(Self::Sell),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

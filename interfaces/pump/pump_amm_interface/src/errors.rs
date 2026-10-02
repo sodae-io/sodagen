@@ -142,6 +142,20 @@ pub enum PumpAmmError {
     PoolCannotBoost = 6065,
     #[error("BOOST: boost is disabled")]
     BoostDisabled = 6066,
+    #[error("BOOST: lp_supply must never drop below the circulating LP mint supply")]
+    SeedLockViolation = 6067,
+    #[error("Configurable creator fee is disabled")]
+    CreatorFeeNotConfigurable = 6068,
+    #[error("Creator fee basis points must be between 1 and the configured maximum")]
+    CreatorFeeBpsOutOfRange = 6069,
+    #[error("Creator fee is not editable for this pool")]
+    CreatorFeeNotEditable = 6070,
+    #[error("Cashback coins cannot have a creator fee")]
+    CreatorFeeNotAllowedForCashbackCoin = 6071,
+    #[error("Sharing config is not active")]
+    SharingConfigNotActive = 6072,
+    #[error("Not authorized")]
+    NotAuthorized = 6073,
 }
 impl From<PumpAmmError> for ProgramError {
     fn from(e: PumpAmmError) -> Self {

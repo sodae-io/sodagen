@@ -589,7 +589,7 @@ pub struct Event {
     pub event_flags: u8,
     pub owner_slot: u8,
     pub fee_tier: u8,
-    pub _padding: [u8; 5],
+    pub padding: [u8; 5],
     pub native_qty_released: u64,
     pub native_qty_paid: u64,
     pub native_fee_or_rebate: u64,
@@ -603,7 +603,7 @@ impl Event {
         let event_flags: u8 = crate::borsh_de_or_default(&mut reader)?;
         let owner_slot: u8 = crate::borsh_de_or_default(&mut reader)?;
         let fee_tier: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
         let native_qty_released: u64 = crate::borsh_de_or_default(&mut reader)?;
         let native_qty_paid: u64 = crate::borsh_de_or_default(&mut reader)?;
         let native_fee_or_rebate: u64 = crate::borsh_de_or_default(&mut reader)?;
@@ -615,7 +615,7 @@ impl Event {
             event_flags,
             owner_slot,
             fee_tier,
-            _padding,
+            padding,
             native_qty_released,
             native_qty_paid,
             native_fee_or_rebate,
@@ -628,7 +628,7 @@ impl Event {
         borsh::BorshSerialize::serialize(&self.event_flags, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.owner_slot, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.fee_tier, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.native_qty_released, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.native_qty_paid, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.native_fee_or_rebate, &mut writer)?;

@@ -254,7 +254,7 @@ pub struct LendingMarket {
     pub obligation_borrow_rollover_configuration_enabled: u8,
     pub obligation_borrow_migration_to_fixed_execution_enabled: u8,
     pub withdraw_ticket_cancellation_enabled: u8,
-    pub padding2: [u8; 1],
+    pub disable_nonce_block: u8,
     pub reserve_rewards_max_apr_bps: u16,
     pub min_withdraw_queued_liquidity_value: u64,
     pub fixed_term_rollover_window_duration_seconds: u64,
@@ -356,7 +356,7 @@ impl LendingMarket {
         let withdraw_ticket_cancellation_enabled: u8 = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let padding2: [u8; 1] = crate::borsh_de_or_default(&mut reader)?;
+        let disable_nonce_block: u8 = crate::borsh_de_or_default(&mut reader)?;
         let reserve_rewards_max_apr_bps: u16 = crate::borsh_de_or_default(&mut reader)?;
         let min_withdraw_queued_liquidity_value: u64 = crate::borsh_de_or_default(
             &mut reader,
@@ -419,7 +419,7 @@ impl LendingMarket {
             obligation_borrow_rollover_configuration_enabled,
             obligation_borrow_migration_to_fixed_execution_enabled,
             withdraw_ticket_cancellation_enabled,
-            padding2,
+            disable_nonce_block,
             reserve_rewards_max_apr_bps,
             min_withdraw_queued_liquidity_value,
             fixed_term_rollover_window_duration_seconds,
@@ -545,7 +545,7 @@ impl LendingMarket {
             &self.withdraw_ticket_cancellation_enabled,
             &mut writer,
         )?;
-        borsh::BorshSerialize::serialize(&self.padding2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.disable_nonce_block, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.reserve_rewards_max_apr_bps,
             &mut writer,
@@ -600,6 +600,7 @@ pub const OBLIGATION_ACCOUNT_DISCM: [u8; 8] = [168, 206, 141, 106, 88, 76, 172, 
 #[derive(
     Clone,
     Debug,
+    Default,
     BorshDeserialize,
     BorshSerialize,
     PartialEq,
@@ -633,10 +634,10 @@ pub struct Obligation {
     pub highest_borrow_factor_pct: u64,
     pub autodeleverage_margin_call_started_timestamp: u64,
     pub obligation_orders: [ObligationOrder; 2],
-    pub borrow_order: BorrowOrder,
+    pub head_borrow_order: BorrowOrder,
     pub pending_owner: Pubkey,
-    #[serde(with = "crate::big_array_serde")]
-    pub padding3: [u64; 69],
+    pub tail_borrow_orders: [BorrowOrder; 2],
+    pub padding3: [u64; 29],
 }
 impl Obligation {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -691,15 +692,16 @@ impl Obligation {
         let obligation_orders: [ObligationOrder; 2] = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let borrow_order = if reader.is_empty() {
+        let head_borrow_order = if reader.is_empty() {
             Default::default()
         } else {
             <BorrowOrder>::deserialize(&mut reader)?
         };
         let pending_owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let padding3 = <[u64; 69] as borsh::BorshDeserialize>::deserialize_reader(
+        let tail_borrow_orders: [BorrowOrder; 2] = crate::borsh_de_or_default(
             &mut reader,
         )?;
+        let padding3: [u64; 29] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             tag,
@@ -728,8 +730,9 @@ impl Obligation {
             highest_borrow_factor_pct,
             autodeleverage_margin_call_started_timestamp,
             obligation_orders,
-            borrow_order,
+            head_borrow_order,
             pending_owner,
+            tail_borrow_orders,
             padding3,
         })
     }
@@ -787,8 +790,9 @@ impl Obligation {
             &mut writer,
         )?;
         borsh::BorshSerialize::serialize(&self.obligation_orders, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.borrow_order, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.head_borrow_order, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pending_owner, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.tail_borrow_orders, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding3, &mut writer)?;
         Ok(())
     }

@@ -357,6 +357,25 @@ pub enum PairViewKind {
     SwapQuote,
     SimulateLiquidationPrice,
 }
+impl TryFrom<u8> for PairViewKind {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::EmaPrice0Nad),
+            1u8 => Ok(Self::EmaPrice1Nad),
+            2u8 => Ok(Self::SpotPrice0Nad),
+            3u8 => Ok(Self::SpotPrice1Nad),
+            4u8 => Ok(Self::K),
+            5u8 => Ok(Self::GetRates),
+            6u8 => Ok(Self::GetBorrowLimitAndCfBpsForCollateral),
+            7u8 => Ok(Self::Reserves),
+            8u8 => Ok(Self::CashReserves),
+            9u8 => Ok(Self::SwapQuote),
+            10u8 => Ok(Self::SimulateLiquidationPrice),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -634,6 +653,23 @@ pub enum UserPositionViewKind {
     UserIsLiquidatable,
     UserCollateralValueWithImpact,
     UserLiquidationBorrowLimit,
+}
+impl TryFrom<u8> for UserPositionViewKind {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::UserDynamicBorrowLimit),
+            1u8 => Ok(Self::UserDynamicCollateralFactorBps),
+            2u8 => Ok(Self::UserLiquidationCfBps),
+            3u8 => Ok(Self::UserDebtUtilizationBps),
+            4u8 => Ok(Self::UserLiquidationPrice),
+            5u8 => Ok(Self::UserDebtWithInterest),
+            6u8 => Ok(Self::UserIsLiquidatable),
+            7u8 => Ok(Self::UserCollateralValueWithImpact),
+            8u8 => Ok(Self::UserLiquidationBorrowLimit),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

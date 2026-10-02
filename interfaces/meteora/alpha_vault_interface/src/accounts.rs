@@ -164,7 +164,7 @@ pub struct FcfsVaultConfig {
     pub escrow_fee: u64,
     pub activation_type: u8,
     #[serde(with = "crate::big_array_serde")]
-    pub _padding: [u8; 175],
+    pub padding: [u8; 175],
 }
 impl FcfsVaultConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -178,7 +178,7 @@ impl FcfsVaultConfig {
         let individual_depositing_cap: u64 = crate::borsh_de_or_default(&mut reader)?;
         let escrow_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let activation_type: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding = <[u8; 175] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding = <[u8; 175] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
@@ -190,7 +190,7 @@ impl FcfsVaultConfig {
             individual_depositing_cap,
             escrow_fee,
             activation_type,
-            _padding,
+            padding,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -204,7 +204,7 @@ impl FcfsVaultConfig {
         borsh::BorshSerialize::serialize(&self.individual_depositing_cap, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.escrow_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.activation_type, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
 }
@@ -305,7 +305,7 @@ pub struct MerkleRootConfig {
     pub root: [u8; 32],
     pub vault: Pubkey,
     pub version: u64,
-    pub _padding: [u64; 8],
+    pub padding: [u64; 8],
 }
 impl MerkleRootConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -313,20 +313,20 @@ impl MerkleRootConfig {
         let root: [u8; 32] = crate::borsh_de_or_default(&mut reader)?;
         let vault: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let version: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u64; 8] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             root,
             vault,
             version,
-            _padding,
+            padding,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.root, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.vault, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.version, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
 }
@@ -372,7 +372,7 @@ pub struct ProrataVaultConfig {
     pub escrow_fee: u64,
     pub activation_type: u8,
     #[serde(with = "crate::big_array_serde")]
-    pub _padding: [u8; 191],
+    pub padding: [u8; 191],
 }
 impl ProrataVaultConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -382,7 +382,7 @@ impl ProrataVaultConfig {
         let end_vesting_duration: u64 = crate::borsh_de_or_default(&mut reader)?;
         let escrow_fee: u64 = crate::borsh_de_or_default(&mut reader)?;
         let activation_type: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding = <[u8; 191] as borsh::BorshDeserialize>::deserialize_reader(
+        let padding = <[u8; 191] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
@@ -392,7 +392,7 @@ impl ProrataVaultConfig {
             end_vesting_duration,
             escrow_fee,
             activation_type,
-            _padding,
+            padding,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -401,7 +401,7 @@ impl ProrataVaultConfig {
         borsh::BorshSerialize::serialize(&self.end_vesting_duration, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.escrow_fee, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.activation_type, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._padding, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }
 }

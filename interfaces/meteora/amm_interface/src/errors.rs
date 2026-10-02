@@ -110,8 +110,24 @@ pub enum AmmError {
     InvalidPoolType = 6051,
     #[error("Quote token must be SOL,USDC")]
     InvalidQuoteMint = 6052,
-    #[error("Invalid fee curve")]
-    InvalidFeeCurve = 6053,
+    #[error("Invalid token metadata program")]
+    InvalidTokenMetadataProgram = 6053,
+    #[error("Invalid permission")]
+    InvalidPermission = 6054,
+    #[error("Invalid zap out parameters")]
+    InvalidZapOutParameters = 6055,
+    #[error("Incorrect ATA")]
+    IncorrectAta = 6056,
+    #[error("Invalid withdraw protocol fee zap accounts")]
+    InvalidWithdrawProtocolFeeZapAccounts = 6057,
+    #[error("SOL,USDC protocol fee cannot be withdrawn via zap")]
+    MintRestrictedFromZap = 6058,
+    #[error("CPI disabled")]
+    CpiDisabled = 6059,
+    #[error("Missing zap out instruction")]
+    MissingZapOutInstruction = 6060,
+    #[error("Invalid zap accounts")]
+    InvalidZapAccounts = 6061,
 }
 impl From<AmmError> for ProgramError {
     fn from(e: AmmError) -> Self {

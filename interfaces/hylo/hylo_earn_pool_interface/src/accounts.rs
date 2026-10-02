@@ -33,7 +33,7 @@ pub struct Hylo {
     pub yield_harvest_cache: HarvestCache,
     pub yield_harvest_config: YieldHarvestConfig,
     pub stablecoin_mint_threshold: UFixValue64,
-    pub _unused_1: UFixValue64,
+    pub unused_1: UFixValue64,
     pub oracle_conf_tolerance: UFixValue64,
     pub sol_usd_oracle: Pubkey,
     pub lst_swap_fee: UFixValue64,
@@ -42,9 +42,9 @@ pub struct Hylo {
     pub lst_sell_curve_config: RebalanceCurveConfig,
     pub protocol_paused: bool,
     pub lst_pair_paused: bool,
-    pub _unused_2: UFixValue64,
+    pub unused_2: UFixValue64,
     pub pool_drawdown: PoolDrawdown,
-    pub _reserved: [u8; 13],
+    pub reserved: [u8; 13],
 }
 impl Hylo {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -92,7 +92,7 @@ impl Hylo {
         } else {
             <UFixValue64>::deserialize(&mut reader)?
         };
-        let _unused_1 = if reader.is_empty() {
+        let unused_1 = if reader.is_empty() {
             Default::default()
         } else {
             <UFixValue64>::deserialize(&mut reader)?
@@ -125,7 +125,7 @@ impl Hylo {
         };
         let protocol_paused: bool = crate::borsh_de_or_default(&mut reader)?;
         let lst_pair_paused: bool = crate::borsh_de_or_default(&mut reader)?;
-        let _unused_2 = if reader.is_empty() {
+        let unused_2 = if reader.is_empty() {
             Default::default()
         } else {
             <UFixValue64>::deserialize(&mut reader)?
@@ -135,7 +135,7 @@ impl Hylo {
         } else {
             <PoolDrawdown>::deserialize(&mut reader)?
         };
-        let _reserved: [u8; 13] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved: [u8; 13] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             admin,
@@ -157,7 +157,7 @@ impl Hylo {
             yield_harvest_cache,
             yield_harvest_config,
             stablecoin_mint_threshold,
-            _unused_1,
+            unused_1,
             oracle_conf_tolerance,
             sol_usd_oracle,
             lst_swap_fee,
@@ -166,9 +166,9 @@ impl Hylo {
             lst_sell_curve_config,
             protocol_paused,
             lst_pair_paused,
-            _unused_2,
+            unused_2,
             pool_drawdown,
-            _reserved,
+            reserved,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -191,7 +191,7 @@ impl Hylo {
         borsh::BorshSerialize::serialize(&self.yield_harvest_cache, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.yield_harvest_config, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.stablecoin_mint_threshold, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._unused_1, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.unused_1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.oracle_conf_tolerance, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.sol_usd_oracle, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lst_swap_fee, &mut writer)?;
@@ -200,9 +200,9 @@ impl Hylo {
         borsh::BorshSerialize::serialize(&self.lst_sell_curve_config, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.protocol_paused, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lst_pair_paused, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._unused_2, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.unused_2, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pool_drawdown, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved, &mut writer)?;
         Ok(())
     }
 }
@@ -241,7 +241,7 @@ pub const POOL_CONFIG_ACCOUNT_DISCM: [u8; 8] = [26, 108, 14, 123, 116, 230, 129,
     serde::Deserialize
 )]
 pub struct PoolConfig {
-    pub _dead_admin: Pubkey,
+    pub dead_admin: Pubkey,
     pub pool_auth_bump: u8,
     pub lp_token_auth_bump: u8,
     pub lp_token_mint_bump: u8,
@@ -249,12 +249,12 @@ pub struct PoolConfig {
     pub paused: bool,
     pub withdrawal_limiter: WithdrawalLimiter,
     pub deposit_limiter: DepositLimiter,
-    pub _reserved: [u8; 19],
+    pub reserved: [u8; 19],
 }
 impl PoolConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
-        let _dead_admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let dead_admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let pool_auth_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
         let lp_token_auth_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
         let lp_token_mint_bump: u8 = crate::borsh_de_or_default(&mut reader)?;
@@ -274,10 +274,10 @@ impl PoolConfig {
         } else {
             <DepositLimiter>::deserialize(&mut reader)?
         };
-        let _reserved: [u8; 19] = crate::borsh_de_or_default(&mut reader)?;
+        let reserved: [u8; 19] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
-            _dead_admin,
+            dead_admin,
             pool_auth_bump,
             lp_token_auth_bump,
             lp_token_mint_bump,
@@ -285,11 +285,11 @@ impl PoolConfig {
             paused,
             withdrawal_limiter,
             deposit_limiter,
-            _reserved,
+            reserved,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        borsh::BorshSerialize::serialize(&self._dead_admin, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.dead_admin, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pool_auth_bump, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lp_token_auth_bump, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.lp_token_mint_bump, &mut writer)?;
@@ -297,7 +297,7 @@ impl PoolConfig {
         borsh::BorshSerialize::serialize(&self.paused, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.withdrawal_limiter, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.deposit_limiter, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._reserved, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reserved, &mut writer)?;
         Ok(())
     }
 }

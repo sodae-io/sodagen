@@ -35,6 +35,16 @@ pub enum ActivationType {
     Slot,
     Timestamp,
 }
+impl TryFrom<u8> for ActivationType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Slot),
+            1u8 => Ok(Self::Timestamp),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -196,7 +206,7 @@ pub struct Bin {
     pub processed_order_remaining_amount: u64,
     pub order_age: u32,
     pub limit_order_ask_side: u8,
-    pub _padding_1: [u8; 3],
+    pub padding_1: [u8; 3],
 }
 impl Bin {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -224,7 +234,7 @@ impl Bin {
         )?;
         let order_age: u32 = crate::borsh_de_or_default(&mut reader)?;
         let limit_order_ask_side: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             amount_x,
@@ -242,7 +252,7 @@ impl Bin {
             processed_order_remaining_amount,
             order_age,
             limit_order_ask_side,
-            _padding_1,
+            padding_1,
         })
     }
 }
@@ -433,32 +443,32 @@ impl CustomizableParams {
     serde::Deserialize
 )]
 pub struct DummyIx {
-    pub _pair_status: PairStatus,
-    pub _pair_type: PairType,
-    pub _activation_type: ActivationType,
-    pub _token_program_flag: TokenProgramFlags,
-    pub _resize_side: ResizeSide,
-    pub _rounding: Rounding,
+    pub pair_status: PairStatus,
+    pub pair_type: PairType,
+    pub activation_type: ActivationType,
+    pub token_program_flag: TokenProgramFlags,
+    pub resize_side: ResizeSide,
+    pub rounding: Rounding,
 }
 impl DummyIx {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
-        let _pair_status: PairStatus = crate::borsh_de_or_default(&mut reader)?;
-        let _pair_type: PairType = crate::borsh_de_or_default(&mut reader)?;
-        let _activation_type: ActivationType = crate::borsh_de_or_default(&mut reader)?;
-        let _token_program_flag: TokenProgramFlags = crate::borsh_de_or_default(
+        let pair_status: PairStatus = crate::borsh_de_or_default(&mut reader)?;
+        let pair_type: PairType = crate::borsh_de_or_default(&mut reader)?;
+        let activation_type: ActivationType = crate::borsh_de_or_default(&mut reader)?;
+        let token_program_flag: TokenProgramFlags = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let _resize_side: ResizeSide = crate::borsh_de_or_default(&mut reader)?;
-        let _rounding: Rounding = crate::borsh_de_or_default(&mut reader)?;
+        let resize_side: ResizeSide = crate::borsh_de_or_default(&mut reader)?;
+        let rounding: Rounding = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
-            _pair_status,
-            _pair_type,
-            _activation_type,
-            _token_program_flag,
-            _resize_side,
-            _rounding,
+            pair_status,
+            pair_type,
+            activation_type,
+            token_program_flag,
+            resize_side,
+            rounding,
         })
     }
 }
@@ -667,28 +677,28 @@ impl InitializeLbPair2Params {
 pub struct LimitOrderBinData {
     pub amount: u64,
     pub age: u32,
-    pub _padding_0: [u8; 4],
+    pub padding_0: [u8; 4],
     pub bin_id: i32,
     pub is_ask: u8,
-    pub _padding_1: [u8; 11],
+    pub padding_1: [u8; 11],
 }
 impl LimitOrderBinData {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
         let age: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_0: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_0: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let bin_id: i32 = crate::borsh_de_or_default(&mut reader)?;
         let is_ask: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 11] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 11] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             amount,
             age,
-            _padding_0,
+            padding_0,
             bin_id,
             is_ask,
-            _padding_1,
+            padding_1,
         })
     }
 }
@@ -874,6 +884,16 @@ pub enum PairStatus {
     Enabled,
     Disabled,
 }
+impl TryFrom<u8> for PairStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Enabled),
+            1u8 => Ok(Self::Disabled),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -890,6 +910,18 @@ pub enum PairType {
     Permission,
     CustomizablePermissionless,
     PermissionlessV2,
+}
+impl TryFrom<u8> for PairType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Permissionless),
+            1u8 => Ok(Self::Permission),
+            2u8 => Ok(Self::CustomizablePermissionless),
+            3u8 => Ok(Self::PermissionlessV2),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1160,6 +1192,16 @@ pub enum ResizeSide {
     Lower,
     Upper,
 }
+impl TryFrom<u8> for ResizeSide {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Lower),
+            1u8 => Ok(Self::Upper),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1221,6 +1263,16 @@ pub enum Rounding {
     Up,
     Down,
 }
+impl TryFrom<u8> for Rounding {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Up),
+            1u8 => Ok(Self::Down),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1244,7 +1296,7 @@ pub struct StaticParameters {
     pub base_fee_power_factor: u8,
     pub function_type: u8,
     pub collect_fee_mode: u8,
-    pub _padding: [u8; 3],
+    pub padding: [u8; 3],
 }
 impl StaticParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1261,7 +1313,7 @@ impl StaticParameters {
         let base_fee_power_factor: u8 = crate::borsh_de_or_default(&mut reader)?;
         let function_type: u8 = crate::borsh_de_or_default(&mut reader)?;
         let collect_fee_mode: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 3] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             base_factor,
@@ -1276,7 +1328,7 @@ impl StaticParameters {
             base_fee_power_factor,
             function_type,
             collect_fee_mode,
-            _padding,
+            padding,
         })
     }
 }
@@ -1336,6 +1388,23 @@ pub enum StrategyType {
     CurveImBalanced,
     BidAskImBalanced,
 }
+impl TryFrom<u8> for StrategyType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::SpotOneSide),
+            1u8 => Ok(Self::CurveOneSide),
+            2u8 => Ok(Self::BidAskOneSide),
+            3u8 => Ok(Self::SpotBalanced),
+            4u8 => Ok(Self::CurveBalanced),
+            5u8 => Ok(Self::BidAskBalanced),
+            6u8 => Ok(Self::SpotImBalanced),
+            7u8 => Ok(Self::CurveImBalanced),
+            8u8 => Ok(Self::BidAskImBalanced),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -1350,6 +1419,16 @@ pub enum TokenProgramFlags {
     #[default]
     TokenProgram,
     TokenProgram2022,
+}
+impl TryFrom<u8> for TokenProgramFlags {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::TokenProgram),
+            1u8 => Ok(Self::TokenProgram2022),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -1393,9 +1472,9 @@ pub struct VariableParameters {
     pub volatility_accumulator: u32,
     pub volatility_reference: u32,
     pub index_reference: i32,
-    pub _padding: [u8; 4],
+    pub padding: [u8; 4],
     pub last_update_timestamp: i64,
-    pub _padding_1: [u8; 8],
+    pub padding_1: [u8; 8],
 }
 impl VariableParameters {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1403,17 +1482,17 @@ impl VariableParameters {
         let volatility_accumulator: u32 = crate::borsh_de_or_default(&mut reader)?;
         let volatility_reference: u32 = crate::borsh_de_or_default(&mut reader)?;
         let index_reference: i32 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
+        let padding: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let last_update_timestamp: i64 = crate::borsh_de_or_default(&mut reader)?;
-        let _padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
+        let padding_1: [u8; 8] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             volatility_accumulator,
             volatility_reference,
             index_reference,
-            _padding,
+            padding,
             last_update_timestamp,
-            _padding_1,
+            padding_1,
         })
     }
 }

@@ -138,6 +138,36 @@ pub enum DynamicBondingCurveError {
     InvalidZapAccounts = 6066,
     #[error("Invalid compounding parameters")]
     InvalidCompoundingParameters = 6067,
+    #[error("Invalid claim protocol fee accounts")]
+    InvalidClaimProtocolFeeAccounts = 6068,
+    #[error("Invalid instructions sysvar account")]
+    InvalidInstructionsSysvar = 6069,
+    #[error("Invalid remaining accounts length")]
+    InvalidRemainingAccountsLength = 6070,
+    #[error("Missing remaining account for transfer hook")]
+    MissingRemainingAccountForTransferHook = 6071,
+    #[error("No transfer hook program")]
+    NoTransferHookProgram = 6072,
+    #[error("Duplicated remaining account types")]
+    DuplicatedRemainingAccountTypes = 6073,
+    #[error("Invalid transfer hook program")]
+    InvalidTransferHookProgram = 6074,
+    #[error("Invalid pool account")]
+    InvalidPoolAccount = 6075,
+    #[error("Pool type does not match instruction")]
+    PoolTypeMismatch = 6076,
+    #[error("Invalid remaining account slice type for this instruction")]
+    InvalidRemainingAccountSliceType = 6077,
+    #[error("Deprecated base fee mode")]
+    DeprecatedBaseFeeMode = 6078,
+    #[error("Cannot create token badge on supported mint")]
+    CannotCreateTokenBadgeOnSupportedMint = 6079,
+    #[error("Invalid token badge")]
+    InvalidTokenBadge = 6080,
+    #[error("Quote mint has a non zero transfer fee")]
+    QuoteMintHasNonZeroTransferFee = 6081,
+    #[error("Deprecated migration option")]
+    DeprecatedMigrationOption = 6082,
 }
 impl From<DynamicBondingCurveError> for ProgramError {
     fn from(e: DynamicBondingCurveError) -> Self {

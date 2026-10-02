@@ -14,25 +14,28 @@ pub enum RaydiumLaunchpadProgramIx {
     ClaimPlatformFee,
     ClaimPlatformFeeFromVault,
     ClaimVestedToken,
-    ClosePlatformGlobalAccess,
+    ClosePlatformAllowConfig,
+    ClosePlatformCurveRule,
+    CollectExcessLamports,
     CollectFee,
     CollectMigrateFee,
     CreateConfig(CreateConfigIxArgs),
+    CreatePlatformAllowConfig,
     CreatePlatformConfig(CreatePlatformConfigIxArgs),
-    CreatePlatformGlobalAccess,
+    CreatePlatformCurveRule,
     CreatePlatformVestingAccount,
     CreateVestingAccount(CreateVestingAccountIxArgs),
     Initialize(InitializeIxArgs),
     InitializeV2(InitializeV2IxArgs),
     InitializeWithToken2022(InitializeWithToken2022IxArgs),
-    MigrateToAmm(MigrateToAmmIxArgs),
+    MigrateToAmm,
     MigrateToCpswap,
-    RemovePlatformCurveParam(RemovePlatformCurveParamIxArgs),
+    RemovePlatformCurveRule(RemovePlatformCurveRuleIxArgs),
     SellExactIn(SellExactInIxArgs),
     SellExactOut(SellExactOutIxArgs),
     UpdateConfig(UpdateConfigIxArgs),
     UpdatePlatformConfig(UpdatePlatformConfigIxArgs),
-    UpdatePlatformCurveParam(UpdatePlatformCurveParamIxArgs),
+    UpdatePlatformCurveRule(UpdatePlatformCurveRuleIxArgs),
 }
 impl RaydiumLaunchpadProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
@@ -74,8 +77,14 @@ impl RaydiumLaunchpadProgramIx {
         if buf.starts_with(&CLAIM_VESTED_TOKEN_IX_DISCM) {
             return Ok(Self::ClaimVestedToken);
         }
-        if buf.starts_with(&CLOSE_PLATFORM_GLOBAL_ACCESS_IX_DISCM) {
-            return Ok(Self::ClosePlatformGlobalAccess);
+        if buf.starts_with(&CLOSE_PLATFORM_ALLOW_CONFIG_IX_DISCM) {
+            return Ok(Self::ClosePlatformAllowConfig);
+        }
+        if buf.starts_with(&CLOSE_PLATFORM_CURVE_RULE_IX_DISCM) {
+            return Ok(Self::ClosePlatformCurveRule);
+        }
+        if buf.starts_with(&COLLECT_EXCESS_LAMPORTS_IX_DISCM) {
+            return Ok(Self::CollectExcessLamports);
         }
         if buf.starts_with(&COLLECT_FEE_IX_DISCM) {
             return Ok(Self::CollectFee);
@@ -98,6 +107,9 @@ impl RaydiumLaunchpadProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&CREATE_PLATFORM_ALLOW_CONFIG_IX_DISCM) {
+            return Ok(Self::CreatePlatformAllowConfig);
+        }
         if buf.starts_with(&CREATE_PLATFORM_CONFIG_IX_DISCM) {
             let mut reader = &buf[CREATE_PLATFORM_CONFIG_IX_DISCM.len()..];
             let platform_params = if reader.is_empty() {
@@ -111,8 +123,8 @@ impl RaydiumLaunchpadProgramIx {
                 }),
             );
         }
-        if buf.starts_with(&CREATE_PLATFORM_GLOBAL_ACCESS_IX_DISCM) {
-            return Ok(Self::CreatePlatformGlobalAccess);
+        if buf.starts_with(&CREATE_PLATFORM_CURVE_RULE_IX_DISCM) {
+            return Ok(Self::CreatePlatformCurveRule);
         }
         if buf.starts_with(&CREATE_PLATFORM_VESTING_ACCOUNT_IX_DISCM) {
             return Ok(Self::CreatePlatformVestingAccount);
@@ -204,27 +216,17 @@ impl RaydiumLaunchpadProgramIx {
             );
         }
         if buf.starts_with(&MIGRATE_TO_AMM_IX_DISCM) {
-            let mut reader = &buf[MIGRATE_TO_AMM_IX_DISCM.len()..];
-            let base_lot_size: u64 = crate::borsh_de_or_default(&mut reader)?;
-            let quote_lot_size: u64 = crate::borsh_de_or_default(&mut reader)?;
-            let market_vault_signer_nonce: u8 = crate::borsh_de_or_default(&mut reader)?;
-            return Ok(
-                Self::MigrateToAmm(MigrateToAmmIxArgs {
-                    base_lot_size,
-                    quote_lot_size,
-                    market_vault_signer_nonce,
-                }),
-            );
+            return Ok(Self::MigrateToAmm);
         }
         if buf.starts_with(&MIGRATE_TO_CPSWAP_IX_DISCM) {
             return Ok(Self::MigrateToCpswap);
         }
-        if buf.starts_with(&REMOVE_PLATFORM_CURVE_PARAM_IX_DISCM) {
-            let mut reader = &buf[REMOVE_PLATFORM_CURVE_PARAM_IX_DISCM.len()..];
-            let index: u8 = crate::borsh_de_or_default(&mut reader)?;
+        if buf.starts_with(&REMOVE_PLATFORM_CURVE_RULE_IX_DISCM) {
+            let mut reader = &buf[REMOVE_PLATFORM_CURVE_RULE_IX_DISCM.len()..];
+            let group_id: u16 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(
-                Self::RemovePlatformCurveParam(RemovePlatformCurveParamIxArgs {
-                    index,
+                Self::RemovePlatformCurveRule(RemovePlatformCurveRuleIxArgs {
+                    group_id,
                 }),
             );
         }
@@ -271,18 +273,16 @@ impl RaydiumLaunchpadProgramIx {
                 }),
             );
         }
-        if buf.starts_with(&UPDATE_PLATFORM_CURVE_PARAM_IX_DISCM) {
-            let mut reader = &buf[UPDATE_PLATFORM_CURVE_PARAM_IX_DISCM.len()..];
-            let index: u8 = crate::borsh_de_or_default(&mut reader)?;
-            let bonding_curve_param = if reader.is_empty() {
-                Default::default()
-            } else {
-                <BondingCurveParam>::deserialize(&mut reader)?
-            };
+        if buf.starts_with(&UPDATE_PLATFORM_CURVE_RULE_IX_DISCM) {
+            let mut reader = &buf[UPDATE_PLATFORM_CURVE_RULE_IX_DISCM.len()..];
+            let group_id: u16 = crate::borsh_de_or_default(&mut reader)?;
+            let constraints: Vec<ParamConstraint> = crate::borsh_de_or_default(
+                &mut reader,
+            )?;
             return Ok(
-                Self::UpdatePlatformCurveParam(UpdatePlatformCurveParamIxArgs {
-                    index,
-                    bonding_curve_param,
+                Self::UpdatePlatformCurveRule(UpdatePlatformCurveRuleIxArgs {
+                    group_id,
+                    constraints,
                 }),
             );
         }
@@ -310,8 +310,14 @@ impl RaydiumLaunchpadProgramIx {
                 writer.write_all(&CLAIM_PLATFORM_FEE_FROM_VAULT_IX_DISCM)
             }
             Self::ClaimVestedToken => writer.write_all(&CLAIM_VESTED_TOKEN_IX_DISCM),
-            Self::ClosePlatformGlobalAccess => {
-                writer.write_all(&CLOSE_PLATFORM_GLOBAL_ACCESS_IX_DISCM)
+            Self::ClosePlatformAllowConfig => {
+                writer.write_all(&CLOSE_PLATFORM_ALLOW_CONFIG_IX_DISCM)
+            }
+            Self::ClosePlatformCurveRule => {
+                writer.write_all(&CLOSE_PLATFORM_CURVE_RULE_IX_DISCM)
+            }
+            Self::CollectExcessLamports => {
+                writer.write_all(&COLLECT_EXCESS_LAMPORTS_IX_DISCM)
             }
             Self::CollectFee => writer.write_all(&COLLECT_FEE_IX_DISCM),
             Self::CollectMigrateFee => writer.write_all(&COLLECT_MIGRATE_FEE_IX_DISCM),
@@ -323,13 +329,16 @@ impl RaydiumLaunchpadProgramIx {
                 borsh::BorshSerialize::serialize(&args.trade_fee_rate, &mut writer)?;
                 Ok(())
             }
+            Self::CreatePlatformAllowConfig => {
+                writer.write_all(&CREATE_PLATFORM_ALLOW_CONFIG_IX_DISCM)
+            }
             Self::CreatePlatformConfig(args) => {
                 writer.write_all(&CREATE_PLATFORM_CONFIG_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.platform_params, &mut writer)?;
                 Ok(())
             }
-            Self::CreatePlatformGlobalAccess => {
-                writer.write_all(&CREATE_PLATFORM_GLOBAL_ACCESS_IX_DISCM)
+            Self::CreatePlatformCurveRule => {
+                writer.write_all(&CREATE_PLATFORM_CURVE_RULE_IX_DISCM)
             }
             Self::CreatePlatformVestingAccount => {
                 writer.write_all(&CREATE_PLATFORM_VESTING_ACCOUNT_IX_DISCM)
@@ -366,20 +375,11 @@ impl RaydiumLaunchpadProgramIx {
                 )?;
                 Ok(())
             }
-            Self::MigrateToAmm(args) => {
-                writer.write_all(&MIGRATE_TO_AMM_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args.base_lot_size, &mut writer)?;
-                borsh::BorshSerialize::serialize(&args.quote_lot_size, &mut writer)?;
-                borsh::BorshSerialize::serialize(
-                    &args.market_vault_signer_nonce,
-                    &mut writer,
-                )?;
-                Ok(())
-            }
+            Self::MigrateToAmm => writer.write_all(&MIGRATE_TO_AMM_IX_DISCM),
             Self::MigrateToCpswap => writer.write_all(&MIGRATE_TO_CPSWAP_IX_DISCM),
-            Self::RemovePlatformCurveParam(args) => {
-                writer.write_all(&REMOVE_PLATFORM_CURVE_PARAM_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args.index, &mut writer)?;
+            Self::RemovePlatformCurveRule(args) => {
+                writer.write_all(&REMOVE_PLATFORM_CURVE_RULE_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.group_id, &mut writer)?;
                 Ok(())
             }
             Self::SellExactIn(args) => {
@@ -407,13 +407,10 @@ impl RaydiumLaunchpadProgramIx {
                 borsh::BorshSerialize::serialize(&args.param, &mut writer)?;
                 Ok(())
             }
-            Self::UpdatePlatformCurveParam(args) => {
-                writer.write_all(&UPDATE_PLATFORM_CURVE_PARAM_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args.index, &mut writer)?;
-                borsh::BorshSerialize::serialize(
-                    &args.bonding_curve_param,
-                    &mut writer,
-                )?;
+            Self::UpdatePlatformCurveRule(args) => {
+                writer.write_all(&UPDATE_PLATFORM_CURVE_RULE_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.group_id, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.constraints, &mut writer)?;
                 Ok(())
             }
         }
@@ -2245,38 +2242,43 @@ pub fn claim_vested_token_verify_account_privileges<'me, 'info>(
     claim_vested_token_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN: usize = 4;
+pub const CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN: usize = 4;
 #[derive(Copy, Clone, Debug)]
-pub struct ClosePlatformGlobalAccessAccounts<'me, 'info> {
-    pub owner: &'me AccountInfo<'info>,
-    pub global_config: &'me AccountInfo<'info>,
+pub struct ClosePlatformAllowConfigAccounts<'me, 'info> {
+    pub platform_admin: &'me AccountInfo<'info>,
     pub platform_config: &'me AccountInfo<'info>,
-    pub platform_global_access: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub platform_allow_config: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct ClosePlatformGlobalAccessKeys {
-    pub owner: Pubkey,
-    pub global_config: Pubkey,
+pub struct ClosePlatformAllowConfigKeys {
+    pub platform_admin: Pubkey,
     pub platform_config: Pubkey,
-    pub platform_global_access: Pubkey,
+    pub global_config: Pubkey,
+    pub platform_allow_config: Pubkey,
 }
-impl From<ClosePlatformGlobalAccessAccounts<'_, '_>> for ClosePlatformGlobalAccessKeys {
-    fn from(accounts: ClosePlatformGlobalAccessAccounts) -> Self {
+impl From<ClosePlatformAllowConfigAccounts<'_, '_>> for ClosePlatformAllowConfigKeys {
+    fn from(accounts: ClosePlatformAllowConfigAccounts) -> Self {
         Self {
-            owner: *accounts.owner.key,
-            global_config: *accounts.global_config.key,
+            platform_admin: *accounts.platform_admin.key,
             platform_config: *accounts.platform_config.key,
-            platform_global_access: *accounts.platform_global_access.key,
+            global_config: *accounts.global_config.key,
+            platform_allow_config: *accounts.platform_allow_config.key,
         }
     }
 }
-impl From<ClosePlatformGlobalAccessKeys>
-for [AccountMeta; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
-    fn from(keys: ClosePlatformGlobalAccessKeys) -> Self {
+impl From<ClosePlatformAllowConfigKeys>
+for [AccountMeta; CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClosePlatformAllowConfigKeys) -> Self {
         [
             AccountMeta {
-                pubkey: keys.owner,
+                pubkey: keys.platform_admin,
                 is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.platform_config,
+                is_signer: false,
                 is_writable: false,
             },
             AccountMeta {
@@ -2285,73 +2287,68 @@ for [AccountMeta; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.platform_config,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.platform_global_access,
+                pubkey: keys.platform_allow_config,
                 is_signer: false,
                 is_writable: true,
             },
         ]
     }
 }
-impl From<[Pubkey; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN]>
-for ClosePlatformGlobalAccessKeys {
-    fn from(pubkeys: [Pubkey; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN]) -> Self {
+impl From<[Pubkey; CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN]>
+for ClosePlatformAllowConfigKeys {
+    fn from(pubkeys: [Pubkey; CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            owner: pubkeys[0],
-            global_config: pubkeys[1],
-            platform_config: pubkeys[2],
-            platform_global_access: pubkeys[3],
+            platform_admin: pubkeys[0],
+            platform_config: pubkeys[1],
+            global_config: pubkeys[2],
+            platform_allow_config: pubkeys[3],
         }
     }
 }
-impl<'info> From<ClosePlatformGlobalAccessAccounts<'_, 'info>>
-for [AccountInfo<'info>; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
-    fn from(accounts: ClosePlatformGlobalAccessAccounts<'_, 'info>) -> Self {
+impl<'info> From<ClosePlatformAllowConfigAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClosePlatformAllowConfigAccounts<'_, 'info>) -> Self {
         [
-            accounts.owner.clone(),
-            accounts.global_config.clone(),
+            accounts.platform_admin.clone(),
             accounts.platform_config.clone(),
-            accounts.platform_global_access.clone(),
+            accounts.global_config.clone(),
+            accounts.platform_allow_config.clone(),
         ]
     }
 }
 impl<
     'me,
     'info,
-> From<&'me [AccountInfo<'info>; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN]>
-for ClosePlatformGlobalAccessAccounts<'me, 'info> {
+> From<&'me [AccountInfo<'info>; CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN]>
+for ClosePlatformAllowConfigAccounts<'me, 'info> {
     fn from(
-        arr: &'me [AccountInfo<'info>; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN],
+        arr: &'me [AccountInfo<'info>; CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN],
     ) -> Self {
         Self {
-            owner: &arr[0],
-            global_config: &arr[1],
-            platform_config: &arr[2],
-            platform_global_access: &arr[3],
+            platform_admin: &arr[0],
+            platform_config: &arr[1],
+            global_config: &arr[2],
+            platform_allow_config: &arr[3],
         }
     }
 }
-pub const CLOSE_PLATFORM_GLOBAL_ACCESS_IX_DISCM: [u8; 8usize] = [
-    123, 180, 184, 129, 111, 185, 187, 59,
+pub const CLOSE_PLATFORM_ALLOW_CONFIG_IX_DISCM: [u8; 8usize] = [
+    82, 205, 36, 216, 16, 6, 240, 215,
 ];
 #[derive(Clone, Debug, PartialEq)]
-pub struct ClosePlatformGlobalAccessIxData;
-impl ClosePlatformGlobalAccessIxData {
+pub struct ClosePlatformAllowConfigIxData;
+impl ClosePlatformAllowConfigIxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8usize];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != CLOSE_PLATFORM_GLOBAL_ACCESS_IX_DISCM {
+        if maybe_discm != CLOSE_PLATFORM_ALLOW_CONFIG_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
         Ok(Self)
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&CLOSE_PLATFORM_GLOBAL_ACCESS_IX_DISCM)
+        writer.write_all(&CLOSE_PLATFORM_ALLOW_CONFIG_IX_DISCM)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut data = Vec::new();
@@ -2359,66 +2356,66 @@ impl ClosePlatformGlobalAccessIxData {
         Ok(data)
     }
 }
-pub fn close_platform_global_access_ix_with_program_id(
+pub fn close_platform_allow_config_ix_with_program_id(
     program_id: Pubkey,
-    keys: ClosePlatformGlobalAccessKeys,
+    keys: ClosePlatformAllowConfigKeys,
 ) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; CLOSE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] = keys.into();
+    let metas: [AccountMeta; CLOSE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN] = keys.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
-        data: ClosePlatformGlobalAccessIxData.try_to_vec()?,
+        data: ClosePlatformAllowConfigIxData.try_to_vec()?,
     })
 }
-pub fn close_platform_global_access_ix(
-    keys: ClosePlatformGlobalAccessKeys,
+pub fn close_platform_allow_config_ix(
+    keys: ClosePlatformAllowConfigKeys,
 ) -> std::io::Result<Instruction> {
-    close_platform_global_access_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
+    close_platform_allow_config_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
 }
-pub fn close_platform_global_access_invoke_with_program_id(
+pub fn close_platform_allow_config_invoke_with_program_id(
     program_id: Pubkey,
-    accounts: ClosePlatformGlobalAccessAccounts<'_, '_>,
+    accounts: ClosePlatformAllowConfigAccounts<'_, '_>,
 ) -> ProgramResult {
-    let keys: ClosePlatformGlobalAccessKeys = accounts.into();
-    let ix = close_platform_global_access_ix_with_program_id(program_id, keys)?;
+    let keys: ClosePlatformAllowConfigKeys = accounts.into();
+    let ix = close_platform_allow_config_ix_with_program_id(program_id, keys)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn close_platform_global_access_invoke(
-    accounts: ClosePlatformGlobalAccessAccounts<'_, '_>,
+pub fn close_platform_allow_config_invoke(
+    accounts: ClosePlatformAllowConfigAccounts<'_, '_>,
 ) -> ProgramResult {
-    close_platform_global_access_invoke_with_program_id(
+    close_platform_allow_config_invoke_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
     )
 }
-pub fn close_platform_global_access_invoke_signed_with_program_id(
+pub fn close_platform_allow_config_invoke_signed_with_program_id(
     program_id: Pubkey,
-    accounts: ClosePlatformGlobalAccessAccounts<'_, '_>,
+    accounts: ClosePlatformAllowConfigAccounts<'_, '_>,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let keys: ClosePlatformGlobalAccessKeys = accounts.into();
-    let ix = close_platform_global_access_ix_with_program_id(program_id, keys)?;
+    let keys: ClosePlatformAllowConfigKeys = accounts.into();
+    let ix = close_platform_allow_config_ix_with_program_id(program_id, keys)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
-pub fn close_platform_global_access_invoke_signed(
-    accounts: ClosePlatformGlobalAccessAccounts<'_, '_>,
+pub fn close_platform_allow_config_invoke_signed(
+    accounts: ClosePlatformAllowConfigAccounts<'_, '_>,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    close_platform_global_access_invoke_signed_with_program_id(
+    close_platform_allow_config_invoke_signed_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
         seeds,
     )
 }
-pub fn close_platform_global_access_verify_account_keys(
-    accounts: ClosePlatformGlobalAccessAccounts<'_, '_>,
-    keys: ClosePlatformGlobalAccessKeys,
+pub fn close_platform_allow_config_verify_account_keys(
+    accounts: ClosePlatformAllowConfigAccounts<'_, '_>,
+    keys: ClosePlatformAllowConfigKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
-        (*accounts.owner.key, keys.owner),
-        (*accounts.global_config.key, keys.global_config),
+        (*accounts.platform_admin.key, keys.platform_admin),
         (*accounts.platform_config.key, keys.platform_config),
-        (*accounts.platform_global_access.key, keys.platform_global_access),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.platform_allow_config.key, keys.platform_allow_config),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -2426,31 +2423,447 @@ pub fn close_platform_global_access_verify_account_keys(
     }
     Ok(())
 }
-pub fn close_platform_global_access_verify_writable_privileges<'me, 'info>(
-    accounts: ClosePlatformGlobalAccessAccounts<'me, 'info>,
+pub fn close_platform_allow_config_verify_writable_privileges<'me, 'info>(
+    accounts: ClosePlatformAllowConfigAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [accounts.platform_global_access] {
+    for should_be_writable in [accounts.platform_admin, accounts.platform_allow_config] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
         }
     }
     Ok(())
 }
-pub fn close_platform_global_access_verify_signer_privileges<'me, 'info>(
-    accounts: ClosePlatformGlobalAccessAccounts<'me, 'info>,
+pub fn close_platform_allow_config_verify_signer_privileges<'me, 'info>(
+    accounts: ClosePlatformAllowConfigAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.owner] {
+    for should_be_signer in [accounts.platform_admin] {
         if !should_be_signer.is_signer {
             return Err((should_be_signer, ProgramError::MissingRequiredSignature));
         }
     }
     Ok(())
 }
-pub fn close_platform_global_access_verify_account_privileges<'me, 'info>(
-    accounts: ClosePlatformGlobalAccessAccounts<'me, 'info>,
+pub fn close_platform_allow_config_verify_account_privileges<'me, 'info>(
+    accounts: ClosePlatformAllowConfigAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    close_platform_global_access_verify_writable_privileges(accounts)?;
-    close_platform_global_access_verify_signer_privileges(accounts)?;
+    close_platform_allow_config_verify_writable_privileges(accounts)?;
+    close_platform_allow_config_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN: usize = 4;
+#[derive(Copy, Clone, Debug)]
+pub struct ClosePlatformCurveRuleAccounts<'me, 'info> {
+    pub curve_rule_authority: &'me AccountInfo<'info>,
+    pub platform_config: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub platform_curve_rule: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ClosePlatformCurveRuleKeys {
+    pub curve_rule_authority: Pubkey,
+    pub platform_config: Pubkey,
+    pub global_config: Pubkey,
+    pub platform_curve_rule: Pubkey,
+}
+impl From<ClosePlatformCurveRuleAccounts<'_, '_>> for ClosePlatformCurveRuleKeys {
+    fn from(accounts: ClosePlatformCurveRuleAccounts) -> Self {
+        Self {
+            curve_rule_authority: *accounts.curve_rule_authority.key,
+            platform_config: *accounts.platform_config.key,
+            global_config: *accounts.global_config.key,
+            platform_curve_rule: *accounts.platform_curve_rule.key,
+        }
+    }
+}
+impl From<ClosePlatformCurveRuleKeys>
+for [AccountMeta; CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(keys: ClosePlatformCurveRuleKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.curve_rule_authority,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.platform_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.platform_curve_rule,
+                is_signer: false,
+                is_writable: true,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for ClosePlatformCurveRuleKeys {
+    fn from(pubkeys: [Pubkey; CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            curve_rule_authority: pubkeys[0],
+            platform_config: pubkeys[1],
+            global_config: pubkeys[2],
+            platform_curve_rule: pubkeys[3],
+        }
+    }
+}
+impl<'info> From<ClosePlatformCurveRuleAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: ClosePlatformCurveRuleAccounts<'_, 'info>) -> Self {
+        [
+            accounts.curve_rule_authority.clone(),
+            accounts.platform_config.clone(),
+            accounts.global_config.clone(),
+            accounts.platform_curve_rule.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for ClosePlatformCurveRuleAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            curve_rule_authority: &arr[0],
+            platform_config: &arr[1],
+            global_config: &arr[2],
+            platform_curve_rule: &arr[3],
+        }
+    }
+}
+pub const CLOSE_PLATFORM_CURVE_RULE_IX_DISCM: [u8; 8usize] = [
+    194, 114, 82, 45, 136, 88, 169, 159,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct ClosePlatformCurveRuleIxData;
+impl ClosePlatformCurveRuleIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLOSE_PLATFORM_CURVE_RULE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLOSE_PLATFORM_CURVE_RULE_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn close_platform_curve_rule_ix_with_program_id(
+    program_id: Pubkey,
+    keys: ClosePlatformCurveRuleKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLOSE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: ClosePlatformCurveRuleIxData.try_to_vec()?,
+    })
+}
+pub fn close_platform_curve_rule_ix(
+    keys: ClosePlatformCurveRuleKeys,
+) -> std::io::Result<Instruction> {
+    close_platform_curve_rule_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
+}
+pub fn close_platform_curve_rule_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: ClosePlatformCurveRuleAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: ClosePlatformCurveRuleKeys = accounts.into();
+    let ix = close_platform_curve_rule_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn close_platform_curve_rule_invoke(
+    accounts: ClosePlatformCurveRuleAccounts<'_, '_>,
+) -> ProgramResult {
+    close_platform_curve_rule_invoke_with_program_id(
+        RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+        accounts,
+    )
+}
+pub fn close_platform_curve_rule_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: ClosePlatformCurveRuleAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: ClosePlatformCurveRuleKeys = accounts.into();
+    let ix = close_platform_curve_rule_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn close_platform_curve_rule_invoke_signed(
+    accounts: ClosePlatformCurveRuleAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    close_platform_curve_rule_invoke_signed_with_program_id(
+        RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn close_platform_curve_rule_verify_account_keys(
+    accounts: ClosePlatformCurveRuleAccounts<'_, '_>,
+    keys: ClosePlatformCurveRuleKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.curve_rule_authority.key, keys.curve_rule_authority),
+        (*accounts.platform_config.key, keys.platform_config),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.platform_curve_rule.key, keys.platform_curve_rule),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn close_platform_curve_rule_verify_writable_privileges<'me, 'info>(
+    accounts: ClosePlatformCurveRuleAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.curve_rule_authority,
+        accounts.platform_curve_rule,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn close_platform_curve_rule_verify_signer_privileges<'me, 'info>(
+    accounts: ClosePlatformCurveRuleAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.curve_rule_authority] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn close_platform_curve_rule_verify_account_privileges<'me, 'info>(
+    accounts: ClosePlatformCurveRuleAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    close_platform_curve_rule_verify_writable_privileges(accounts)?;
+    close_platform_curve_rule_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN: usize = 4;
+#[derive(Copy, Clone, Debug)]
+pub struct CollectExcessLamportsAccounts<'me, 'info> {
+    pub collect_lamports_wallet: &'me AccountInfo<'info>,
+    pub authority: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub token_program_2022: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CollectExcessLamportsKeys {
+    pub collect_lamports_wallet: Pubkey,
+    pub authority: Pubkey,
+    pub token_program: Pubkey,
+    pub token_program_2022: Pubkey,
+}
+impl From<CollectExcessLamportsAccounts<'_, '_>> for CollectExcessLamportsKeys {
+    fn from(accounts: CollectExcessLamportsAccounts) -> Self {
+        Self {
+            collect_lamports_wallet: *accounts.collect_lamports_wallet.key,
+            authority: *accounts.authority.key,
+            token_program: *accounts.token_program.key,
+            token_program_2022: *accounts.token_program_2022.key,
+        }
+    }
+}
+impl From<CollectExcessLamportsKeys>
+for [AccountMeta; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] {
+    fn from(keys: CollectExcessLamportsKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.collect_lamports_wallet,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.token_program_2022,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]>
+for CollectExcessLamportsKeys {
+    fn from(pubkeys: [Pubkey; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            collect_lamports_wallet: pubkeys[0],
+            authority: pubkeys[1],
+            token_program: pubkeys[2],
+            token_program_2022: pubkeys[3],
+        }
+    }
+}
+impl<'info> From<CollectExcessLamportsAccounts<'_, 'info>>
+for [AccountInfo<'info>; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CollectExcessLamportsAccounts<'_, 'info>) -> Self {
+        [
+            accounts.collect_lamports_wallet.clone(),
+            accounts.authority.clone(),
+            accounts.token_program.clone(),
+            accounts.token_program_2022.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN]>
+for CollectExcessLamportsAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            collect_lamports_wallet: &arr[0],
+            authority: &arr[1],
+            token_program: &arr[2],
+            token_program_2022: &arr[3],
+        }
+    }
+}
+pub const COLLECT_EXCESS_LAMPORTS_IX_DISCM: [u8; 8usize] = [
+    28, 189, 19, 40, 164, 176, 118, 17,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CollectExcessLamportsIxData;
+impl CollectExcessLamportsIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != COLLECT_EXCESS_LAMPORTS_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&COLLECT_EXCESS_LAMPORTS_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn collect_excess_lamports_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CollectExcessLamportsKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; COLLECT_EXCESS_LAMPORTS_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CollectExcessLamportsIxData.try_to_vec()?,
+    })
+}
+pub fn collect_excess_lamports_ix(
+    keys: CollectExcessLamportsKeys,
+) -> std::io::Result<Instruction> {
+    collect_excess_lamports_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
+}
+pub fn collect_excess_lamports_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CollectExcessLamportsKeys = accounts.into();
+    let ix = collect_excess_lamports_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn collect_excess_lamports_invoke(
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+) -> ProgramResult {
+    collect_excess_lamports_invoke_with_program_id(
+        RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+        accounts,
+    )
+}
+pub fn collect_excess_lamports_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CollectExcessLamportsKeys = accounts.into();
+    let ix = collect_excess_lamports_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn collect_excess_lamports_invoke_signed(
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    collect_excess_lamports_invoke_signed_with_program_id(
+        RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn collect_excess_lamports_verify_account_keys(
+    accounts: CollectExcessLamportsAccounts<'_, '_>,
+    keys: CollectExcessLamportsKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.collect_lamports_wallet.key, keys.collect_lamports_wallet),
+        (*accounts.authority.key, keys.authority),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.token_program_2022.key, keys.token_program_2022),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn collect_excess_lamports_verify_writable_privileges<'me, 'info>(
+    accounts: CollectExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.collect_lamports_wallet] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn collect_excess_lamports_verify_signer_privileges<'me, 'info>(
+    accounts: CollectExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.collect_lamports_wallet] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn collect_excess_lamports_verify_account_privileges<'me, 'info>(
+    accounts: CollectExcessLamportsAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    collect_excess_lamports_verify_writable_privileges(accounts)?;
+    collect_excess_lamports_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const COLLECT_FEE_IX_ACCOUNTS_LEN: usize = 8;
@@ -3229,6 +3642,226 @@ pub fn create_config_verify_account_privileges<'me, 'info>(
     create_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
+pub const CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN: usize = 5;
+#[derive(Copy, Clone, Debug)]
+pub struct CreatePlatformAllowConfigAccounts<'me, 'info> {
+    pub platform_admin: &'me AccountInfo<'info>,
+    pub platform_config: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub platform_allow_config: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CreatePlatformAllowConfigKeys {
+    pub platform_admin: Pubkey,
+    pub platform_config: Pubkey,
+    pub global_config: Pubkey,
+    pub platform_allow_config: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<CreatePlatformAllowConfigAccounts<'_, '_>> for CreatePlatformAllowConfigKeys {
+    fn from(accounts: CreatePlatformAllowConfigAccounts) -> Self {
+        Self {
+            platform_admin: *accounts.platform_admin.key,
+            platform_config: *accounts.platform_config.key,
+            global_config: *accounts.global_config.key,
+            platform_allow_config: *accounts.platform_allow_config.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<CreatePlatformAllowConfigKeys>
+for [AccountMeta; CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreatePlatformAllowConfigKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.platform_admin,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.platform_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.platform_allow_config,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN]>
+for CreatePlatformAllowConfigKeys {
+    fn from(pubkeys: [Pubkey; CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            platform_admin: pubkeys[0],
+            platform_config: pubkeys[1],
+            global_config: pubkeys[2],
+            platform_allow_config: pubkeys[3],
+            system_program: pubkeys[4],
+        }
+    }
+}
+impl<'info> From<CreatePlatformAllowConfigAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreatePlatformAllowConfigAccounts<'_, 'info>) -> Self {
+        [
+            accounts.platform_admin.clone(),
+            accounts.platform_config.clone(),
+            accounts.global_config.clone(),
+            accounts.platform_allow_config.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN]>
+for CreatePlatformAllowConfigAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            platform_admin: &arr[0],
+            platform_config: &arr[1],
+            global_config: &arr[2],
+            platform_allow_config: &arr[3],
+            system_program: &arr[4],
+        }
+    }
+}
+pub const CREATE_PLATFORM_ALLOW_CONFIG_IX_DISCM: [u8; 8usize] = [
+    69, 71, 168, 7, 214, 250, 107, 102,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CreatePlatformAllowConfigIxData;
+impl CreatePlatformAllowConfigIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CREATE_PLATFORM_ALLOW_CONFIG_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CREATE_PLATFORM_ALLOW_CONFIG_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn create_platform_allow_config_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CreatePlatformAllowConfigKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CREATE_PLATFORM_ALLOW_CONFIG_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CreatePlatformAllowConfigIxData.try_to_vec()?,
+    })
+}
+pub fn create_platform_allow_config_ix(
+    keys: CreatePlatformAllowConfigKeys,
+) -> std::io::Result<Instruction> {
+    create_platform_allow_config_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
+}
+pub fn create_platform_allow_config_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CreatePlatformAllowConfigAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CreatePlatformAllowConfigKeys = accounts.into();
+    let ix = create_platform_allow_config_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn create_platform_allow_config_invoke(
+    accounts: CreatePlatformAllowConfigAccounts<'_, '_>,
+) -> ProgramResult {
+    create_platform_allow_config_invoke_with_program_id(
+        RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+        accounts,
+    )
+}
+pub fn create_platform_allow_config_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CreatePlatformAllowConfigAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CreatePlatformAllowConfigKeys = accounts.into();
+    let ix = create_platform_allow_config_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn create_platform_allow_config_invoke_signed(
+    accounts: CreatePlatformAllowConfigAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    create_platform_allow_config_invoke_signed_with_program_id(
+        RAYDIUM_LAUNCHPAD_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn create_platform_allow_config_verify_account_keys(
+    accounts: CreatePlatformAllowConfigAccounts<'_, '_>,
+    keys: CreatePlatformAllowConfigKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.platform_admin.key, keys.platform_admin),
+        (*accounts.platform_config.key, keys.platform_config),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.platform_allow_config.key, keys.platform_allow_config),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn create_platform_allow_config_verify_writable_privileges<'me, 'info>(
+    accounts: CreatePlatformAllowConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.platform_admin, accounts.platform_allow_config] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn create_platform_allow_config_verify_signer_privileges<'me, 'info>(
+    accounts: CreatePlatformAllowConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.platform_admin] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn create_platform_allow_config_verify_account_privileges<'me, 'info>(
+    accounts: CreatePlatformAllowConfigAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    create_platform_allow_config_verify_writable_privileges(accounts)?;
+    create_platform_allow_config_verify_signer_privileges(accounts)?;
+    Ok(())
+}
 pub const CREATE_PLATFORM_CONFIG_IX_ACCOUNTS_LEN: usize = 8;
 #[derive(Copy, Clone, Debug)]
 pub struct CreatePlatformConfigAccounts<'me, 'info> {
@@ -3516,48 +4149,42 @@ pub fn create_platform_config_verify_account_privileges<'me, 'info>(
     create_platform_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN: usize = 5;
+pub const CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
-pub struct CreatePlatformGlobalAccessAccounts<'me, 'info> {
-    pub owner: &'me AccountInfo<'info>,
-    pub global_config: &'me AccountInfo<'info>,
+pub struct CreatePlatformCurveRuleAccounts<'me, 'info> {
+    pub curve_rule_authority: &'me AccountInfo<'info>,
     pub platform_config: &'me AccountInfo<'info>,
-    pub platform_global_access: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub platform_curve_rule: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct CreatePlatformGlobalAccessKeys {
-    pub owner: Pubkey,
-    pub global_config: Pubkey,
+pub struct CreatePlatformCurveRuleKeys {
+    pub curve_rule_authority: Pubkey,
     pub platform_config: Pubkey,
-    pub platform_global_access: Pubkey,
+    pub global_config: Pubkey,
+    pub platform_curve_rule: Pubkey,
     pub system_program: Pubkey,
 }
-impl From<CreatePlatformGlobalAccessAccounts<'_, '_>>
-for CreatePlatformGlobalAccessKeys {
-    fn from(accounts: CreatePlatformGlobalAccessAccounts) -> Self {
+impl From<CreatePlatformCurveRuleAccounts<'_, '_>> for CreatePlatformCurveRuleKeys {
+    fn from(accounts: CreatePlatformCurveRuleAccounts) -> Self {
         Self {
-            owner: *accounts.owner.key,
-            global_config: *accounts.global_config.key,
+            curve_rule_authority: *accounts.curve_rule_authority.key,
             platform_config: *accounts.platform_config.key,
-            platform_global_access: *accounts.platform_global_access.key,
+            global_config: *accounts.global_config.key,
+            platform_curve_rule: *accounts.platform_curve_rule.key,
             system_program: *accounts.system_program.key,
         }
     }
 }
-impl From<CreatePlatformGlobalAccessKeys>
-for [AccountMeta; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
-    fn from(keys: CreatePlatformGlobalAccessKeys) -> Self {
+impl From<CreatePlatformCurveRuleKeys>
+for [AccountMeta; CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(keys: CreatePlatformCurveRuleKeys) -> Self {
         [
             AccountMeta {
-                pubkey: keys.owner,
+                pubkey: keys.curve_rule_authority,
                 is_signer: true,
                 is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.global_config,
-                is_signer: false,
-                is_writable: false,
             },
             AccountMeta {
                 pubkey: keys.platform_config,
@@ -3565,7 +4192,12 @@ for [AccountMeta; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.platform_global_access,
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.platform_curve_rule,
                 is_signer: false,
                 is_writable: true,
             },
@@ -3577,26 +4209,26 @@ for [AccountMeta; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
         ]
     }
 }
-impl From<[Pubkey; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN]>
-for CreatePlatformGlobalAccessKeys {
-    fn from(pubkeys: [Pubkey; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN]) -> Self {
+impl From<[Pubkey; CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for CreatePlatformCurveRuleKeys {
+    fn from(pubkeys: [Pubkey; CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            owner: pubkeys[0],
-            global_config: pubkeys[1],
-            platform_config: pubkeys[2],
-            platform_global_access: pubkeys[3],
+            curve_rule_authority: pubkeys[0],
+            platform_config: pubkeys[1],
+            global_config: pubkeys[2],
+            platform_curve_rule: pubkeys[3],
             system_program: pubkeys[4],
         }
     }
 }
-impl<'info> From<CreatePlatformGlobalAccessAccounts<'_, 'info>>
-for [AccountInfo<'info>; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
-    fn from(accounts: CreatePlatformGlobalAccessAccounts<'_, 'info>) -> Self {
+impl<'info> From<CreatePlatformCurveRuleAccounts<'_, 'info>>
+for [AccountInfo<'info>; CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CreatePlatformCurveRuleAccounts<'_, 'info>) -> Self {
         [
-            accounts.owner.clone(),
-            accounts.global_config.clone(),
+            accounts.curve_rule_authority.clone(),
             accounts.platform_config.clone(),
-            accounts.platform_global_access.clone(),
+            accounts.global_config.clone(),
+            accounts.platform_curve_rule.clone(),
             accounts.system_program.clone(),
         ]
     }
@@ -3604,37 +4236,37 @@ for [AccountInfo<'info>; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] {
 impl<
     'me,
     'info,
-> From<&'me [AccountInfo<'info>; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN]>
-for CreatePlatformGlobalAccessAccounts<'me, 'info> {
+> From<&'me [AccountInfo<'info>; CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for CreatePlatformCurveRuleAccounts<'me, 'info> {
     fn from(
-        arr: &'me [AccountInfo<'info>; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN],
+        arr: &'me [AccountInfo<'info>; CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN],
     ) -> Self {
         Self {
-            owner: &arr[0],
-            global_config: &arr[1],
-            platform_config: &arr[2],
-            platform_global_access: &arr[3],
+            curve_rule_authority: &arr[0],
+            platform_config: &arr[1],
+            global_config: &arr[2],
+            platform_curve_rule: &arr[3],
             system_program: &arr[4],
         }
     }
 }
-pub const CREATE_PLATFORM_GLOBAL_ACCESS_IX_DISCM: [u8; 8usize] = [
-    162, 91, 146, 199, 93, 133, 234, 237,
+pub const CREATE_PLATFORM_CURVE_RULE_IX_DISCM: [u8; 8usize] = [
+    148, 71, 180, 136, 122, 144, 59, 21,
 ];
 #[derive(Clone, Debug, PartialEq)]
-pub struct CreatePlatformGlobalAccessIxData;
-impl CreatePlatformGlobalAccessIxData {
+pub struct CreatePlatformCurveRuleIxData;
+impl CreatePlatformCurveRuleIxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8usize];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != CREATE_PLATFORM_GLOBAL_ACCESS_IX_DISCM {
+        if maybe_discm != CREATE_PLATFORM_CURVE_RULE_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
         Ok(Self)
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&CREATE_PLATFORM_GLOBAL_ACCESS_IX_DISCM)
+        writer.write_all(&CREATE_PLATFORM_CURVE_RULE_IX_DISCM)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut data = Vec::new();
@@ -3642,67 +4274,66 @@ impl CreatePlatformGlobalAccessIxData {
         Ok(data)
     }
 }
-pub fn create_platform_global_access_ix_with_program_id(
+pub fn create_platform_curve_rule_ix_with_program_id(
     program_id: Pubkey,
-    keys: CreatePlatformGlobalAccessKeys,
+    keys: CreatePlatformCurveRuleKeys,
 ) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; CREATE_PLATFORM_GLOBAL_ACCESS_IX_ACCOUNTS_LEN] = keys
-        .into();
+    let metas: [AccountMeta; CREATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] = keys.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
-        data: CreatePlatformGlobalAccessIxData.try_to_vec()?,
+        data: CreatePlatformCurveRuleIxData.try_to_vec()?,
     })
 }
-pub fn create_platform_global_access_ix(
-    keys: CreatePlatformGlobalAccessKeys,
+pub fn create_platform_curve_rule_ix(
+    keys: CreatePlatformCurveRuleKeys,
 ) -> std::io::Result<Instruction> {
-    create_platform_global_access_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
+    create_platform_curve_rule_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
 }
-pub fn create_platform_global_access_invoke_with_program_id(
+pub fn create_platform_curve_rule_invoke_with_program_id(
     program_id: Pubkey,
-    accounts: CreatePlatformGlobalAccessAccounts<'_, '_>,
+    accounts: CreatePlatformCurveRuleAccounts<'_, '_>,
 ) -> ProgramResult {
-    let keys: CreatePlatformGlobalAccessKeys = accounts.into();
-    let ix = create_platform_global_access_ix_with_program_id(program_id, keys)?;
+    let keys: CreatePlatformCurveRuleKeys = accounts.into();
+    let ix = create_platform_curve_rule_ix_with_program_id(program_id, keys)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn create_platform_global_access_invoke(
-    accounts: CreatePlatformGlobalAccessAccounts<'_, '_>,
+pub fn create_platform_curve_rule_invoke(
+    accounts: CreatePlatformCurveRuleAccounts<'_, '_>,
 ) -> ProgramResult {
-    create_platform_global_access_invoke_with_program_id(
+    create_platform_curve_rule_invoke_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
     )
 }
-pub fn create_platform_global_access_invoke_signed_with_program_id(
+pub fn create_platform_curve_rule_invoke_signed_with_program_id(
     program_id: Pubkey,
-    accounts: CreatePlatformGlobalAccessAccounts<'_, '_>,
+    accounts: CreatePlatformCurveRuleAccounts<'_, '_>,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let keys: CreatePlatformGlobalAccessKeys = accounts.into();
-    let ix = create_platform_global_access_ix_with_program_id(program_id, keys)?;
+    let keys: CreatePlatformCurveRuleKeys = accounts.into();
+    let ix = create_platform_curve_rule_ix_with_program_id(program_id, keys)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
-pub fn create_platform_global_access_invoke_signed(
-    accounts: CreatePlatformGlobalAccessAccounts<'_, '_>,
+pub fn create_platform_curve_rule_invoke_signed(
+    accounts: CreatePlatformCurveRuleAccounts<'_, '_>,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    create_platform_global_access_invoke_signed_with_program_id(
+    create_platform_curve_rule_invoke_signed_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
         seeds,
     )
 }
-pub fn create_platform_global_access_verify_account_keys(
-    accounts: CreatePlatformGlobalAccessAccounts<'_, '_>,
-    keys: CreatePlatformGlobalAccessKeys,
+pub fn create_platform_curve_rule_verify_account_keys(
+    accounts: CreatePlatformCurveRuleAccounts<'_, '_>,
+    keys: CreatePlatformCurveRuleKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
-        (*accounts.owner.key, keys.owner),
-        (*accounts.global_config.key, keys.global_config),
+        (*accounts.curve_rule_authority.key, keys.curve_rule_authority),
         (*accounts.platform_config.key, keys.platform_config),
-        (*accounts.platform_global_access.key, keys.platform_global_access),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.platform_curve_rule.key, keys.platform_curve_rule),
         (*accounts.system_program.key, keys.system_program),
     ] {
         if actual != expected {
@@ -3711,31 +4342,34 @@ pub fn create_platform_global_access_verify_account_keys(
     }
     Ok(())
 }
-pub fn create_platform_global_access_verify_writable_privileges<'me, 'info>(
-    accounts: CreatePlatformGlobalAccessAccounts<'me, 'info>,
+pub fn create_platform_curve_rule_verify_writable_privileges<'me, 'info>(
+    accounts: CreatePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [accounts.owner, accounts.platform_global_access] {
+    for should_be_writable in [
+        accounts.curve_rule_authority,
+        accounts.platform_curve_rule,
+    ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
         }
     }
     Ok(())
 }
-pub fn create_platform_global_access_verify_signer_privileges<'me, 'info>(
-    accounts: CreatePlatformGlobalAccessAccounts<'me, 'info>,
+pub fn create_platform_curve_rule_verify_signer_privileges<'me, 'info>(
+    accounts: CreatePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.owner] {
+    for should_be_signer in [accounts.curve_rule_authority] {
         if !should_be_signer.is_signer {
             return Err((should_be_signer, ProgramError::MissingRequiredSignature));
         }
     }
     Ok(())
 }
-pub fn create_platform_global_access_verify_account_privileges<'me, 'info>(
-    accounts: CreatePlatformGlobalAccessAccounts<'me, 'info>,
+pub fn create_platform_curve_rule_verify_account_privileges<'me, 'info>(
+    accounts: CreatePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    create_platform_global_access_verify_writable_privileges(accounts)?;
-    create_platform_global_access_verify_signer_privileges(accounts)?;
+    create_platform_curve_rule_verify_writable_privileges(accounts)?;
+    create_platform_curve_rule_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const CREATE_PLATFORM_VESTING_ACCOUNT_IX_ACCOUNTS_LEN: usize = 6;
@@ -5463,25 +6097,16 @@ pub fn initialize_with_token_2022_verify_account_privileges<'me, 'info>(
     initialize_with_token_2022_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const MIGRATE_TO_AMM_IX_ACCOUNTS_LEN: usize = 32;
+pub const MIGRATE_TO_AMM_IX_ACCOUNTS_LEN: usize = 23;
 #[derive(Copy, Clone, Debug)]
 pub struct MigrateToAmmAccounts<'me, 'info> {
     pub payer: &'me AccountInfo<'info>,
     pub base_mint: &'me AccountInfo<'info>,
     pub quote_mint: &'me AccountInfo<'info>,
-    pub openbook_program: &'me AccountInfo<'info>,
     pub market: &'me AccountInfo<'info>,
-    pub request_queue: &'me AccountInfo<'info>,
-    pub event_queue: &'me AccountInfo<'info>,
-    pub bids: &'me AccountInfo<'info>,
-    pub asks: &'me AccountInfo<'info>,
-    pub market_vault_signer: &'me AccountInfo<'info>,
-    pub market_base_vault: &'me AccountInfo<'info>,
-    pub market_quote_vault: &'me AccountInfo<'info>,
     pub amm_program: &'me AccountInfo<'info>,
     pub amm_pool: &'me AccountInfo<'info>,
     pub amm_authority: &'me AccountInfo<'info>,
-    pub amm_open_orders: &'me AccountInfo<'info>,
     pub amm_lp_mint: &'me AccountInfo<'info>,
     pub amm_base_vault: &'me AccountInfo<'info>,
     pub amm_quote_vault: &'me AccountInfo<'info>,
@@ -5504,19 +6129,10 @@ pub struct MigrateToAmmKeys {
     pub payer: Pubkey,
     pub base_mint: Pubkey,
     pub quote_mint: Pubkey,
-    pub openbook_program: Pubkey,
     pub market: Pubkey,
-    pub request_queue: Pubkey,
-    pub event_queue: Pubkey,
-    pub bids: Pubkey,
-    pub asks: Pubkey,
-    pub market_vault_signer: Pubkey,
-    pub market_base_vault: Pubkey,
-    pub market_quote_vault: Pubkey,
     pub amm_program: Pubkey,
     pub amm_pool: Pubkey,
     pub amm_authority: Pubkey,
-    pub amm_open_orders: Pubkey,
     pub amm_lp_mint: Pubkey,
     pub amm_base_vault: Pubkey,
     pub amm_quote_vault: Pubkey,
@@ -5540,19 +6156,10 @@ impl From<MigrateToAmmAccounts<'_, '_>> for MigrateToAmmKeys {
             payer: *accounts.payer.key,
             base_mint: *accounts.base_mint.key,
             quote_mint: *accounts.quote_mint.key,
-            openbook_program: *accounts.openbook_program.key,
             market: *accounts.market.key,
-            request_queue: *accounts.request_queue.key,
-            event_queue: *accounts.event_queue.key,
-            bids: *accounts.bids.key,
-            asks: *accounts.asks.key,
-            market_vault_signer: *accounts.market_vault_signer.key,
-            market_base_vault: *accounts.market_base_vault.key,
-            market_quote_vault: *accounts.market_quote_vault.key,
             amm_program: *accounts.amm_program.key,
             amm_pool: *accounts.amm_pool.key,
             amm_authority: *accounts.amm_authority.key,
-            amm_open_orders: *accounts.amm_open_orders.key,
             amm_lp_mint: *accounts.amm_lp_mint.key,
             amm_base_vault: *accounts.amm_base_vault.key,
             amm_quote_vault: *accounts.amm_quote_vault.key,
@@ -5591,47 +6198,7 @@ impl From<MigrateToAmmKeys> for [AccountMeta; MIGRATE_TO_AMM_IX_ACCOUNTS_LEN] {
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.openbook_program,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
                 pubkey: keys.market,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.request_queue,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.event_queue,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.bids,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.asks,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.market_vault_signer,
-                is_signer: false,
-                is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.market_base_vault,
-                is_signer: false,
-                is_writable: true,
-            },
-            AccountMeta {
-                pubkey: keys.market_quote_vault,
                 is_signer: false,
                 is_writable: true,
             },
@@ -5649,11 +6216,6 @@ impl From<MigrateToAmmKeys> for [AccountMeta; MIGRATE_TO_AMM_IX_ACCOUNTS_LEN] {
                 pubkey: keys.amm_authority,
                 is_signer: false,
                 is_writable: false,
-            },
-            AccountMeta {
-                pubkey: keys.amm_open_orders,
-                is_signer: false,
-                is_writable: true,
             },
             AccountMeta {
                 pubkey: keys.amm_lp_mint,
@@ -5744,35 +6306,26 @@ impl From<[Pubkey; MIGRATE_TO_AMM_IX_ACCOUNTS_LEN]> for MigrateToAmmKeys {
             payer: pubkeys[0],
             base_mint: pubkeys[1],
             quote_mint: pubkeys[2],
-            openbook_program: pubkeys[3],
-            market: pubkeys[4],
-            request_queue: pubkeys[5],
-            event_queue: pubkeys[6],
-            bids: pubkeys[7],
-            asks: pubkeys[8],
-            market_vault_signer: pubkeys[9],
-            market_base_vault: pubkeys[10],
-            market_quote_vault: pubkeys[11],
-            amm_program: pubkeys[12],
-            amm_pool: pubkeys[13],
-            amm_authority: pubkeys[14],
-            amm_open_orders: pubkeys[15],
-            amm_lp_mint: pubkeys[16],
-            amm_base_vault: pubkeys[17],
-            amm_quote_vault: pubkeys[18],
-            amm_target_orders: pubkeys[19],
-            amm_config: pubkeys[20],
-            amm_create_fee_destination: pubkeys[21],
-            authority: pubkeys[22],
-            pool_state: pubkeys[23],
-            global_config: pubkeys[24],
-            base_vault: pubkeys[25],
-            quote_vault: pubkeys[26],
-            pool_lp_token: pubkeys[27],
-            spl_token_program: pubkeys[28],
-            associated_token_program: pubkeys[29],
-            system_program: pubkeys[30],
-            rent_program: pubkeys[31],
+            market: pubkeys[3],
+            amm_program: pubkeys[4],
+            amm_pool: pubkeys[5],
+            amm_authority: pubkeys[6],
+            amm_lp_mint: pubkeys[7],
+            amm_base_vault: pubkeys[8],
+            amm_quote_vault: pubkeys[9],
+            amm_target_orders: pubkeys[10],
+            amm_config: pubkeys[11],
+            amm_create_fee_destination: pubkeys[12],
+            authority: pubkeys[13],
+            pool_state: pubkeys[14],
+            global_config: pubkeys[15],
+            base_vault: pubkeys[16],
+            quote_vault: pubkeys[17],
+            pool_lp_token: pubkeys[18],
+            spl_token_program: pubkeys[19],
+            associated_token_program: pubkeys[20],
+            system_program: pubkeys[21],
+            rent_program: pubkeys[22],
         }
     }
 }
@@ -5783,19 +6336,10 @@ for [AccountInfo<'info>; MIGRATE_TO_AMM_IX_ACCOUNTS_LEN] {
             accounts.payer.clone(),
             accounts.base_mint.clone(),
             accounts.quote_mint.clone(),
-            accounts.openbook_program.clone(),
             accounts.market.clone(),
-            accounts.request_queue.clone(),
-            accounts.event_queue.clone(),
-            accounts.bids.clone(),
-            accounts.asks.clone(),
-            accounts.market_vault_signer.clone(),
-            accounts.market_base_vault.clone(),
-            accounts.market_quote_vault.clone(),
             accounts.amm_program.clone(),
             accounts.amm_pool.clone(),
             accounts.amm_authority.clone(),
-            accounts.amm_open_orders.clone(),
             accounts.amm_lp_mint.clone(),
             accounts.amm_base_vault.clone(),
             accounts.amm_quote_vault.clone(),
@@ -5822,54 +6366,34 @@ for MigrateToAmmAccounts<'me, 'info> {
             payer: &arr[0],
             base_mint: &arr[1],
             quote_mint: &arr[2],
-            openbook_program: &arr[3],
-            market: &arr[4],
-            request_queue: &arr[5],
-            event_queue: &arr[6],
-            bids: &arr[7],
-            asks: &arr[8],
-            market_vault_signer: &arr[9],
-            market_base_vault: &arr[10],
-            market_quote_vault: &arr[11],
-            amm_program: &arr[12],
-            amm_pool: &arr[13],
-            amm_authority: &arr[14],
-            amm_open_orders: &arr[15],
-            amm_lp_mint: &arr[16],
-            amm_base_vault: &arr[17],
-            amm_quote_vault: &arr[18],
-            amm_target_orders: &arr[19],
-            amm_config: &arr[20],
-            amm_create_fee_destination: &arr[21],
-            authority: &arr[22],
-            pool_state: &arr[23],
-            global_config: &arr[24],
-            base_vault: &arr[25],
-            quote_vault: &arr[26],
-            pool_lp_token: &arr[27],
-            spl_token_program: &arr[28],
-            associated_token_program: &arr[29],
-            system_program: &arr[30],
-            rent_program: &arr[31],
+            market: &arr[3],
+            amm_program: &arr[4],
+            amm_pool: &arr[5],
+            amm_authority: &arr[6],
+            amm_lp_mint: &arr[7],
+            amm_base_vault: &arr[8],
+            amm_quote_vault: &arr[9],
+            amm_target_orders: &arr[10],
+            amm_config: &arr[11],
+            amm_create_fee_destination: &arr[12],
+            authority: &arr[13],
+            pool_state: &arr[14],
+            global_config: &arr[15],
+            base_vault: &arr[16],
+            quote_vault: &arr[17],
+            pool_lp_token: &arr[18],
+            spl_token_program: &arr[19],
+            associated_token_program: &arr[20],
+            system_program: &arr[21],
+            rent_program: &arr[22],
         }
     }
 }
 pub const MIGRATE_TO_AMM_IX_DISCM: [u8; 8usize] = [
     207, 82, 192, 145, 254, 207, 145, 223,
 ];
-#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct MigrateToAmmIxArgs {
-    pub base_lot_size: u64,
-    pub quote_lot_size: u64,
-    pub market_vault_signer_nonce: u8,
-}
 #[derive(Clone, Debug, PartialEq)]
-pub struct MigrateToAmmIxData(pub MigrateToAmmIxArgs);
-impl From<MigrateToAmmIxArgs> for MigrateToAmmIxData {
-    fn from(args: MigrateToAmmIxArgs) -> Self {
-        Self(args)
-    }
-}
+pub struct MigrateToAmmIxData;
 impl MigrateToAmmIxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
@@ -5878,26 +6402,10 @@ impl MigrateToAmmIxData {
         if maybe_discm != MIGRATE_TO_AMM_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let base_lot_size: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let quote_lot_size: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let market_vault_signer_nonce: u8 = crate::borsh_de_or_default(&mut reader)?;
-        Ok(
-            Self(MigrateToAmmIxArgs {
-                base_lot_size,
-                quote_lot_size,
-                market_vault_signer_nonce,
-            }),
-        )
+        Ok(Self)
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&MIGRATE_TO_AMM_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0.base_lot_size, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.quote_lot_size, &mut writer)?;
-        borsh::BorshSerialize::serialize(
-            &self.0.market_vault_signer_nonce,
-            &mut writer,
-        )?;
-        Ok(())
+        writer.write_all(&MIGRATE_TO_AMM_IX_DISCM)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
         let mut data = Vec::new();
@@ -5908,56 +6416,44 @@ impl MigrateToAmmIxData {
 pub fn migrate_to_amm_ix_with_program_id(
     program_id: Pubkey,
     keys: MigrateToAmmKeys,
-    args: MigrateToAmmIxArgs,
 ) -> std::io::Result<Instruction> {
     let metas: [AccountMeta; MIGRATE_TO_AMM_IX_ACCOUNTS_LEN] = keys.into();
-    let data: MigrateToAmmIxData = args.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
-        data: data.try_to_vec()?,
+        data: MigrateToAmmIxData.try_to_vec()?,
     })
 }
-pub fn migrate_to_amm_ix(
-    keys: MigrateToAmmKeys,
-    args: MigrateToAmmIxArgs,
-) -> std::io::Result<Instruction> {
-    migrate_to_amm_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys, args)
+pub fn migrate_to_amm_ix(keys: MigrateToAmmKeys) -> std::io::Result<Instruction> {
+    migrate_to_amm_ix_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, keys)
 }
 pub fn migrate_to_amm_invoke_with_program_id(
     program_id: Pubkey,
     accounts: MigrateToAmmAccounts<'_, '_>,
-    args: MigrateToAmmIxArgs,
 ) -> ProgramResult {
     let keys: MigrateToAmmKeys = accounts.into();
-    let ix = migrate_to_amm_ix_with_program_id(program_id, keys, args)?;
+    let ix = migrate_to_amm_ix_with_program_id(program_id, keys)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn migrate_to_amm_invoke(
-    accounts: MigrateToAmmAccounts<'_, '_>,
-    args: MigrateToAmmIxArgs,
-) -> ProgramResult {
-    migrate_to_amm_invoke_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, accounts, args)
+pub fn migrate_to_amm_invoke(accounts: MigrateToAmmAccounts<'_, '_>) -> ProgramResult {
+    migrate_to_amm_invoke_with_program_id(RAYDIUM_LAUNCHPAD_PROGRAM_ID, accounts)
 }
 pub fn migrate_to_amm_invoke_signed_with_program_id(
     program_id: Pubkey,
     accounts: MigrateToAmmAccounts<'_, '_>,
-    args: MigrateToAmmIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
     let keys: MigrateToAmmKeys = accounts.into();
-    let ix = migrate_to_amm_ix_with_program_id(program_id, keys, args)?;
+    let ix = migrate_to_amm_ix_with_program_id(program_id, keys)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
 pub fn migrate_to_amm_invoke_signed(
     accounts: MigrateToAmmAccounts<'_, '_>,
-    args: MigrateToAmmIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
     migrate_to_amm_invoke_signed_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
-        args,
         seeds,
     )
 }
@@ -5969,19 +6465,10 @@ pub fn migrate_to_amm_verify_account_keys(
         (*accounts.payer.key, keys.payer),
         (*accounts.base_mint.key, keys.base_mint),
         (*accounts.quote_mint.key, keys.quote_mint),
-        (*accounts.openbook_program.key, keys.openbook_program),
         (*accounts.market.key, keys.market),
-        (*accounts.request_queue.key, keys.request_queue),
-        (*accounts.event_queue.key, keys.event_queue),
-        (*accounts.bids.key, keys.bids),
-        (*accounts.asks.key, keys.asks),
-        (*accounts.market_vault_signer.key, keys.market_vault_signer),
-        (*accounts.market_base_vault.key, keys.market_base_vault),
-        (*accounts.market_quote_vault.key, keys.market_quote_vault),
         (*accounts.amm_program.key, keys.amm_program),
         (*accounts.amm_pool.key, keys.amm_pool),
         (*accounts.amm_authority.key, keys.amm_authority),
-        (*accounts.amm_open_orders.key, keys.amm_open_orders),
         (*accounts.amm_lp_mint.key, keys.amm_lp_mint),
         (*accounts.amm_base_vault.key, keys.amm_base_vault),
         (*accounts.amm_quote_vault.key, keys.amm_quote_vault),
@@ -6011,14 +6498,7 @@ pub fn migrate_to_amm_verify_writable_privileges<'me, 'info>(
     for should_be_writable in [
         accounts.payer,
         accounts.market,
-        accounts.request_queue,
-        accounts.event_queue,
-        accounts.bids,
-        accounts.asks,
-        accounts.market_base_vault,
-        accounts.market_quote_vault,
         accounts.amm_pool,
-        accounts.amm_open_orders,
         accounts.amm_lp_mint,
         accounts.amm_base_vault,
         accounts.amm_quote_vault,
@@ -6078,8 +6558,8 @@ pub struct MigrateToCpswapAccounts<'me, 'info> {
     pub base_vault: &'me AccountInfo<'info>,
     pub quote_vault: &'me AccountInfo<'info>,
     pub pool_lp_token: &'me AccountInfo<'info>,
-    pub base_token_program: &'me AccountInfo<'info>,
-    pub quote_token_program: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub token_program_2022: &'me AccountInfo<'info>,
     pub associated_token_program: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
     pub rent_program: &'me AccountInfo<'info>,
@@ -6109,8 +6589,8 @@ pub struct MigrateToCpswapKeys {
     pub base_vault: Pubkey,
     pub quote_vault: Pubkey,
     pub pool_lp_token: Pubkey,
-    pub base_token_program: Pubkey,
-    pub quote_token_program: Pubkey,
+    pub token_program: Pubkey,
+    pub token_program_2022: Pubkey,
     pub associated_token_program: Pubkey,
     pub system_program: Pubkey,
     pub rent_program: Pubkey,
@@ -6141,8 +6621,8 @@ impl From<MigrateToCpswapAccounts<'_, '_>> for MigrateToCpswapKeys {
             base_vault: *accounts.base_vault.key,
             quote_vault: *accounts.quote_vault.key,
             pool_lp_token: *accounts.pool_lp_token.key,
-            base_token_program: *accounts.base_token_program.key,
-            quote_token_program: *accounts.quote_token_program.key,
+            token_program: *accounts.token_program.key,
+            token_program_2022: *accounts.token_program_2022.key,
             associated_token_program: *accounts.associated_token_program.key,
             system_program: *accounts.system_program.key,
             rent_program: *accounts.rent_program.key,
@@ -6264,12 +6744,12 @@ impl From<MigrateToCpswapKeys> for [AccountMeta; MIGRATE_TO_CPSWAP_IX_ACCOUNTS_L
                 is_writable: true,
             },
             AccountMeta {
-                pubkey: keys.base_token_program,
+                pubkey: keys.token_program,
                 is_signer: false,
                 is_writable: false,
             },
             AccountMeta {
-                pubkey: keys.quote_token_program,
+                pubkey: keys.token_program_2022,
                 is_signer: false,
                 is_writable: false,
             },
@@ -6321,8 +6801,8 @@ impl From<[Pubkey; MIGRATE_TO_CPSWAP_IX_ACCOUNTS_LEN]> for MigrateToCpswapKeys {
             base_vault: pubkeys[19],
             quote_vault: pubkeys[20],
             pool_lp_token: pubkeys[21],
-            base_token_program: pubkeys[22],
-            quote_token_program: pubkeys[23],
+            token_program: pubkeys[22],
+            token_program_2022: pubkeys[23],
             associated_token_program: pubkeys[24],
             system_program: pubkeys[25],
             rent_program: pubkeys[26],
@@ -6356,8 +6836,8 @@ for [AccountInfo<'info>; MIGRATE_TO_CPSWAP_IX_ACCOUNTS_LEN] {
             accounts.base_vault.clone(),
             accounts.quote_vault.clone(),
             accounts.pool_lp_token.clone(),
-            accounts.base_token_program.clone(),
-            accounts.quote_token_program.clone(),
+            accounts.token_program.clone(),
+            accounts.token_program_2022.clone(),
             accounts.associated_token_program.clone(),
             accounts.system_program.clone(),
             accounts.rent_program.clone(),
@@ -6391,8 +6871,8 @@ for MigrateToCpswapAccounts<'me, 'info> {
             base_vault: &arr[19],
             quote_vault: &arr[20],
             pool_lp_token: &arr[21],
-            base_token_program: &arr[22],
-            quote_token_program: &arr[23],
+            token_program: &arr[22],
+            token_program_2022: &arr[23],
             associated_token_program: &arr[24],
             system_program: &arr[25],
             rent_program: &arr[26],
@@ -6497,8 +6977,8 @@ pub fn migrate_to_cpswap_verify_account_keys(
         (*accounts.base_vault.key, keys.base_vault),
         (*accounts.quote_vault.key, keys.quote_vault),
         (*accounts.pool_lp_token.key, keys.pool_lp_token),
-        (*accounts.base_token_program.key, keys.base_token_program),
-        (*accounts.quote_token_program.key, keys.quote_token_program),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.token_program_2022.key, keys.token_program_2022),
         (*accounts.associated_token_program.key, keys.associated_token_program),
         (*accounts.system_program.key, keys.system_program),
         (*accounts.rent_program.key, keys.rent_program),
@@ -6552,103 +7032,139 @@ pub fn migrate_to_cpswap_verify_account_privileges<'me, 'info>(
     migrate_to_cpswap_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN: usize = 2;
+pub const REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
-pub struct RemovePlatformCurveParamAccounts<'me, 'info> {
-    pub platform_admin: &'me AccountInfo<'info>,
+pub struct RemovePlatformCurveRuleAccounts<'me, 'info> {
+    pub curve_rule_authority: &'me AccountInfo<'info>,
     pub platform_config: &'me AccountInfo<'info>,
+    pub global_config: &'me AccountInfo<'info>,
+    pub platform_curve_rule: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct RemovePlatformCurveParamKeys {
-    pub platform_admin: Pubkey,
+pub struct RemovePlatformCurveRuleKeys {
+    pub curve_rule_authority: Pubkey,
     pub platform_config: Pubkey,
+    pub global_config: Pubkey,
+    pub platform_curve_rule: Pubkey,
+    pub system_program: Pubkey,
 }
-impl From<RemovePlatformCurveParamAccounts<'_, '_>> for RemovePlatformCurveParamKeys {
-    fn from(accounts: RemovePlatformCurveParamAccounts) -> Self {
+impl From<RemovePlatformCurveRuleAccounts<'_, '_>> for RemovePlatformCurveRuleKeys {
+    fn from(accounts: RemovePlatformCurveRuleAccounts) -> Self {
         Self {
-            platform_admin: *accounts.platform_admin.key,
+            curve_rule_authority: *accounts.curve_rule_authority.key,
             platform_config: *accounts.platform_config.key,
+            global_config: *accounts.global_config.key,
+            platform_curve_rule: *accounts.platform_curve_rule.key,
+            system_program: *accounts.system_program.key,
         }
     }
 }
-impl From<RemovePlatformCurveParamKeys>
-for [AccountMeta; REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] {
-    fn from(keys: RemovePlatformCurveParamKeys) -> Self {
+impl From<RemovePlatformCurveRuleKeys>
+for [AccountMeta; REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(keys: RemovePlatformCurveRuleKeys) -> Self {
         [
             AccountMeta {
-                pubkey: keys.platform_admin,
+                pubkey: keys.curve_rule_authority,
                 is_signer: true,
-                is_writable: false,
+                is_writable: true,
             },
             AccountMeta {
                 pubkey: keys.platform_config,
                 is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.global_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.platform_curve_rule,
+                is_signer: false,
                 is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
             },
         ]
     }
 }
-impl From<[Pubkey; REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN]>
-for RemovePlatformCurveParamKeys {
-    fn from(pubkeys: [Pubkey; REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN]) -> Self {
+impl From<[Pubkey; REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for RemovePlatformCurveRuleKeys {
+    fn from(pubkeys: [Pubkey; REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            platform_admin: pubkeys[0],
+            curve_rule_authority: pubkeys[0],
             platform_config: pubkeys[1],
+            global_config: pubkeys[2],
+            platform_curve_rule: pubkeys[3],
+            system_program: pubkeys[4],
         }
     }
 }
-impl<'info> From<RemovePlatformCurveParamAccounts<'_, 'info>>
-for [AccountInfo<'info>; REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] {
-    fn from(accounts: RemovePlatformCurveParamAccounts<'_, 'info>) -> Self {
-        [accounts.platform_admin.clone(), accounts.platform_config.clone()]
+impl<'info> From<RemovePlatformCurveRuleAccounts<'_, 'info>>
+for [AccountInfo<'info>; REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: RemovePlatformCurveRuleAccounts<'_, 'info>) -> Self {
+        [
+            accounts.curve_rule_authority.clone(),
+            accounts.platform_config.clone(),
+            accounts.global_config.clone(),
+            accounts.platform_curve_rule.clone(),
+            accounts.system_program.clone(),
+        ]
     }
 }
 impl<
     'me,
     'info,
-> From<&'me [AccountInfo<'info>; REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN]>
-for RemovePlatformCurveParamAccounts<'me, 'info> {
+> From<&'me [AccountInfo<'info>; REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for RemovePlatformCurveRuleAccounts<'me, 'info> {
     fn from(
-        arr: &'me [AccountInfo<'info>; REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN],
+        arr: &'me [AccountInfo<'info>; REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN],
     ) -> Self {
         Self {
-            platform_admin: &arr[0],
+            curve_rule_authority: &arr[0],
             platform_config: &arr[1],
+            global_config: &arr[2],
+            platform_curve_rule: &arr[3],
+            system_program: &arr[4],
         }
     }
 }
-pub const REMOVE_PLATFORM_CURVE_PARAM_IX_DISCM: [u8; 8usize] = [
-    27, 30, 62, 169, 93, 224, 24, 145,
+pub const REMOVE_PLATFORM_CURVE_RULE_IX_DISCM: [u8; 8usize] = [
+    236, 77, 154, 138, 32, 145, 127, 219,
 ];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct RemovePlatformCurveParamIxArgs {
-    pub index: u8,
+pub struct RemovePlatformCurveRuleIxArgs {
+    pub group_id: u16,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct RemovePlatformCurveParamIxData(pub RemovePlatformCurveParamIxArgs);
-impl From<RemovePlatformCurveParamIxArgs> for RemovePlatformCurveParamIxData {
-    fn from(args: RemovePlatformCurveParamIxArgs) -> Self {
+pub struct RemovePlatformCurveRuleIxData(pub RemovePlatformCurveRuleIxArgs);
+impl From<RemovePlatformCurveRuleIxArgs> for RemovePlatformCurveRuleIxData {
+    fn from(args: RemovePlatformCurveRuleIxArgs) -> Self {
         Self(args)
     }
 }
-impl RemovePlatformCurveParamIxData {
+impl RemovePlatformCurveRuleIxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8usize];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != REMOVE_PLATFORM_CURVE_PARAM_IX_DISCM {
+        if maybe_discm != REMOVE_PLATFORM_CURVE_RULE_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let index: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let group_id: u16 = crate::borsh_de_or_default(&mut reader)?;
         Ok(
-            Self(RemovePlatformCurveParamIxArgs {
-                index,
+            Self(RemovePlatformCurveRuleIxArgs {
+                group_id,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&REMOVE_PLATFORM_CURVE_PARAM_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0.index, &mut writer)?;
+        writer.write_all(&REMOVE_PLATFORM_CURVE_RULE_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.group_id, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -6657,77 +7173,80 @@ impl RemovePlatformCurveParamIxData {
         Ok(data)
     }
 }
-pub fn remove_platform_curve_param_ix_with_program_id(
+pub fn remove_platform_curve_rule_ix_with_program_id(
     program_id: Pubkey,
-    keys: RemovePlatformCurveParamKeys,
-    args: RemovePlatformCurveParamIxArgs,
+    keys: RemovePlatformCurveRuleKeys,
+    args: RemovePlatformCurveRuleIxArgs,
 ) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; REMOVE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] = keys.into();
-    let data: RemovePlatformCurveParamIxData = args.into();
+    let metas: [AccountMeta; REMOVE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] = keys.into();
+    let data: RemovePlatformCurveRuleIxData = args.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
         data: data.try_to_vec()?,
     })
 }
-pub fn remove_platform_curve_param_ix(
-    keys: RemovePlatformCurveParamKeys,
-    args: RemovePlatformCurveParamIxArgs,
+pub fn remove_platform_curve_rule_ix(
+    keys: RemovePlatformCurveRuleKeys,
+    args: RemovePlatformCurveRuleIxArgs,
 ) -> std::io::Result<Instruction> {
-    remove_platform_curve_param_ix_with_program_id(
+    remove_platform_curve_rule_ix_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         keys,
         args,
     )
 }
-pub fn remove_platform_curve_param_invoke_with_program_id(
+pub fn remove_platform_curve_rule_invoke_with_program_id(
     program_id: Pubkey,
-    accounts: RemovePlatformCurveParamAccounts<'_, '_>,
-    args: RemovePlatformCurveParamIxArgs,
+    accounts: RemovePlatformCurveRuleAccounts<'_, '_>,
+    args: RemovePlatformCurveRuleIxArgs,
 ) -> ProgramResult {
-    let keys: RemovePlatformCurveParamKeys = accounts.into();
-    let ix = remove_platform_curve_param_ix_with_program_id(program_id, keys, args)?;
+    let keys: RemovePlatformCurveRuleKeys = accounts.into();
+    let ix = remove_platform_curve_rule_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn remove_platform_curve_param_invoke(
-    accounts: RemovePlatformCurveParamAccounts<'_, '_>,
-    args: RemovePlatformCurveParamIxArgs,
+pub fn remove_platform_curve_rule_invoke(
+    accounts: RemovePlatformCurveRuleAccounts<'_, '_>,
+    args: RemovePlatformCurveRuleIxArgs,
 ) -> ProgramResult {
-    remove_platform_curve_param_invoke_with_program_id(
+    remove_platform_curve_rule_invoke_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
         args,
     )
 }
-pub fn remove_platform_curve_param_invoke_signed_with_program_id(
+pub fn remove_platform_curve_rule_invoke_signed_with_program_id(
     program_id: Pubkey,
-    accounts: RemovePlatformCurveParamAccounts<'_, '_>,
-    args: RemovePlatformCurveParamIxArgs,
+    accounts: RemovePlatformCurveRuleAccounts<'_, '_>,
+    args: RemovePlatformCurveRuleIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let keys: RemovePlatformCurveParamKeys = accounts.into();
-    let ix = remove_platform_curve_param_ix_with_program_id(program_id, keys, args)?;
+    let keys: RemovePlatformCurveRuleKeys = accounts.into();
+    let ix = remove_platform_curve_rule_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
-pub fn remove_platform_curve_param_invoke_signed(
-    accounts: RemovePlatformCurveParamAccounts<'_, '_>,
-    args: RemovePlatformCurveParamIxArgs,
+pub fn remove_platform_curve_rule_invoke_signed(
+    accounts: RemovePlatformCurveRuleAccounts<'_, '_>,
+    args: RemovePlatformCurveRuleIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    remove_platform_curve_param_invoke_signed_with_program_id(
+    remove_platform_curve_rule_invoke_signed_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
         args,
         seeds,
     )
 }
-pub fn remove_platform_curve_param_verify_account_keys(
-    accounts: RemovePlatformCurveParamAccounts<'_, '_>,
-    keys: RemovePlatformCurveParamKeys,
+pub fn remove_platform_curve_rule_verify_account_keys(
+    accounts: RemovePlatformCurveRuleAccounts<'_, '_>,
+    keys: RemovePlatformCurveRuleKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
-        (*accounts.platform_admin.key, keys.platform_admin),
+        (*accounts.curve_rule_authority.key, keys.curve_rule_authority),
         (*accounts.platform_config.key, keys.platform_config),
+        (*accounts.global_config.key, keys.global_config),
+        (*accounts.platform_curve_rule.key, keys.platform_curve_rule),
+        (*accounts.system_program.key, keys.system_program),
     ] {
         if actual != expected {
             return Err((actual, expected));
@@ -6735,31 +7254,34 @@ pub fn remove_platform_curve_param_verify_account_keys(
     }
     Ok(())
 }
-pub fn remove_platform_curve_param_verify_writable_privileges<'me, 'info>(
-    accounts: RemovePlatformCurveParamAccounts<'me, 'info>,
+pub fn remove_platform_curve_rule_verify_writable_privileges<'me, 'info>(
+    accounts: RemovePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [accounts.platform_config] {
+    for should_be_writable in [
+        accounts.curve_rule_authority,
+        accounts.platform_curve_rule,
+    ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
         }
     }
     Ok(())
 }
-pub fn remove_platform_curve_param_verify_signer_privileges<'me, 'info>(
-    accounts: RemovePlatformCurveParamAccounts<'me, 'info>,
+pub fn remove_platform_curve_rule_verify_signer_privileges<'me, 'info>(
+    accounts: RemovePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.platform_admin] {
+    for should_be_signer in [accounts.curve_rule_authority] {
         if !should_be_signer.is_signer {
             return Err((should_be_signer, ProgramError::MissingRequiredSignature));
         }
     }
     Ok(())
 }
-pub fn remove_platform_curve_param_verify_account_privileges<'me, 'info>(
-    accounts: RemovePlatformCurveParamAccounts<'me, 'info>,
+pub fn remove_platform_curve_rule_verify_account_privileges<'me, 'info>(
+    accounts: RemovePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    remove_platform_curve_param_verify_writable_privileges(accounts)?;
-    remove_platform_curve_param_verify_signer_privileges(accounts)?;
+    remove_platform_curve_rule_verify_writable_privileges(accounts)?;
+    remove_platform_curve_rule_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const SELL_EXACT_IN_IX_ACCOUNTS_LEN: usize = 15;
@@ -7893,49 +8415,57 @@ pub fn update_platform_config_verify_account_privileges<'me, 'info>(
     update_platform_config_verify_signer_privileges(accounts)?;
     Ok(())
 }
-pub const UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN: usize = 4;
+pub const UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN: usize = 5;
 #[derive(Copy, Clone, Debug)]
-pub struct UpdatePlatformCurveParamAccounts<'me, 'info> {
-    pub platform_admin: &'me AccountInfo<'info>,
+pub struct UpdatePlatformCurveRuleAccounts<'me, 'info> {
+    pub curve_rule_authority: &'me AccountInfo<'info>,
     pub platform_config: &'me AccountInfo<'info>,
     pub global_config: &'me AccountInfo<'info>,
+    pub platform_curve_rule: &'me AccountInfo<'info>,
     pub system_program: &'me AccountInfo<'info>,
 }
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct UpdatePlatformCurveParamKeys {
-    pub platform_admin: Pubkey,
+pub struct UpdatePlatformCurveRuleKeys {
+    pub curve_rule_authority: Pubkey,
     pub platform_config: Pubkey,
     pub global_config: Pubkey,
+    pub platform_curve_rule: Pubkey,
     pub system_program: Pubkey,
 }
-impl From<UpdatePlatformCurveParamAccounts<'_, '_>> for UpdatePlatformCurveParamKeys {
-    fn from(accounts: UpdatePlatformCurveParamAccounts) -> Self {
+impl From<UpdatePlatformCurveRuleAccounts<'_, '_>> for UpdatePlatformCurveRuleKeys {
+    fn from(accounts: UpdatePlatformCurveRuleAccounts) -> Self {
         Self {
-            platform_admin: *accounts.platform_admin.key,
+            curve_rule_authority: *accounts.curve_rule_authority.key,
             platform_config: *accounts.platform_config.key,
             global_config: *accounts.global_config.key,
+            platform_curve_rule: *accounts.platform_curve_rule.key,
             system_program: *accounts.system_program.key,
         }
     }
 }
-impl From<UpdatePlatformCurveParamKeys>
-for [AccountMeta; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] {
-    fn from(keys: UpdatePlatformCurveParamKeys) -> Self {
+impl From<UpdatePlatformCurveRuleKeys>
+for [AccountMeta; UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(keys: UpdatePlatformCurveRuleKeys) -> Self {
         [
             AccountMeta {
-                pubkey: keys.platform_admin,
+                pubkey: keys.curve_rule_authority,
                 is_signer: true,
                 is_writable: true,
             },
             AccountMeta {
                 pubkey: keys.platform_config,
                 is_signer: false,
-                is_writable: true,
+                is_writable: false,
             },
             AccountMeta {
                 pubkey: keys.global_config,
                 is_signer: false,
                 is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.platform_curve_rule,
+                is_signer: false,
+                is_writable: true,
             },
             AccountMeta {
                 pubkey: keys.system_program,
@@ -7945,24 +8475,26 @@ for [AccountMeta; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] {
         ]
     }
 }
-impl From<[Pubkey; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN]>
-for UpdatePlatformCurveParamKeys {
-    fn from(pubkeys: [Pubkey; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN]) -> Self {
+impl From<[Pubkey; UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for UpdatePlatformCurveRuleKeys {
+    fn from(pubkeys: [Pubkey; UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]) -> Self {
         Self {
-            platform_admin: pubkeys[0],
+            curve_rule_authority: pubkeys[0],
             platform_config: pubkeys[1],
             global_config: pubkeys[2],
-            system_program: pubkeys[3],
+            platform_curve_rule: pubkeys[3],
+            system_program: pubkeys[4],
         }
     }
 }
-impl<'info> From<UpdatePlatformCurveParamAccounts<'_, 'info>>
-for [AccountInfo<'info>; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] {
-    fn from(accounts: UpdatePlatformCurveParamAccounts<'_, 'info>) -> Self {
+impl<'info> From<UpdatePlatformCurveRuleAccounts<'_, 'info>>
+for [AccountInfo<'info>; UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: UpdatePlatformCurveRuleAccounts<'_, 'info>) -> Self {
         [
-            accounts.platform_admin.clone(),
+            accounts.curve_rule_authority.clone(),
             accounts.platform_config.clone(),
             accounts.global_config.clone(),
+            accounts.platform_curve_rule.clone(),
             accounts.system_program.clone(),
         ]
     }
@@ -7970,59 +8502,56 @@ for [AccountInfo<'info>; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] {
 impl<
     'me,
     'info,
-> From<&'me [AccountInfo<'info>; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN]>
-for UpdatePlatformCurveParamAccounts<'me, 'info> {
+> From<&'me [AccountInfo<'info>; UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN]>
+for UpdatePlatformCurveRuleAccounts<'me, 'info> {
     fn from(
-        arr: &'me [AccountInfo<'info>; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN],
+        arr: &'me [AccountInfo<'info>; UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN],
     ) -> Self {
         Self {
-            platform_admin: &arr[0],
+            curve_rule_authority: &arr[0],
             platform_config: &arr[1],
             global_config: &arr[2],
-            system_program: &arr[3],
+            platform_curve_rule: &arr[3],
+            system_program: &arr[4],
         }
     }
 }
-pub const UPDATE_PLATFORM_CURVE_PARAM_IX_DISCM: [u8; 8usize] = [
-    138, 144, 138, 250, 220, 128, 4, 57,
+pub const UPDATE_PLATFORM_CURVE_RULE_IX_DISCM: [u8; 8usize] = [
+    90, 100, 206, 196, 54, 117, 120, 139,
 ];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct UpdatePlatformCurveParamIxArgs {
-    pub index: u8,
-    pub bonding_curve_param: BondingCurveParam,
+pub struct UpdatePlatformCurveRuleIxArgs {
+    pub group_id: u16,
+    pub constraints: Vec<ParamConstraint>,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct UpdatePlatformCurveParamIxData(pub UpdatePlatformCurveParamIxArgs);
-impl From<UpdatePlatformCurveParamIxArgs> for UpdatePlatformCurveParamIxData {
-    fn from(args: UpdatePlatformCurveParamIxArgs) -> Self {
+pub struct UpdatePlatformCurveRuleIxData(pub UpdatePlatformCurveRuleIxArgs);
+impl From<UpdatePlatformCurveRuleIxArgs> for UpdatePlatformCurveRuleIxData {
+    fn from(args: UpdatePlatformCurveRuleIxArgs) -> Self {
         Self(args)
     }
 }
-impl UpdatePlatformCurveParamIxData {
+impl UpdatePlatformCurveRuleIxData {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
         let mut reader = buf;
         let mut maybe_discm = [0u8; 8usize];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != UPDATE_PLATFORM_CURVE_PARAM_IX_DISCM {
+        if maybe_discm != UPDATE_PLATFORM_CURVE_RULE_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let index: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let bonding_curve_param = if reader.is_empty() {
-            Default::default()
-        } else {
-            <BondingCurveParam>::deserialize(&mut reader)?
-        };
+        let group_id: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let constraints: Vec<ParamConstraint> = crate::borsh_de_or_default(&mut reader)?;
         Ok(
-            Self(UpdatePlatformCurveParamIxArgs {
-                index,
-                bonding_curve_param,
+            Self(UpdatePlatformCurveRuleIxArgs {
+                group_id,
+                constraints,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&UPDATE_PLATFORM_CURVE_PARAM_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0.index, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0.bonding_curve_param, &mut writer)?;
+        writer.write_all(&UPDATE_PLATFORM_CURVE_RULE_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.group_id, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.constraints, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -8031,78 +8560,79 @@ impl UpdatePlatformCurveParamIxData {
         Ok(data)
     }
 }
-pub fn update_platform_curve_param_ix_with_program_id(
+pub fn update_platform_curve_rule_ix_with_program_id(
     program_id: Pubkey,
-    keys: UpdatePlatformCurveParamKeys,
-    args: UpdatePlatformCurveParamIxArgs,
+    keys: UpdatePlatformCurveRuleKeys,
+    args: UpdatePlatformCurveRuleIxArgs,
 ) -> std::io::Result<Instruction> {
-    let metas: [AccountMeta; UPDATE_PLATFORM_CURVE_PARAM_IX_ACCOUNTS_LEN] = keys.into();
-    let data: UpdatePlatformCurveParamIxData = args.into();
+    let metas: [AccountMeta; UPDATE_PLATFORM_CURVE_RULE_IX_ACCOUNTS_LEN] = keys.into();
+    let data: UpdatePlatformCurveRuleIxData = args.into();
     Ok(Instruction {
         program_id,
         accounts: Vec::from(metas),
         data: data.try_to_vec()?,
     })
 }
-pub fn update_platform_curve_param_ix(
-    keys: UpdatePlatformCurveParamKeys,
-    args: UpdatePlatformCurveParamIxArgs,
+pub fn update_platform_curve_rule_ix(
+    keys: UpdatePlatformCurveRuleKeys,
+    args: UpdatePlatformCurveRuleIxArgs,
 ) -> std::io::Result<Instruction> {
-    update_platform_curve_param_ix_with_program_id(
+    update_platform_curve_rule_ix_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         keys,
         args,
     )
 }
-pub fn update_platform_curve_param_invoke_with_program_id(
+pub fn update_platform_curve_rule_invoke_with_program_id(
     program_id: Pubkey,
-    accounts: UpdatePlatformCurveParamAccounts<'_, '_>,
-    args: UpdatePlatformCurveParamIxArgs,
+    accounts: UpdatePlatformCurveRuleAccounts<'_, '_>,
+    args: UpdatePlatformCurveRuleIxArgs,
 ) -> ProgramResult {
-    let keys: UpdatePlatformCurveParamKeys = accounts.into();
-    let ix = update_platform_curve_param_ix_with_program_id(program_id, keys, args)?;
+    let keys: UpdatePlatformCurveRuleKeys = accounts.into();
+    let ix = update_platform_curve_rule_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction(&ix, accounts)
 }
-pub fn update_platform_curve_param_invoke(
-    accounts: UpdatePlatformCurveParamAccounts<'_, '_>,
-    args: UpdatePlatformCurveParamIxArgs,
+pub fn update_platform_curve_rule_invoke(
+    accounts: UpdatePlatformCurveRuleAccounts<'_, '_>,
+    args: UpdatePlatformCurveRuleIxArgs,
 ) -> ProgramResult {
-    update_platform_curve_param_invoke_with_program_id(
+    update_platform_curve_rule_invoke_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
         args,
     )
 }
-pub fn update_platform_curve_param_invoke_signed_with_program_id(
+pub fn update_platform_curve_rule_invoke_signed_with_program_id(
     program_id: Pubkey,
-    accounts: UpdatePlatformCurveParamAccounts<'_, '_>,
-    args: UpdatePlatformCurveParamIxArgs,
+    accounts: UpdatePlatformCurveRuleAccounts<'_, '_>,
+    args: UpdatePlatformCurveRuleIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    let keys: UpdatePlatformCurveParamKeys = accounts.into();
-    let ix = update_platform_curve_param_ix_with_program_id(program_id, keys, args)?;
+    let keys: UpdatePlatformCurveRuleKeys = accounts.into();
+    let ix = update_platform_curve_rule_ix_with_program_id(program_id, keys, args)?;
     invoke_instruction_signed(&ix, accounts, seeds)
 }
-pub fn update_platform_curve_param_invoke_signed(
-    accounts: UpdatePlatformCurveParamAccounts<'_, '_>,
-    args: UpdatePlatformCurveParamIxArgs,
+pub fn update_platform_curve_rule_invoke_signed(
+    accounts: UpdatePlatformCurveRuleAccounts<'_, '_>,
+    args: UpdatePlatformCurveRuleIxArgs,
     seeds: &[&[&[u8]]],
 ) -> ProgramResult {
-    update_platform_curve_param_invoke_signed_with_program_id(
+    update_platform_curve_rule_invoke_signed_with_program_id(
         RAYDIUM_LAUNCHPAD_PROGRAM_ID,
         accounts,
         args,
         seeds,
     )
 }
-pub fn update_platform_curve_param_verify_account_keys(
-    accounts: UpdatePlatformCurveParamAccounts<'_, '_>,
-    keys: UpdatePlatformCurveParamKeys,
+pub fn update_platform_curve_rule_verify_account_keys(
+    accounts: UpdatePlatformCurveRuleAccounts<'_, '_>,
+    keys: UpdatePlatformCurveRuleKeys,
 ) -> Result<(), (Pubkey, Pubkey)> {
     for (actual, expected) in [
-        (*accounts.platform_admin.key, keys.platform_admin),
+        (*accounts.curve_rule_authority.key, keys.curve_rule_authority),
         (*accounts.platform_config.key, keys.platform_config),
         (*accounts.global_config.key, keys.global_config),
+        (*accounts.platform_curve_rule.key, keys.platform_curve_rule),
         (*accounts.system_program.key, keys.system_program),
     ] {
         if actual != expected {
@@ -8111,30 +8641,33 @@ pub fn update_platform_curve_param_verify_account_keys(
     }
     Ok(())
 }
-pub fn update_platform_curve_param_verify_writable_privileges<'me, 'info>(
-    accounts: UpdatePlatformCurveParamAccounts<'me, 'info>,
+pub fn update_platform_curve_rule_verify_writable_privileges<'me, 'info>(
+    accounts: UpdatePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_writable in [accounts.platform_admin, accounts.platform_config] {
+    for should_be_writable in [
+        accounts.curve_rule_authority,
+        accounts.platform_curve_rule,
+    ] {
         if !should_be_writable.is_writable {
             return Err((should_be_writable, ProgramError::InvalidAccountData));
         }
     }
     Ok(())
 }
-pub fn update_platform_curve_param_verify_signer_privileges<'me, 'info>(
-    accounts: UpdatePlatformCurveParamAccounts<'me, 'info>,
+pub fn update_platform_curve_rule_verify_signer_privileges<'me, 'info>(
+    accounts: UpdatePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.platform_admin] {
+    for should_be_signer in [accounts.curve_rule_authority] {
         if !should_be_signer.is_signer {
             return Err((should_be_signer, ProgramError::MissingRequiredSignature));
         }
     }
     Ok(())
 }
-pub fn update_platform_curve_param_verify_account_privileges<'me, 'info>(
-    accounts: UpdatePlatformCurveParamAccounts<'me, 'info>,
+pub fn update_platform_curve_rule_verify_account_privileges<'me, 'info>(
+    accounts: UpdatePlatformCurveRuleAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    update_platform_curve_param_verify_writable_privileges(accounts)?;
-    update_platform_curve_param_verify_signer_privileges(accounts)?;
+    update_platform_curve_rule_verify_writable_privileges(accounts)?;
+    update_platform_curve_rule_verify_signer_privileges(accounts)?;
     Ok(())
 }

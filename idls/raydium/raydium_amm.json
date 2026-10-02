@@ -105,7 +105,11 @@
           "name": "openTime",
           "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 0
+      }
     },
     {
       "name": "initialize2",
@@ -171,17 +175,17 @@
           "isSigner": false
         },
         {
-          "name": "poolWithdrawQueue",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
           "name": "ammTargetOrders",
           "isMut": true,
           "isSigner": false
         },
         {
-          "name": "poolTempLp",
+          "name": "ammConfig",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "createFeeDestination",
           "isMut": true,
           "isSigner": false
         },
@@ -233,7 +237,11 @@
           "name": "initCoinAmount",
           "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 1
+      }
     },
     {
       "name": "monitorStep",
@@ -347,7 +355,11 @@
           "name": "cancelOrderLimit",
           "type": "u16"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 2
+      }
     },
     {
       "name": "deposit",
@@ -435,8 +447,16 @@
         {
           "name": "baseSide",
           "type": "u64"
+        },
+        {
+          "name": "otherAmountMin",
+          "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 3
+      }
     },
     {
       "name": "withdraw",
@@ -478,16 +498,6 @@
         },
         {
           "name": "poolPcTokenAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "poolWithdrawQueue",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "poolTempLpTokenAccount",
           "isMut": true,
           "isSigner": false
         },
@@ -556,8 +566,20 @@
         {
           "name": "amount",
           "type": "u64"
+        },
+        {
+          "name": "minCoinAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minPcAmount",
+          "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
     },
     {
       "name": "migrateToOpenBook",
@@ -668,83 +690,17 @@
           "isSigner": true
         }
       ],
-      "args": []
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
     },
     {
       "name": "setParams",
       "accounts": [
         {
-          "name": "tokenProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
           "name": "amm",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammAuthority",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "ammOpenOrders",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammTargetOrders",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammCoinVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "ammPcVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "serumMarket",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumCoinVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumPcVault",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumVaultSigner",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "serumEventQueue",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumBids",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumAsks",
           "isMut": true,
           "isSigner": false
         },
@@ -766,36 +722,18 @@
           }
         },
         {
-          "name": "newPubkey",
-          "type": {
-            "option": "publicKey"
-          }
-        },
-        {
           "name": "fees",
           "type": {
             "option": {
               "defined": "Fees"
             }
           }
-        },
-        {
-          "name": "lastOrderDistance",
-          "type": {
-            "option": {
-              "defined": "LastOrderDistance"
-            }
-          }
-        },
-        {
-          "name": "needTakeAmounts",
-          "type": {
-            "option": {
-              "defined": "NeedTake"
-            }
-          }
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 6
+      }
     },
     {
       "name": "withdrawPnl",
@@ -818,11 +756,6 @@
         {
           "name": "ammAuthority",
           "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "ammOpenOrders",
-          "isMut": true,
           "isSigner": false
         },
         {
@@ -854,39 +787,13 @@
           "name": "ammTargetOrders",
           "isMut": true,
           "isSigner": false
-        },
-        {
-          "name": "serumProgram",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "serumMarket",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumEventQueue",
-          "isMut": false,
-          "isSigner": false
-        },
-        {
-          "name": "serumCoinVaultAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumPcVaultAccount",
-          "isMut": true,
-          "isSigner": false
-        },
-        {
-          "name": "serumVaultSigner",
-          "isMut": false,
-          "isSigner": false
         }
       ],
-      "args": []
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 7
+      }
     },
     {
       "name": "withdrawSrm",
@@ -927,7 +834,11 @@
           "name": "amount",
           "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 8
+      }
     },
     {
       "name": "swapBaseIn",
@@ -1032,7 +943,11 @@
           "name": "minimumAmountOut",
           "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 9
+      }
     },
     {
       "name": "preInitialize",
@@ -1113,7 +1028,11 @@
           "name": "nonce",
           "type": "u8"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 10
+      }
     },
     {
       "name": "swapBaseOut",
@@ -1218,7 +1137,11 @@
           "name": "amountOut",
           "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 11
+      }
     },
     {
       "name": "simulateInfo",
@@ -1285,7 +1208,11 @@
             }
           }
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 12
+      }
     },
     {
       "name": "adminCancelOrders",
@@ -1381,7 +1308,11 @@
           "name": "limit",
           "type": "u16"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 13
+      }
     },
     {
       "name": "createConfigAccount",
@@ -1412,7 +1343,11 @@
           "isSigner": false
         }
       ],
-      "args": []
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 14
+      }
     },
     {
       "name": "updateConfigAccount",
@@ -1437,7 +1372,11 @@
           "name": "owner",
           "type": "publicKey"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 15
+      }
     },
     {
       "name": "swapBaseInV2",
@@ -1492,7 +1431,11 @@
           "name": "minimumAmountOut",
           "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 16
+      }
     },
     {
       "name": "swapBaseOutV2",
@@ -1547,7 +1490,36 @@
           "name": "amountOut",
           "type": "u64"
         }
-      ]
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 17
+      }
+    },
+    {
+      "name": "withdrawExcessLamports",
+      "accounts": [
+        {
+          "name": "collectLamportsWallet",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "ammAuthority",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 18
+      }
     }
   ],
   "accounts": [
@@ -1819,25 +1791,25 @@
             }
           },
           {
-            "name": "outPut",
+            "name": "stateData",
             "type": {
-              "defined": "OutPutData"
+              "defined": "StateData"
             }
           },
           {
-            "name": "tokenCoin",
+            "name": "coinVault",
             "type": "publicKey"
           },
           {
-            "name": "tokenPc",
+            "name": "pcVault",
             "type": "publicKey"
           },
           {
-            "name": "coinMint",
+            "name": "coinVaultMint",
             "type": "publicKey"
           },
           {
-            "name": "pcMint",
+            "name": "pcVaultMint",
             "type": "publicKey"
           },
           {
@@ -1853,7 +1825,7 @@
             "type": "publicKey"
           },
           {
-            "name": "serumDex",
+            "name": "marketProgram",
             "type": "publicKey"
           },
           {
@@ -1861,12 +1833,13 @@
             "type": "publicKey"
           },
           {
-            "name": "withdrawQueue",
-            "type": "publicKey"
-          },
-          {
-            "name": "tokenTempLp",
-            "type": "publicKey"
+            "name": "padding1",
+            "type": {
+              "array": [
+                "u64",
+                8
+              ]
+            }
           },
           {
             "name": "ammOwner",
@@ -1881,13 +1854,12 @@
             "type": "u64"
           },
           {
-            "name": "padding",
-            "type": {
-              "array": [
-                "u64",
-                2
-              ]
-            }
+            "name": "recentEpoch",
+            "type": "u64"
+          },
+          {
+            "name": "padding2",
+            "type": "u64"
           }
         ]
       }
@@ -1975,7 +1947,7 @@
       }
     },
     {
-      "name": "OutPutData",
+      "name": "StateData",
       "type": {
         "kind": "struct",
         "fields": [
@@ -2000,12 +1972,13 @@
             "type": "u64"
           },
           {
-            "name": "punishPcAmount",
-            "type": "u64"
-          },
-          {
-            "name": "punishCoinAmount",
-            "type": "u64"
+            "name": "padding",
+            "type": {
+              "array": [
+                "u64",
+                2
+              ]
+            }
           },
           {
             "name": "orderbookToInitTime",
@@ -2020,7 +1993,7 @@
             "type": "u128"
           },
           {
-            "name": "swapTakePcFee",
+            "name": "swapAccPcFee",
             "type": "u64"
           },
           {
@@ -2032,7 +2005,7 @@
             "type": "u128"
           },
           {
-            "name": "swapTakeCoinFee",
+            "name": "swapAccCoinFee",
             "type": "u64"
           }
         ]
@@ -2065,40 +2038,12 @@
             "type": {
               "array": [
                 "u64",
-                32
+                31
               ]
             }
-          }
-        ]
-      }
-    },
-    {
-      "name": "LastOrderDistance",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "lastOrderNumerator",
-            "type": "u64"
           },
           {
-            "name": "lastOrderDenominator",
-            "type": "u64"
-          }
-        ]
-      }
-    },
-    {
-      "name": "NeedTake",
-      "type": {
-        "kind": "struct",
-        "fields": [
-          {
-            "name": "needTakePc",
-            "type": "u64"
-          },
-          {
-            "name": "needTakeCoin",
+            "name": "createPoolFee",
             "type": "u64"
           }
         ]
@@ -2141,117 +2086,117 @@
     {
       "code": 0,
       "name": "AlreadyInUse",
-      "msg": "AlreadyInUse"
+      "msg": "Already in use"
     },
     {
       "code": 1,
       "name": "InvalidProgramAddress",
-      "msg": "InvalidProgramAddress"
+      "msg": "Invalid program address"
     },
     {
       "code": 2,
       "name": "ExpectedMint",
-      "msg": "ExpectedMint"
+      "msg": "Expected mint"
     },
     {
       "code": 3,
       "name": "ExpectedAccount",
-      "msg": "ExpectedAccount"
+      "msg": "Expected account"
     },
     {
       "code": 4,
       "name": "InvalidCoinVault",
-      "msg": "InvalidCoinVault"
+      "msg": "Invalid coin vault"
     },
     {
       "code": 5,
       "name": "InvalidPCVault",
-      "msg": "InvalidPCVault"
+      "msg": "Invalid PC vault"
     },
     {
       "code": 6,
       "name": "InvalidTokenLP",
-      "msg": "InvalidTokenLP"
+      "msg": "Invalid token LP"
     },
     {
       "code": 7,
       "name": "InvalidDestTokenCoin",
-      "msg": "InvalidDestTokenCoin"
+      "msg": "Invalid destination token coin"
     },
     {
       "code": 8,
       "name": "InvalidDestTokenPC",
-      "msg": "InvalidDestTokenPC"
+      "msg": "Invalid destination token PC"
     },
     {
       "code": 9,
       "name": "InvalidPoolMint",
-      "msg": "InvalidPoolMint"
+      "msg": "Invalid pool mint"
     },
     {
       "code": 10,
       "name": "InvalidOpenOrders",
-      "msg": "InvalidOpenOrders"
+      "msg": "Invalid open orders"
     },
     {
       "code": 11,
-      "name": "InvalidSerumMarket",
-      "msg": "InvalidSerumMarket"
+      "name": "InvalidMarket",
+      "msg": "Invalid market"
     },
     {
       "code": 12,
-      "name": "InvalidSerumProgram",
-      "msg": "InvalidSerumProgram"
+      "name": "InvalidMarketProgram",
+      "msg": "Invalid market program"
     },
     {
       "code": 13,
       "name": "InvalidTargetOrders",
-      "msg": "InvalidTargetOrders"
+      "msg": "Invalid target orders"
     },
     {
       "code": 14,
-      "name": "InvalidWithdrawQueue",
-      "msg": "InvalidWithdrawQueue"
+      "name": "AccountNeedWriteable",
+      "msg": "Account must be writable"
     },
     {
       "code": 15,
-      "name": "InvalidTempLp",
-      "msg": "InvalidTempLp"
+      "name": "AccountNeedReadOnly",
+      "msg": "Account must be read-only"
     },
     {
       "code": 16,
       "name": "InvalidCoinMint",
-      "msg": "InvalidCoinMint"
+      "msg": "Invalid coin mint"
     },
     {
       "code": 17,
       "name": "InvalidPCMint",
-      "msg": "InvalidPCMint"
+      "msg": "Invalid PC mint"
     },
     {
       "code": 18,
       "name": "InvalidOwner",
-      "msg": "InvalidOwner"
+      "msg": "Invalid owner"
     },
     {
       "code": 19,
       "name": "InvalidSupply",
-      "msg": "InvalidSupply"
+      "msg": "Invalid supply"
     },
     {
       "code": 20,
       "name": "InvalidDelegate",
-      "msg": "InvalidDelegate"
+      "msg": "Invalid delegate"
     },
     {
       "code": 21,
       "name": "InvalidSignAccount",
-      "msg": "Invalid Sign Account"
+      "msg": "Invalid sign account"
     },
     {
       "code": 22,
       "name": "InvalidStatus",
-      "msg": "InvalidStatus"
+      "msg": "Invalid status"
     },
     {
       "code": 23,
@@ -2265,78 +2210,78 @@
     },
     {
       "code": 25,
-      "name": "WithdrawTransferBusy",
-      "msg": "Withdraw_transfer is busy"
+      "name": "InvalidTargetAccountOwner",
+      "msg": "Invalid target account owner"
     },
     {
       "code": 26,
-      "name": "WithdrawQueueFull",
-      "msg": "WithdrawQueue is full"
+      "name": "InvalidTargetOwner",
+      "msg": "Invalid target owner"
     },
     {
       "code": 27,
-      "name": "WithdrawQueueEmpty",
-      "msg": "WithdrawQueue is empty"
+      "name": "InvalidAmmAccountOwner",
+      "msg": "Invalid AMM account owner"
     },
     {
       "code": 28,
       "name": "InvalidParamsSet",
-      "msg": "Params Set is invalid"
+      "msg": "Invalid parameter set"
     },
     {
       "code": 29,
       "name": "InvalidInput",
-      "msg": "InvalidInput"
+      "msg": "Invalid input"
     },
     {
       "code": 30,
       "name": "ExceededSlippage",
-      "msg": "instruction exceeds desired slippage limit"
+      "msg": "Exceeded desired slippage limit"
     },
     {
       "code": 31,
       "name": "CalculationExRateFailure",
-      "msg": "CalculationExRateFailure"
+      "msg": "Calculation exchange rate failed"
     },
     {
       "code": 32,
       "name": "CheckedSubOverflow",
-      "msg": "Checked_Sub Overflow"
+      "msg": "Checked subtraction overflow"
     },
     {
       "code": 33,
       "name": "CheckedAddOverflow",
-      "msg": "Checked_Add Overflow"
+      "msg": "Checked addition overflow"
     },
     {
       "code": 34,
       "name": "CheckedMulOverflow",
-      "msg": "Checked_Mul Overflow"
+      "msg": "Checked multiplication overflow"
     },
     {
       "code": 35,
       "name": "CheckedDivOverflow",
-      "msg": "Checked_Div Overflow"
+      "msg": "Checked division overflow"
     },
     {
       "code": 36,
       "name": "CheckedEmptyFunds",
-      "msg": "Empty Funds"
+      "msg": "Empty funds"
     },
     {
       "code": 37,
       "name": "CalcPnlError",
-      "msg": "Calc pnl error"
+      "msg": "P&L calculation error"
     },
     {
       "code": 38,
       "name": "InvalidSplTokenProgram",
-      "msg": "InvalidSplTokenProgram"
+      "msg": "Invalid SPL token program"
     },
     {
       "code": 39,
       "name": "TakePnlError",
-      "msg": "Take Pnl error"
+      "msg": "Take P&L error"
     },
     {
       "code": 40,
@@ -2346,52 +2291,52 @@
     {
       "code": 41,
       "name": "ConversionFailure",
-      "msg": "Conversion to u64 failed with an overflow or underflow"
+      "msg": "Conversion to u64 failed with overflow or underflow"
     },
     {
       "code": 42,
       "name": "InvalidUserToken",
-      "msg": "user token input does not match amm"
+      "msg": "User token input does not match AMM"
     },
     {
       "code": 43,
       "name": "InvalidSrmMint",
-      "msg": "InvalidSrmMint"
+      "msg": "Invalid SRM mint"
     },
     {
       "code": 44,
       "name": "InvalidSrmToken",
-      "msg": "InvalidSrmToken"
+      "msg": "Invalid SRM token"
     },
     {
       "code": 45,
       "name": "TooManyOpenOrders",
-      "msg": "TooManyOpenOrders"
+      "msg": "Too many open orders"
     },
     {
       "code": 46,
       "name": "OrderAtSlotIsPlaced",
-      "msg": "OrderAtSlotIsPlaced"
+      "msg": "Order at slot is already placed"
     },
     {
       "code": 47,
       "name": "InvalidSysProgramAddress",
-      "msg": "InvalidSysProgramAddress"
+      "msg": "Invalid system program address"
     },
     {
       "code": 48,
       "name": "InvalidFee",
-      "msg": "The provided fee does not match the program owner's constraints"
+      "msg": "Invalid fee"
     },
     {
       "code": 49,
       "name": "RepeatCreateAmm",
-      "msg": "Repeat create amm about market"
+      "msg": "Repeat AMM creation for the market"
     },
     {
       "code": 50,
       "name": "NotAllowZeroLP",
-      "msg": "Not allow Zero LP"
+      "msg": "Zero LP not allowed"
     },
     {
       "code": 51,
@@ -2406,22 +2351,46 @@
     {
       "code": 53,
       "name": "InvalidReferPCMint",
-      "msg": "InvalidReferPCMint"
+      "msg": "Invalid referrer PC mint"
     },
     {
       "code": 54,
       "name": "InvalidConfigAccount",
-      "msg": "InvalidConfigAccount"
+      "msg": "Invalid configuration account"
     },
     {
       "code": 55,
       "name": "RepeatCreateConfigAccount",
-      "msg": "Repeat create staking config account"
+      "msg": "Repeat configuration account creation"
     },
     {
       "code": 56,
+      "name": "MarketLotSizeIsTooLarge",
+      "msg": "Market lot size is too large"
+    },
+    {
+      "code": 57,
+      "name": "InitLpAmountTooLess",
+      "msg": "Initial LP amount is too low"
+    },
+    {
+      "code": 58,
       "name": "UnknownAmmError",
-      "msg": "Unknown Amm Error"
+      "msg": "Unknown AMM error"
+    },
+    {
+      "code": 59,
+      "name": "NotAllowed",
+      "msg": "Not allowed due to same mint"
+    },
+    {
+      "code": 60,
+      "name": "LamportsCalculateError",
+      "msg": "Lamports calculate error"
     }
-  ]
+  ],
+  "metadata": {
+    "origin": "shank",
+    "address": "675kPX9MHTjS2zt1qfr1NYHuzeLXfQM9H24wFSUt1Mp8"
+  }
 }

@@ -48,10 +48,26 @@ pub enum RaydiumLaunchpadError {
         "Total locked amount must great or equal to the platform vesting share amount"
     )]
     InvalidTotalLockedAmount = 6021,
-    #[error("Platform is not authorized to use this global config")]
-    PlatformGlobalAccessDenied = 6022,
-    #[error("Invalid platform-global access account")]
-    InvalidPlatformGlobalAccess = 6023,
+    #[error("Invalid platform allow config account")]
+    InvalidPlatformAllowConfig = 6022,
+    #[error("Calculation overflowed")]
+    CalculateOverflow = 6023,
+    #[error("Invalid platform curve rule account")]
+    InvalidPlatformCurveRule = 6024,
+    #[error("The curve param does not match any check group of the platform curve rule")]
+    CurveParamNotMatchPlatformRule = 6025,
+    #[error("The curve rule group is not exist")]
+    CurveRuleGroupNotExist = 6026,
+    #[error("The number of curve rule groups exceeds the limit")]
+    CurveRuleGroupsExceeded = 6027,
+    #[error("The curve rule constraint is invalid")]
+    InvalidCurveRuleConstraint = 6028,
+    #[error("The signer is neither the curve rule manager nor the platform admin")]
+    InvalidCurveRuleAuthority = 6029,
+    #[error("The curve rule field is not supported by the curve of the global config")]
+    CurveRuleFieldNotSupportedByCurve = 6030,
+    #[error("Lamports calculate error")]
+    LamportsCalculateError = 6031,
 }
 impl From<RaydiumLaunchpadError> for ProgramError {
     fn from(e: RaydiumLaunchpadError) -> Self {

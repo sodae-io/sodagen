@@ -26,7 +26,7 @@ pub struct Market {
     pub fees: MarketFees,
     pub quote_token_decimals: u8,
     pub bump: u8,
-    pub _space: [u8; 6],
+    pub space: [u8; 6],
 }
 impl Market {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -47,7 +47,7 @@ impl Market {
         };
         let quote_token_decimals: u8 = crate::borsh_de_or_default(&mut reader)?;
         let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let _space: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
+        let space: [u8; 6] = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             config,
@@ -62,7 +62,7 @@ impl Market {
             fees,
             quote_token_decimals,
             bump,
-            _space,
+            space,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -78,7 +78,7 @@ impl Market {
         borsh::BorshSerialize::serialize(&self.fees, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.quote_token_decimals, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.bump, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self._space, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.space, &mut writer)?;
         Ok(())
     }
 }

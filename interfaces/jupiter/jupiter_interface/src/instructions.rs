@@ -13,6 +13,7 @@ pub enum JupiterProgramIx {
     CloseToken(CloseTokenIxArgs),
     CreateTokenLedger,
     CreateTokenAccount(CreateTokenAccountIxArgs),
+    CloseWsolTokenAccount,
     ExactOutRoute(ExactOutRouteIxArgs),
     Route(RouteIxArgs),
     RouteWithTokenLedger(RouteWithTokenLedgerIxArgs),
@@ -50,6 +51,9 @@ impl JupiterProgramIx {
             let mut reader = &buf[CREATE_TOKEN_ACCOUNT_IX_DISCM.len()..];
             let bump: u8 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(Self::CreateTokenAccount(CreateTokenAccountIxArgs { bump }));
+        }
+        if buf.starts_with(&CLOSE_WSOL_TOKEN_ACCOUNT_IX_DISCM) {
+            return Ok(Self::CloseWsolTokenAccount);
         }
         if buf.starts_with(&EXACT_OUT_ROUTE_IX_DISCM) {
             let mut reader = &buf[EXACT_OUT_ROUTE_IX_DISCM.len()..];
@@ -284,6 +288,9 @@ impl JupiterProgramIx {
                 writer.write_all(&CREATE_TOKEN_ACCOUNT_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.bump, &mut writer)?;
                 Ok(())
+            }
+            Self::CloseWsolTokenAccount => {
+                writer.write_all(&CLOSE_WSOL_TOKEN_ACCOUNT_IX_DISCM)
             }
             Self::ExactOutRoute(args) => {
                 writer.write_all(&EXACT_OUT_ROUTE_IX_DISCM)?;
@@ -1539,6 +1546,211 @@ pub fn create_token_account_verify_account_privileges<'me, 'info>(
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     create_token_account_verify_writable_privileges(accounts)?;
     create_token_account_verify_signer_privileges(accounts)?;
+    Ok(())
+}
+pub const CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN: usize = 4;
+#[derive(Copy, Clone, Debug)]
+pub struct CloseWsolTokenAccountAccounts<'me, 'info> {
+    pub token_account: &'me AccountInfo<'info>,
+    pub user: &'me AccountInfo<'info>,
+    pub token_program: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CloseWsolTokenAccountKeys {
+    pub token_account: Pubkey,
+    pub user: Pubkey,
+    pub token_program: Pubkey,
+    pub system_program: Pubkey,
+}
+impl From<CloseWsolTokenAccountAccounts<'_, '_>> for CloseWsolTokenAccountKeys {
+    fn from(accounts: CloseWsolTokenAccountAccounts) -> Self {
+        Self {
+            token_account: *accounts.token_account.key,
+            user: *accounts.user.key,
+            token_program: *accounts.token_program.key,
+            system_program: *accounts.system_program.key,
+        }
+    }
+}
+impl From<CloseWsolTokenAccountKeys>
+for [AccountMeta; CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN] {
+    fn from(keys: CloseWsolTokenAccountKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.token_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.user,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.token_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN]>
+for CloseWsolTokenAccountKeys {
+    fn from(pubkeys: [Pubkey; CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            token_account: pubkeys[0],
+            user: pubkeys[1],
+            token_program: pubkeys[2],
+            system_program: pubkeys[3],
+        }
+    }
+}
+impl<'info> From<CloseWsolTokenAccountAccounts<'_, 'info>>
+for [AccountInfo<'info>; CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN] {
+    fn from(accounts: CloseWsolTokenAccountAccounts<'_, 'info>) -> Self {
+        [
+            accounts.token_account.clone(),
+            accounts.user.clone(),
+            accounts.token_program.clone(),
+            accounts.system_program.clone(),
+        ]
+    }
+}
+impl<
+    'me,
+    'info,
+> From<&'me [AccountInfo<'info>; CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN]>
+for CloseWsolTokenAccountAccounts<'me, 'info> {
+    fn from(
+        arr: &'me [AccountInfo<'info>; CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN],
+    ) -> Self {
+        Self {
+            token_account: &arr[0],
+            user: &arr[1],
+            token_program: &arr[2],
+            system_program: &arr[3],
+        }
+    }
+}
+pub const CLOSE_WSOL_TOKEN_ACCOUNT_IX_DISCM: [u8; 8usize] = [
+    203, 129, 103, 133, 197, 125, 107, 86,
+];
+#[derive(Clone, Debug, PartialEq)]
+pub struct CloseWsolTokenAccountIxData;
+impl CloseWsolTokenAccountIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != CLOSE_WSOL_TOKEN_ACCOUNT_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        Ok(Self)
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&CLOSE_WSOL_TOKEN_ACCOUNT_IX_DISCM)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn close_wsol_token_account_ix_with_program_id(
+    program_id: Pubkey,
+    keys: CloseWsolTokenAccountKeys,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; CLOSE_WSOL_TOKEN_ACCOUNT_IX_ACCOUNTS_LEN] = keys.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: CloseWsolTokenAccountIxData.try_to_vec()?,
+    })
+}
+pub fn close_wsol_token_account_ix(
+    keys: CloseWsolTokenAccountKeys,
+) -> std::io::Result<Instruction> {
+    close_wsol_token_account_ix_with_program_id(JUPITER_PROGRAM_ID, keys)
+}
+pub fn close_wsol_token_account_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseWsolTokenAccountAccounts<'_, '_>,
+) -> ProgramResult {
+    let keys: CloseWsolTokenAccountKeys = accounts.into();
+    let ix = close_wsol_token_account_ix_with_program_id(program_id, keys)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn close_wsol_token_account_invoke(
+    accounts: CloseWsolTokenAccountAccounts<'_, '_>,
+) -> ProgramResult {
+    close_wsol_token_account_invoke_with_program_id(JUPITER_PROGRAM_ID, accounts)
+}
+pub fn close_wsol_token_account_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: CloseWsolTokenAccountAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: CloseWsolTokenAccountKeys = accounts.into();
+    let ix = close_wsol_token_account_ix_with_program_id(program_id, keys)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn close_wsol_token_account_invoke_signed(
+    accounts: CloseWsolTokenAccountAccounts<'_, '_>,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    close_wsol_token_account_invoke_signed_with_program_id(
+        JUPITER_PROGRAM_ID,
+        accounts,
+        seeds,
+    )
+}
+pub fn close_wsol_token_account_verify_account_keys(
+    accounts: CloseWsolTokenAccountAccounts<'_, '_>,
+    keys: CloseWsolTokenAccountKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.token_account.key, keys.token_account),
+        (*accounts.user.key, keys.user),
+        (*accounts.token_program.key, keys.token_program),
+        (*accounts.system_program.key, keys.system_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn close_wsol_token_account_verify_writable_privileges<'me, 'info>(
+    accounts: CloseWsolTokenAccountAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [accounts.token_account, accounts.user] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn close_wsol_token_account_verify_signer_privileges<'me, 'info>(
+    accounts: CloseWsolTokenAccountAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [accounts.user] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn close_wsol_token_account_verify_account_privileges<'me, 'info>(
+    accounts: CloseWsolTokenAccountAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    close_wsol_token_account_verify_writable_privileges(accounts)?;
+    close_wsol_token_account_verify_signer_privileges(accounts)?;
     Ok(())
 }
 pub const EXACT_OUT_ROUTE_IX_ACCOUNTS_LEN: usize = 11;

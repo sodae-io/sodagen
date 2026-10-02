@@ -251,12 +251,12 @@ impl GammaProgramIx {
         }
         if buf.starts_with(&SWAP_BASE_OUTPUT_IX_DISCM) {
             let mut reader = &buf[SWAP_BASE_OUTPUT_IX_DISCM.len()..];
-            let _max_amount_in: u64 = crate::borsh_de_or_default(&mut reader)?;
-            let _amount_out: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let max_amount_in: u64 = crate::borsh_de_or_default(&mut reader)?;
+            let amount_out: u64 = crate::borsh_de_or_default(&mut reader)?;
             return Ok(
                 Self::SwapBaseOutput(SwapBaseOutputIxArgs {
-                    _max_amount_in,
-                    _amount_out,
+                    max_amount_in,
+                    amount_out,
                 }),
             );
         }
@@ -447,8 +447,8 @@ impl GammaProgramIx {
             }
             Self::SwapBaseOutput(args) => {
                 writer.write_all(&SWAP_BASE_OUTPUT_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args._max_amount_in, &mut writer)?;
-                borsh::BorshSerialize::serialize(&args._amount_out, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.max_amount_in, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.amount_out, &mut writer)?;
                 Ok(())
             }
             Self::UpdateAmmConfig(args) => {
@@ -6599,8 +6599,8 @@ for SwapBaseOutputAccounts<'me, 'info> {
 pub const SWAP_BASE_OUTPUT_IX_DISCM: [u8; 8usize] = [55, 217, 98, 86, 163, 74, 180, 173];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct SwapBaseOutputIxArgs {
-    pub _max_amount_in: u64,
-    pub _amount_out: u64,
+    pub max_amount_in: u64,
+    pub amount_out: u64,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct SwapBaseOutputIxData(pub SwapBaseOutputIxArgs);
@@ -6617,19 +6617,19 @@ impl SwapBaseOutputIxData {
         if maybe_discm != SWAP_BASE_OUTPUT_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let _max_amount_in: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let _amount_out: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let max_amount_in: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let amount_out: u64 = crate::borsh_de_or_default(&mut reader)?;
         Ok(
             Self(SwapBaseOutputIxArgs {
-                _max_amount_in,
-                _amount_out,
+                max_amount_in,
+                amount_out,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&SWAP_BASE_OUTPUT_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0._max_amount_in, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.0._amount_out, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.max_amount_in, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.amount_out, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

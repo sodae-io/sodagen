@@ -719,7 +719,8 @@ pub struct WhirlpoolStrategy {
     pub is_community: u8,
     pub rebalance_type: u8,
     pub flash_swap_in_progress: u8,
-    pub padding1: [u8; 5],
+    pub emergency_mode: u8,
+    pub padding1: [u8; 4],
     pub rebalance_raw: RebalanceRaw,
     pub padding2: [u8; 7],
     pub token_a_fees_from_rewards_cumulative: u64,
@@ -733,10 +734,16 @@ pub struct WhirlpoolStrategy {
     pub token_b_token_program: Pubkey,
     pub pending_admin: Pubkey,
     pub max_deviation_from_ref_price_on_invest_bps: u32,
-    pub padding3: u32,
-    pub last_invest_slot: u64,
-    pub padding4: u64,
-    pub padding5: [u128; 12],
+    pub max_pool_deviation_from_twap_bps: u32,
+    pub last_invest_timestamp: u64,
+    pub pending_new_tick_lower_index: i32,
+    pub pending_new_tick_upper_index: i32,
+    pub deposit_max_pool_price_oracle_deviation_bps: u64,
+    pub reward_discount_bps: u64,
+    pub ref_tick_index_price: i32,
+    pub max_deviation_from_snapshot_price_bps: u32,
+    pub ref_tick_index_price_timestamp: u64,
+    pub padding5: [u128; 10],
     pub padding6: [u128; 32],
     pub padding7: [u128; 32],
     pub padding8: [u128; 32],
@@ -851,7 +858,8 @@ impl WhirlpoolStrategy {
         let is_community: u8 = crate::borsh_de_or_default(&mut reader)?;
         let rebalance_type: u8 = crate::borsh_de_or_default(&mut reader)?;
         let flash_swap_in_progress: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let padding1: [u8; 5] = crate::borsh_de_or_default(&mut reader)?;
+        let emergency_mode: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let padding1: [u8; 4] = crate::borsh_de_or_default(&mut reader)?;
         let rebalance_raw = <RebalanceRaw>::deserialize(&mut reader)?;
         let padding2: [u8; 7] = crate::borsh_de_or_default(&mut reader)?;
         let token_a_fees_from_rewards_cumulative: u64 = crate::borsh_de_or_default(
@@ -877,10 +885,24 @@ impl WhirlpoolStrategy {
         let max_deviation_from_ref_price_on_invest_bps: u32 = crate::borsh_de_or_default(
             &mut reader,
         )?;
-        let padding3: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let last_invest_slot: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let padding4: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let padding5: [u128; 12] = crate::borsh_de_or_default(&mut reader)?;
+        let max_pool_deviation_from_twap_bps: u32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let last_invest_timestamp: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let pending_new_tick_lower_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let pending_new_tick_upper_index: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let deposit_max_pool_price_oracle_deviation_bps: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let reward_discount_bps: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let ref_tick_index_price: i32 = crate::borsh_de_or_default(&mut reader)?;
+        let max_deviation_from_snapshot_price_bps: u32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let ref_tick_index_price_timestamp: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let padding5: [u128; 10] = crate::borsh_de_or_default(&mut reader)?;
         let padding6: [u128; 32] = crate::borsh_de_or_default(&mut reader)?;
         let padding7: [u128; 32] = crate::borsh_de_or_default(&mut reader)?;
         let padding8: [u128; 32] = crate::borsh_de_or_default(&mut reader)?;
@@ -969,6 +991,7 @@ impl WhirlpoolStrategy {
             is_community,
             rebalance_type,
             flash_swap_in_progress,
+            emergency_mode,
             padding1,
             rebalance_raw,
             padding2,
@@ -983,9 +1006,15 @@ impl WhirlpoolStrategy {
             token_b_token_program,
             pending_admin,
             max_deviation_from_ref_price_on_invest_bps,
-            padding3,
-            last_invest_slot,
-            padding4,
+            max_pool_deviation_from_twap_bps,
+            last_invest_timestamp,
+            pending_new_tick_lower_index,
+            pending_new_tick_upper_index,
+            deposit_max_pool_price_oracle_deviation_bps,
+            reward_discount_bps,
+            ref_tick_index_price,
+            max_deviation_from_snapshot_price_bps,
+            ref_tick_index_price_timestamp,
             padding5,
             padding6,
             padding7,
@@ -1091,6 +1120,7 @@ impl WhirlpoolStrategy {
         borsh::BorshSerialize::serialize(&self.is_community, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.rebalance_type, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.flash_swap_in_progress, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.emergency_mode, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding1, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.rebalance_raw, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding2, &mut writer)?;
@@ -1117,9 +1147,33 @@ impl WhirlpoolStrategy {
             &self.max_deviation_from_ref_price_on_invest_bps,
             &mut writer,
         )?;
-        borsh::BorshSerialize::serialize(&self.padding3, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.last_invest_slot, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.padding4, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.max_pool_deviation_from_twap_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.last_invest_timestamp, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.pending_new_tick_lower_index,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.pending_new_tick_upper_index,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.deposit_max_pool_price_oracle_deviation_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.reward_discount_bps, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.ref_tick_index_price, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.max_deviation_from_snapshot_price_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.ref_tick_index_price_timestamp,
+            &mut writer,
+        )?;
         borsh::BorshSerialize::serialize(&self.padding5, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding6, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding7, &mut writer)?;
@@ -1189,10 +1243,24 @@ pub struct GlobalConfig {
     pub scope_price_ids: [Pubkey; 16],
     pub max_deviation_from_ref_price_on_invest_bps: u32,
     pub padding1: u32,
-    pub invest_cooldown_slots: u64,
+    pub invest_cooldown_seconds: u64,
     pub min_invest_trigger_value_usd: u64,
+    pub pending_admin: Pubkey,
+    pub cap_max_deviation_from_ref_price_on_invest_bps: u32,
+    pub cap_max_price_deviation_bps: u32,
+    pub emergency_council: Pubkey,
+    pub unfreeze_authority: Pubkey,
+    pub deposit_max_pool_price_oracle_deviation_bps: u64,
+    pub max_pool_deviation_from_twap_bps: u32,
+    pub padding2: u32,
+    pub max_invest_bps_per_operation: u64,
+    pub max_invest_usd_per_operation: u64,
+    pub ref_price_max_ttl_seconds: u64,
+    pub max_deviation_from_snapshot_price_bps: u32,
+    pub cap_max_deviation_from_snapshot_price_bps: u32,
+    pub min_ref_price_age_seconds: u64,
     #[serde(with = "crate::big_array_serde")]
-    pub padding: [u64; 1968],
+    pub padding: [u64; 1948],
 }
 impl GlobalConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -1237,9 +1305,33 @@ impl GlobalConfig {
             &mut reader,
         )?;
         let padding1: u32 = crate::borsh_de_or_default(&mut reader)?;
-        let invest_cooldown_slots: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let invest_cooldown_seconds: u64 = crate::borsh_de_or_default(&mut reader)?;
         let min_invest_trigger_value_usd: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let padding = <[u64; 1968] as borsh::BorshDeserialize>::deserialize_reader(
+        let pending_admin: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let cap_max_deviation_from_ref_price_on_invest_bps: u32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let cap_max_price_deviation_bps: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let emergency_council: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let unfreeze_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let deposit_max_pool_price_oracle_deviation_bps: u64 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let max_pool_deviation_from_twap_bps: u32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let padding2: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let max_invest_bps_per_operation: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let max_invest_usd_per_operation: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let ref_price_max_ttl_seconds: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let max_deviation_from_snapshot_price_bps: u32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let cap_max_deviation_from_snapshot_price_bps: u32 = crate::borsh_de_or_default(
+            &mut reader,
+        )?;
+        let min_ref_price_age_seconds: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let padding = <[u64; 1948] as borsh::BorshDeserialize>::deserialize_reader(
             &mut reader,
         )?;
         *__buf = reader;
@@ -1270,8 +1362,22 @@ impl GlobalConfig {
             scope_price_ids,
             max_deviation_from_ref_price_on_invest_bps,
             padding1,
-            invest_cooldown_slots,
+            invest_cooldown_seconds,
             min_invest_trigger_value_usd,
+            pending_admin,
+            cap_max_deviation_from_ref_price_on_invest_bps,
+            cap_max_price_deviation_bps,
+            emergency_council,
+            unfreeze_authority,
+            deposit_max_pool_price_oracle_deviation_bps,
+            max_pool_deviation_from_twap_bps,
+            padding2,
+            max_invest_bps_per_operation,
+            max_invest_usd_per_operation,
+            ref_price_max_ttl_seconds,
+            max_deviation_from_snapshot_price_bps,
+            cap_max_deviation_from_snapshot_price_bps,
+            min_ref_price_age_seconds,
             padding,
         })
     }
@@ -1317,11 +1423,49 @@ impl GlobalConfig {
             &mut writer,
         )?;
         borsh::BorshSerialize::serialize(&self.padding1, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.invest_cooldown_slots, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.invest_cooldown_seconds, &mut writer)?;
         borsh::BorshSerialize::serialize(
             &self.min_invest_trigger_value_usd,
             &mut writer,
         )?;
+        borsh::BorshSerialize::serialize(&self.pending_admin, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.cap_max_deviation_from_ref_price_on_invest_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.cap_max_price_deviation_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.emergency_council, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.unfreeze_authority, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.deposit_max_pool_price_oracle_deviation_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.max_pool_deviation_from_twap_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.padding2, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.max_invest_bps_per_operation,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.max_invest_usd_per_operation,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.ref_price_max_ttl_seconds, &mut writer)?;
+        borsh::BorshSerialize::serialize(
+            &self.max_deviation_from_snapshot_price_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(
+            &self.cap_max_deviation_from_snapshot_price_bps,
+            &mut writer,
+        )?;
+        borsh::BorshSerialize::serialize(&self.min_ref_price_age_seconds, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.padding, &mut writer)?;
         Ok(())
     }

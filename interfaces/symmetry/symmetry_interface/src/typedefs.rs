@@ -268,6 +268,18 @@ pub enum PriceStatus {
     Halted,
     Auction,
 }
+impl TryFrom<u8> for PriceStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Unknown),
+            1u8 => Ok(Self::Trading),
+            2u8 => Ok(Self::Halted),
+            3u8 => Ok(Self::Auction),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -281,6 +293,15 @@ pub enum PriceStatus {
 pub enum CorpAction {
     #[default]
     NoCorpAct,
+}
+impl TryFrom<u8> for CorpAction {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::NoCorpAct),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,
@@ -298,4 +319,16 @@ pub enum PriceType {
     Price,
     Twap,
     Volatility,
+}
+impl TryFrom<u8> for PriceType {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Unknown),
+            1u8 => Ok(Self::Price),
+            2u8 => Ok(Self::Twap),
+            3u8 => Ok(Self::Volatility),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }

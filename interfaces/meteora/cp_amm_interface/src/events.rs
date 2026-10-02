@@ -63,52 +63,56 @@ impl EvtClaimPositionFeeEvent {
         Ok(data)
     }
 }
-pub const EVT_CLAIM_PROTOCOL_FEE_EVENT_DISCM: [u8; 8] = [
-    186, 244, 75, 251, 188, 13, 25, 33,
+pub const EVT_CLAIM_PROTOCOL_FEE2_EVENT_DISCM: [u8; 8] = [
+    187, 133, 66, 9, 205, 161, 84, 13,
 ];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
-pub struct EvtClaimProtocolFee {
+pub struct EvtClaimProtocolFee2 {
     pub pool: Pubkey,
-    pub token_a_amount: u64,
-    pub token_b_amount: u64,
+    pub receiver_token_account: Pubkey,
+    pub token_mint: Pubkey,
+    pub amount: u64,
 }
-impl EvtClaimProtocolFee {
+impl EvtClaimProtocolFee2 {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         let mut reader: &[u8] = *__buf;
         let pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let token_a_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let token_b_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let receiver_token_account: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let token_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pool,
-            token_a_amount,
-            token_b_amount,
+            receiver_token_account,
+            token_mint,
+            amount,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.pool, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.token_a_amount, &mut writer)?;
-        borsh::BorshSerialize::serialize(&self.token_b_amount, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.receiver_token_account, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.token_mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.amount, &mut writer)?;
         Ok(())
     }
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct EvtClaimProtocolFeeEvent(pub EvtClaimProtocolFee);
-impl EvtClaimProtocolFeeEvent {
+pub struct EvtClaimProtocolFee2Event(pub EvtClaimProtocolFee2);
+impl EvtClaimProtocolFee2Event {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
         use std::io::Read;
         let mut reader: &[u8] = *__buf;
         let mut maybe_discm = [0u8; 8];
         reader.read_exact(&mut maybe_discm)?;
-        if maybe_discm != EVT_CLAIM_PROTOCOL_FEE_EVENT_DISCM {
+        if maybe_discm != EVT_CLAIM_PROTOCOL_FEE2_EVENT_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let inner = EvtClaimProtocolFee::deserialize(&mut reader)?;
+        let inner = EvtClaimProtocolFee2::deserialize(&mut reader)?;
         *__buf = reader;
         Ok(Self(inner))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
-        writer.write_all(&EVT_CLAIM_PROTOCOL_FEE_EVENT_DISCM)?;
+        writer.write_all(&EVT_CLAIM_PROTOCOL_FEE2_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -300,6 +304,7 @@ pub struct EvtCreateConfig {
     pub collect_fee_mode: u8,
     pub index: u64,
     pub config: Pubkey,
+    pub permission: u128,
 }
 impl EvtCreateConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -317,6 +322,7 @@ impl EvtCreateConfig {
         let collect_fee_mode: u8 = crate::borsh_de_or_default(&mut reader)?;
         let index: u64 = crate::borsh_de_or_default(&mut reader)?;
         let config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let permission: u128 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             pool_fees,
@@ -328,6 +334,7 @@ impl EvtCreateConfig {
             collect_fee_mode,
             index,
             config,
+            permission,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -340,6 +347,7 @@ impl EvtCreateConfig {
         borsh::BorshSerialize::serialize(&self.collect_fee_mode, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.index, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.config, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.permission, &mut writer)?;
         Ok(())
     }
 }
@@ -376,6 +384,7 @@ pub struct EvtCreateDynamicConfig {
     pub config: Pubkey,
     pub pool_creator_authority: Pubkey,
     pub index: u64,
+    pub permission: u128,
 }
 impl EvtCreateDynamicConfig {
     pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
@@ -383,17 +392,20 @@ impl EvtCreateDynamicConfig {
         let config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let pool_creator_authority: Pubkey = crate::borsh_de_or_default(&mut reader)?;
         let index: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let permission: u128 = crate::borsh_de_or_default(&mut reader)?;
         *__buf = reader;
         Ok(Self {
             config,
             pool_creator_authority,
             index,
+            permission,
         })
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         borsh::BorshSerialize::serialize(&self.config, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.pool_creator_authority, &mut writer)?;
         borsh::BorshSerialize::serialize(&self.index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.permission, &mut writer)?;
         Ok(())
     }
 }
@@ -1396,6 +1408,64 @@ impl EvtSwap2Event {
         Ok(data)
     }
 }
+pub const EVT_UPDATE_DELEGATE_PERMISSION_EVENT_DISCM: [u8; 8] = [
+    66, 188, 75, 151, 150, 232, 87, 93,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct EvtUpdateDelegatePermission {
+    pub position: Pubkey,
+    pub owner: Pubkey,
+    pub permission: u32,
+    pub delegate: Option<Pubkey>,
+}
+impl EvtUpdateDelegatePermission {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let position: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let owner: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let permission: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let delegate: Option<Pubkey> = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            position,
+            owner,
+            permission,
+            delegate,
+        })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.position, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.owner, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.permission, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.delegate, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct EvtUpdateDelegatePermissionEvent(pub EvtUpdateDelegatePermission);
+impl EvtUpdateDelegatePermissionEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != EVT_UPDATE_DELEGATE_PERMISSION_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = EvtUpdateDelegatePermission::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&EVT_UPDATE_DELEGATE_PERMISSION_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
 pub const EVT_UPDATE_POOL_FEES_EVENT_DISCM: [u8; 8] = [
     76, 165, 246, 102, 102, 217, 156, 44,
 ];
@@ -1558,6 +1628,56 @@ impl EvtUpdateRewardFunderEvent {
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&EVT_UPDATE_REWARD_FUNDER_EVENT_DISCM)?;
+        self.0.serialize(&mut writer)
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub const EVT_WITHDRAW_DEAD_LIQUIDITY_REWARD_EVENT_DISCM: [u8; 8] = [
+    228, 66, 150, 195, 42, 62, 163, 13,
+];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct EvtWithdrawDeadLiquidityReward {
+    pub pool: Pubkey,
+    pub reward_mint: Pubkey,
+    pub amount: u64,
+}
+impl EvtWithdrawDeadLiquidityReward {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let pool: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let reward_mint: Pubkey = crate::borsh_de_or_default(&mut reader)?;
+        let amount: u64 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { pool, reward_mint, amount })
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        borsh::BorshSerialize::serialize(&self.pool, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.reward_mint, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.amount, &mut writer)?;
+        Ok(())
+    }
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct EvtWithdrawDeadLiquidityRewardEvent(pub EvtWithdrawDeadLiquidityReward);
+impl EvtWithdrawDeadLiquidityRewardEvent {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        use std::io::Read;
+        let mut reader: &[u8] = *__buf;
+        let mut maybe_discm = [0u8; 8];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != EVT_WITHDRAW_DEAD_LIQUIDITY_REWARD_EVENT_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let inner = EvtWithdrawDeadLiquidityReward::deserialize(&mut reader)?;
+        *__buf = reader;
+        Ok(Self(inner))
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&EVT_WITHDRAW_DEAD_LIQUIDITY_REWARD_EVENT_DISCM)?;
         self.0.serialize(&mut writer)
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

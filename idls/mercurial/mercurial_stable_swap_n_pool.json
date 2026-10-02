@@ -1,0 +1,399 @@
+{
+  "version": "2.0.0",
+  "name": "mercurial_stable_swap_n_pool",
+  "docs": [
+    "Mercurial Finance multi-token stable swap (`stable-swap-n-pool`).",
+    "NOT an SPL-Token-Swap fork -- Saber's stable-swap is a fork of THIS codebase.",
+    "Every pool account on mainnet is a fixed 265 bytes (1 version tag + SwapV2::LEN 264),",
+    "verified live: all 24 program accounts are dataSize 265, byte[0] == 0x02.",
+    "Instruction tags are a plain leading u8, NOT an Anchor 8-byte discriminator."
+  ],
+  "instructions": [
+    {
+      "name": "exchange",
+      "docs": [
+        "The swap. Account list is N_COINS-dependent:",
+        "indices 4..4+N are the pool's own token accounts (owned by $authority),",
+        "then the user's source and destination token accounts."
+      ],
+      "accounts": [
+        {
+          "name": "swap",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "tokenProgram",
+          "isMut": false,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": false,
+          "isSigner": false,
+          "docs": [
+            "PDA: create_program_address([swap_account, nonce])"
+          ]
+        },
+        {
+          "name": "userTransferAuthority",
+          "isMut": false,
+          "isSigner": true
+        },
+        {
+          "name": "poolTokenAccounts",
+          "isMut": true,
+          "isSigner": false,
+          "docs": [
+            "N_COINS accounts, in slot order"
+          ]
+        },
+        {
+          "name": "sourceTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "destinationTokenAccount",
+          "isMut": true,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "inAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumOutAmount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 4
+      }
+    },
+    {
+      "name": "initialize",
+      "accounts": [],
+      "args": [
+        {
+          "name": "nonce",
+          "type": "u8"
+        },
+        {
+          "name": "nCoins",
+          "type": "u8"
+        },
+        {
+          "name": "amplificationCoefficient",
+          "type": "u64"
+        },
+        {
+          "name": "feeNumerator",
+          "type": "u64"
+        },
+        {
+          "name": "adminFeeNumerator",
+          "type": "u64"
+        },
+        {
+          "name": "swapEnabled",
+          "type": "u8"
+        },
+        {
+          "name": "addLiquidityEnabled",
+          "type": "u8"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 0
+      }
+    },
+    {
+      "name": "addLiquidity",
+      "accounts": [],
+      "args": [
+        {
+          "name": "depositAmounts",
+          "type": {
+            "vec": "u64"
+          }
+        },
+        {
+          "name": "minMintAmount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 1
+      }
+    },
+    {
+      "name": "removeLiquidity",
+      "accounts": [],
+      "args": [
+        {
+          "name": "unmintAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumAmounts",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 2
+      }
+    },
+    {
+      "name": "removeLiquidityOneToken",
+      "accounts": [],
+      "args": [
+        {
+          "name": "unmintAmount",
+          "type": "u64"
+        },
+        {
+          "name": "minimumOutAmount",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 3
+      }
+    },
+    {
+      "name": "getVirtualPrice",
+      "accounts": [],
+      "args": [],
+      "discriminant": {
+        "type": "u8",
+        "value": 5
+      }
+    },
+    {
+      "name": "setSwapEnabled",
+      "accounts": [],
+      "args": [
+        {
+          "name": "enabled",
+          "type": "u8"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 100
+      }
+    },
+    {
+      "name": "setAddLiquidityEnabled",
+      "accounts": [],
+      "args": [
+        {
+          "name": "enabled",
+          "type": "u8"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 101
+      }
+    },
+    {
+      "name": "setAmplificationCoefficient",
+      "accounts": [],
+      "args": [
+        {
+          "name": "value",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 102
+      }
+    },
+    {
+      "name": "setFeeNumerator",
+      "accounts": [],
+      "args": [
+        {
+          "name": "value",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 103
+      }
+    },
+    {
+      "name": "setAdminFeeNumerator",
+      "accounts": [],
+      "args": [
+        {
+          "name": "value",
+          "type": "u64"
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 104
+      }
+    },
+    {
+      "name": "setPrecisionMultipliers",
+      "accounts": [],
+      "args": [
+        {
+          "name": "values",
+          "type": {
+            "vec": "u64"
+          }
+        }
+      ],
+      "discriminant": {
+        "type": "u8",
+        "value": 105
+      }
+    }
+  ],
+  "accounts": [
+    {
+      "name": "SwapV2",
+      "docs": [
+        "Pool state, 265 bytes on the wire and fixed for every pool.",
+        "Byte 0 is the SwapVersion tag (always 0x02 = SwapV2), followed by the 264-byte",
+        "SwapV2 body. The body is NOT Borsh: `precisionMultipliers` and",
+        "`tokenAccountAddresses` are FIXED [_; MAX_N_COINS=4] arrays with no length prefix;",
+        "only the first `tokensLen` entries of each are meaningful.",
+        "Field order below is verbatim from the program's own array_refs! in src/state.rs."
+      ],
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "u8",
+            "docs": [
+              "SwapVersion tag; 2 = SwapV2 (the only live version)"
+            ]
+          },
+          {
+            "name": "isInitialized",
+            "type": "u8"
+          },
+          {
+            "name": "nonce",
+            "type": "u8",
+            "docs": [
+              "bump for the $authority PDA"
+            ]
+          },
+          {
+            "name": "amplificationCoefficient",
+            "type": "u64"
+          },
+          {
+            "name": "feeNumerator",
+            "type": "u64",
+            "docs": [
+              "denominator is FEE_DENOMINATOR = 1e10"
+            ]
+          },
+          {
+            "name": "adminFeeNumerator",
+            "type": "u64",
+            "docs": [
+              "not implemented on-chain"
+            ]
+          },
+          {
+            "name": "tokensLen",
+            "type": "u32",
+            "docs": [
+              "number of live coin slots, 2..=4"
+            ]
+          },
+          {
+            "name": "precisionFactor",
+            "type": "u64"
+          },
+          {
+            "name": "precisionMultipliers",
+            "type": {
+              "array": [
+                "u64",
+                4
+              ]
+            },
+            "docs": [
+              "virtual balance_i = raw_reserve_i * precisionMultipliers[i]; admin-set, NOT live-updating"
+            ]
+          },
+          {
+            "name": "tokenAccountAddresses",
+            "type": {
+              "array": [
+                "publicKey",
+                4
+              ]
+            },
+            "docs": [
+              "the pool's own SPL vaults, in slot order"
+            ]
+          },
+          {
+            "name": "poolMintAddress",
+            "type": "publicKey"
+          },
+          {
+            "name": "adminTokenMintAddress",
+            "type": "publicKey"
+          },
+          {
+            "name": "adminSettings",
+            "type": {
+              "defined": "AdminSettings"
+            }
+          }
+        ]
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "AdminSettings",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "swapEnabled",
+            "type": "u8"
+          },
+          {
+            "name": "addLiquidityEnabled",
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ],
+  "metadata": {
+    "origin": "shank",
+    "spec": "shank",
+    "name": "mercurial_stable_swap_n_pool",
+    "version": "2.0.0",
+    "address": "MERLuDFBMmsHnsBPZw2sDQZHvXFMwp8EdjudcU2HKky",
+    "source": "github.com/mercurial-finance/stable-swap-n-pool-instructions (src/instruction.rs, src/state.rs) + stable-swap-n-pool-js"
+  },
+  "address": "MERLuDFBMmsHnsBPZw2sDQZHvXFMwp8EdjudcU2HKky"
+}

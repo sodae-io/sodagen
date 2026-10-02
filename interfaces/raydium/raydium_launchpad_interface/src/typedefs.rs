@@ -17,48 +17,14 @@ pub enum AmmCreatorFeeOn {
     QuoteToken,
     BothToken,
 }
-#[derive(
-    Clone,
-    Debug,
-    Default,
-    BorshDeserialize,
-    BorshSerialize,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize
-)]
-pub struct BondingCurveParam {
-    pub migrate_type: u8,
-    pub migrate_cpmm_fee_on: u8,
-    pub supply: u64,
-    pub total_base_sell: u64,
-    pub total_quote_fund_raising: u64,
-    pub total_locked_amount: u64,
-    pub cliff_period: u64,
-    pub unlock_period: u64,
-}
-impl BondingCurveParam {
-    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
-        let mut reader: &[u8] = *__buf;
-        let migrate_type: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let migrate_cpmm_fee_on: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let supply: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_base_sell: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_quote_fund_raising: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let total_locked_amount: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let cliff_period: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let unlock_period: u64 = crate::borsh_de_or_default(&mut reader)?;
-        *__buf = reader;
-        Ok(Self {
-            migrate_type,
-            migrate_cpmm_fee_on,
-            supply,
-            total_base_sell,
-            total_quote_fund_raising,
-            total_locked_amount,
-            cliff_period,
-            unlock_period,
-        })
+impl TryFrom<u8> for AmmCreatorFeeOn {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::QuoteToken),
+            1u8 => Ok(Self::BothToken),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
     }
 }
 #[derive(
@@ -106,6 +72,35 @@ pub enum CurveParams {
     Constant { data: ConstantCurve },
     Fixed { data: FixedCurve },
     Linear { data: LinearCurve },
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
+pub struct CurveRuleGroup {
+    pub group_id: u16,
+    pub epoch: u64,
+    pub constraints: Vec<ParamConstraint>,
+}
+impl CurveRuleGroup {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let group_id: u16 = crate::borsh_de_or_default(&mut reader)?;
+        let epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
+        let constraints: Vec<ParamConstraint> = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self {
+            group_id,
+            epoch,
+            constraints,
+        })
+    }
 }
 #[derive(
     Clone,
@@ -236,6 +231,31 @@ impl MintParams {
     serde::Serialize,
     serde::Deserialize
 )]
+pub struct ParamConstraint {
+    pub field: u8,
+    pub op: u8,
+    pub value: u128,
+}
+impl ParamConstraint {
+    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
+        let mut reader: &[u8] = *__buf;
+        let field: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let op: u8 = crate::borsh_de_or_default(&mut reader)?;
+        let value: u128 = crate::borsh_de_or_default(&mut reader)?;
+        *__buf = reader;
+        Ok(Self { field, op, value })
+    }
+}
+#[derive(
+    Clone,
+    Debug,
+    Default,
+    BorshDeserialize,
+    BorshSerialize,
+    PartialEq,
+    serde::Serialize,
+    serde::Deserialize
+)]
 pub struct PlatformConfigInfo {
     pub fee_wallet: Pubkey,
     pub nft_wallet: Pubkey,
@@ -307,47 +327,9 @@ pub enum PlatformConfigParam {
     VestingWallet(Pubkey),
     PlatformVestingScale(u64),
     PlatformCpCreator(Pubkey),
-}
-#[derive(
-    Clone,
-    Debug,
-    BorshDeserialize,
-    BorshSerialize,
-    PartialEq,
-    serde::Serialize,
-    serde::Deserialize
-)]
-pub struct PlatformCurveParam {
-    pub epoch: u64,
-    pub index: u8,
-    pub global_config: Pubkey,
-    pub bonding_curve_param: BondingCurveParam,
-    #[serde(with = "crate::big_array_serde")]
-    pub padding: [u64; 50],
-}
-impl PlatformCurveParam {
-    pub fn deserialize(__buf: &mut &[u8]) -> std::io::Result<Self> {
-        let mut reader: &[u8] = *__buf;
-        let epoch: u64 = crate::borsh_de_or_default(&mut reader)?;
-        let index: u8 = crate::borsh_de_or_default(&mut reader)?;
-        let global_config: Pubkey = crate::borsh_de_or_default(&mut reader)?;
-        let bonding_curve_param = if reader.is_empty() {
-            Default::default()
-        } else {
-            <BondingCurveParam>::deserialize(&mut reader)?
-        };
-        let padding = <[u64; 50] as borsh::BorshDeserialize>::deserialize_reader(
-            &mut reader,
-        )?;
-        *__buf = reader;
-        Ok(Self {
-            epoch,
-            index,
-            global_config,
-            bonding_curve_param,
-            padding,
-        })
-    }
+    RestrictGlobalConfig(u64),
+    RestrictCurveParam(u64),
+    CurveRuleManager(Pubkey),
 }
 #[derive(
     Clone,
@@ -410,6 +392,17 @@ pub enum PoolStatus {
     Migrate,
     Trade,
 }
+impl TryFrom<u8> for PoolStatus {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Fund),
+            1u8 => Ok(Self::Migrate),
+            2u8 => Ok(Self::Trade),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
+}
 #[derive(
     Clone,
     Debug,
@@ -424,6 +417,16 @@ pub enum TradeDirection {
     #[default]
     Buy,
     Sell,
+}
+impl TryFrom<u8> for TradeDirection {
+    type Error = std::io::Error;
+    fn try_from(value: u8) -> Result<Self, Self::Error> {
+        match value {
+            0u8 => Ok(Self::Buy),
+            1u8 => Ok(Self::Sell),
+            _ => Err(std::io::Error::from(std::io::ErrorKind::InvalidData)),
+        }
+    }
 }
 #[derive(
     Clone,

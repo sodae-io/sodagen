@@ -2803,7 +2803,7 @@ impl From<InitializeKeys> for [AccountMeta; INITIALIZE_IX_ACCOUNTS_LEN] {
             },
             AccountMeta {
                 pubkey: keys.rate_model,
-                is_signer: true,
+                is_signer: false,
                 is_writable: true,
             },
             AccountMeta {
@@ -3152,7 +3152,7 @@ pub fn initialize_verify_writable_privileges<'me, 'info>(
 pub fn initialize_verify_signer_privileges<'me, 'info>(
     accounts: InitializeAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
-    for should_be_signer in [accounts.deployer, accounts.rate_model] {
+    for should_be_signer in [accounts.deployer] {
         if !should_be_signer.is_signer {
             return Err((should_be_signer, ProgramError::MissingRequiredSignature));
         }

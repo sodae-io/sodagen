@@ -37,6 +37,7 @@ pub enum MarinadeFinanceProgramIx {
     ReallocValidatorList(ReallocValidatorListIxArgs),
     ReallocStakeList(ReallocStakeListIxArgs),
     FinalizeDelinquentUpgrade(FinalizeDelinquentUpgradeIxArgs),
+    Redelegate(RedelegateIxArgs),
 }
 impl MarinadeFinanceProgramIx {
     pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
@@ -285,6 +286,19 @@ impl MarinadeFinanceProgramIx {
                 }),
             );
         }
+        if buf.starts_with(&REDELEGATE_IX_DISCM) {
+            let mut reader = &buf[REDELEGATE_IX_DISCM.len()..];
+            let stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+            let source_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+            let dest_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(
+                Self::Redelegate(RedelegateIxArgs {
+                    stake_index,
+                    source_validator_index,
+                    dest_validator_index,
+                }),
+            );
+        }
         Err(std::io::Error::from(std::io::ErrorKind::InvalidData))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
@@ -441,6 +455,19 @@ impl MarinadeFinanceProgramIx {
             Self::FinalizeDelinquentUpgrade(args) => {
                 writer.write_all(&FINALIZE_DELINQUENT_UPGRADE_IX_DISCM)?;
                 borsh::BorshSerialize::serialize(&args.max_validators, &mut writer)?;
+                Ok(())
+            }
+            Self::Redelegate(args) => {
+                writer.write_all(&REDELEGATE_IX_DISCM)?;
+                borsh::BorshSerialize::serialize(&args.stake_index, &mut writer)?;
+                borsh::BorshSerialize::serialize(
+                    &args.source_validator_index,
+                    &mut writer,
+                )?;
+                borsh::BorshSerialize::serialize(
+                    &args.dest_validator_index,
+                    &mut writer,
+                )?;
                 Ok(())
             }
         }
@@ -8437,5 +8464,377 @@ pub fn finalize_delinquent_upgrade_verify_account_privileges<'me, 'info>(
     accounts: FinalizeDelinquentUpgradeAccounts<'me, 'info>,
 ) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
     finalize_delinquent_upgrade_verify_writable_privileges(accounts)?;
+    Ok(())
+}
+pub const REDELEGATE_IX_ACCOUNTS_LEN: usize = 15;
+#[derive(Copy, Clone, Debug)]
+pub struct RedelegateAccounts<'me, 'info> {
+    pub state: &'me AccountInfo<'info>,
+    pub validator_list: &'me AccountInfo<'info>,
+    pub stake_list: &'me AccountInfo<'info>,
+    pub stake_account: &'me AccountInfo<'info>,
+    pub stake_deposit_authority: &'me AccountInfo<'info>,
+    pub reserve_pda: &'me AccountInfo<'info>,
+    pub split_stake_account: &'me AccountInfo<'info>,
+    pub split_stake_rent_payer: &'me AccountInfo<'info>,
+    pub dest_validator_account: &'me AccountInfo<'info>,
+    pub redelegate_stake_account: &'me AccountInfo<'info>,
+    pub clock: &'me AccountInfo<'info>,
+    pub stake_history: &'me AccountInfo<'info>,
+    pub stake_config: &'me AccountInfo<'info>,
+    pub system_program: &'me AccountInfo<'info>,
+    pub stake_program: &'me AccountInfo<'info>,
+}
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RedelegateKeys {
+    pub state: Pubkey,
+    pub validator_list: Pubkey,
+    pub stake_list: Pubkey,
+    pub stake_account: Pubkey,
+    pub stake_deposit_authority: Pubkey,
+    pub reserve_pda: Pubkey,
+    pub split_stake_account: Pubkey,
+    pub split_stake_rent_payer: Pubkey,
+    pub dest_validator_account: Pubkey,
+    pub redelegate_stake_account: Pubkey,
+    pub clock: Pubkey,
+    pub stake_history: Pubkey,
+    pub stake_config: Pubkey,
+    pub system_program: Pubkey,
+    pub stake_program: Pubkey,
+}
+impl From<RedelegateAccounts<'_, '_>> for RedelegateKeys {
+    fn from(accounts: RedelegateAccounts) -> Self {
+        Self {
+            state: *accounts.state.key,
+            validator_list: *accounts.validator_list.key,
+            stake_list: *accounts.stake_list.key,
+            stake_account: *accounts.stake_account.key,
+            stake_deposit_authority: *accounts.stake_deposit_authority.key,
+            reserve_pda: *accounts.reserve_pda.key,
+            split_stake_account: *accounts.split_stake_account.key,
+            split_stake_rent_payer: *accounts.split_stake_rent_payer.key,
+            dest_validator_account: *accounts.dest_validator_account.key,
+            redelegate_stake_account: *accounts.redelegate_stake_account.key,
+            clock: *accounts.clock.key,
+            stake_history: *accounts.stake_history.key,
+            stake_config: *accounts.stake_config.key,
+            system_program: *accounts.system_program.key,
+            stake_program: *accounts.stake_program.key,
+        }
+    }
+}
+impl From<RedelegateKeys> for [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] {
+    fn from(keys: RedelegateKeys) -> Self {
+        [
+            AccountMeta {
+                pubkey: keys.state,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.validator_list,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.stake_list,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.stake_account,
+                is_signer: false,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.stake_deposit_authority,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.reserve_pda,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.split_stake_account,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.split_stake_rent_payer,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.dest_validator_account,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.redelegate_stake_account,
+                is_signer: true,
+                is_writable: true,
+            },
+            AccountMeta {
+                pubkey: keys.clock,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.stake_history,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.stake_config,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.system_program,
+                is_signer: false,
+                is_writable: false,
+            },
+            AccountMeta {
+                pubkey: keys.stake_program,
+                is_signer: false,
+                is_writable: false,
+            },
+        ]
+    }
+}
+impl From<[Pubkey; REDELEGATE_IX_ACCOUNTS_LEN]> for RedelegateKeys {
+    fn from(pubkeys: [Pubkey; REDELEGATE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            state: pubkeys[0],
+            validator_list: pubkeys[1],
+            stake_list: pubkeys[2],
+            stake_account: pubkeys[3],
+            stake_deposit_authority: pubkeys[4],
+            reserve_pda: pubkeys[5],
+            split_stake_account: pubkeys[6],
+            split_stake_rent_payer: pubkeys[7],
+            dest_validator_account: pubkeys[8],
+            redelegate_stake_account: pubkeys[9],
+            clock: pubkeys[10],
+            stake_history: pubkeys[11],
+            stake_config: pubkeys[12],
+            system_program: pubkeys[13],
+            stake_program: pubkeys[14],
+        }
+    }
+}
+impl<'info> From<RedelegateAccounts<'_, 'info>>
+for [AccountInfo<'info>; REDELEGATE_IX_ACCOUNTS_LEN] {
+    fn from(accounts: RedelegateAccounts<'_, 'info>) -> Self {
+        [
+            accounts.state.clone(),
+            accounts.validator_list.clone(),
+            accounts.stake_list.clone(),
+            accounts.stake_account.clone(),
+            accounts.stake_deposit_authority.clone(),
+            accounts.reserve_pda.clone(),
+            accounts.split_stake_account.clone(),
+            accounts.split_stake_rent_payer.clone(),
+            accounts.dest_validator_account.clone(),
+            accounts.redelegate_stake_account.clone(),
+            accounts.clock.clone(),
+            accounts.stake_history.clone(),
+            accounts.stake_config.clone(),
+            accounts.system_program.clone(),
+            accounts.stake_program.clone(),
+        ]
+    }
+}
+impl<'me, 'info> From<&'me [AccountInfo<'info>; REDELEGATE_IX_ACCOUNTS_LEN]>
+for RedelegateAccounts<'me, 'info> {
+    fn from(arr: &'me [AccountInfo<'info>; REDELEGATE_IX_ACCOUNTS_LEN]) -> Self {
+        Self {
+            state: &arr[0],
+            validator_list: &arr[1],
+            stake_list: &arr[2],
+            stake_account: &arr[3],
+            stake_deposit_authority: &arr[4],
+            reserve_pda: &arr[5],
+            split_stake_account: &arr[6],
+            split_stake_rent_payer: &arr[7],
+            dest_validator_account: &arr[8],
+            redelegate_stake_account: &arr[9],
+            clock: &arr[10],
+            stake_history: &arr[11],
+            stake_config: &arr[12],
+            system_program: &arr[13],
+            stake_program: &arr[14],
+        }
+    }
+}
+pub const REDELEGATE_IX_DISCM: [u8; 8usize] = [212, 82, 51, 160, 228, 80, 116, 35];
+#[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct RedelegateIxArgs {
+    pub stake_index: u32,
+    pub source_validator_index: u32,
+    pub dest_validator_index: u32,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct RedelegateIxData(pub RedelegateIxArgs);
+impl From<RedelegateIxArgs> for RedelegateIxData {
+    fn from(args: RedelegateIxArgs) -> Self {
+        Self(args)
+    }
+}
+impl RedelegateIxData {
+    pub fn deserialize(buf: &[u8]) -> std::io::Result<Self> {
+        let mut reader = buf;
+        let mut maybe_discm = [0u8; 8usize];
+        reader.read_exact(&mut maybe_discm)?;
+        if maybe_discm != REDELEGATE_IX_DISCM {
+            return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
+        }
+        let stake_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let source_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        let dest_validator_index: u32 = crate::borsh_de_or_default(&mut reader)?;
+        Ok(
+            Self(RedelegateIxArgs {
+                stake_index,
+                source_validator_index,
+                dest_validator_index,
+            }),
+        )
+    }
+    pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
+        writer.write_all(&REDELEGATE_IX_DISCM)?;
+        borsh::BorshSerialize::serialize(&self.0.stake_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.source_validator_index, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.dest_validator_index, &mut writer)?;
+        Ok(())
+    }
+    pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
+        let mut data = Vec::new();
+        self.serialize(&mut data)?;
+        Ok(data)
+    }
+}
+pub fn redelegate_ix_with_program_id(
+    program_id: Pubkey,
+    keys: RedelegateKeys,
+    args: RedelegateIxArgs,
+) -> std::io::Result<Instruction> {
+    let metas: [AccountMeta; REDELEGATE_IX_ACCOUNTS_LEN] = keys.into();
+    let data: RedelegateIxData = args.into();
+    Ok(Instruction {
+        program_id,
+        accounts: Vec::from(metas),
+        data: data.try_to_vec()?,
+    })
+}
+pub fn redelegate_ix(
+    keys: RedelegateKeys,
+    args: RedelegateIxArgs,
+) -> std::io::Result<Instruction> {
+    redelegate_ix_with_program_id(MARINADE_FINANCE_PROGRAM_ID, keys, args)
+}
+pub fn redelegate_invoke_with_program_id(
+    program_id: Pubkey,
+    accounts: RedelegateAccounts<'_, '_>,
+    args: RedelegateIxArgs,
+) -> ProgramResult {
+    let keys: RedelegateKeys = accounts.into();
+    let ix = redelegate_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction(&ix, accounts)
+}
+pub fn redelegate_invoke(
+    accounts: RedelegateAccounts<'_, '_>,
+    args: RedelegateIxArgs,
+) -> ProgramResult {
+    redelegate_invoke_with_program_id(MARINADE_FINANCE_PROGRAM_ID, accounts, args)
+}
+pub fn redelegate_invoke_signed_with_program_id(
+    program_id: Pubkey,
+    accounts: RedelegateAccounts<'_, '_>,
+    args: RedelegateIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    let keys: RedelegateKeys = accounts.into();
+    let ix = redelegate_ix_with_program_id(program_id, keys, args)?;
+    invoke_instruction_signed(&ix, accounts, seeds)
+}
+pub fn redelegate_invoke_signed(
+    accounts: RedelegateAccounts<'_, '_>,
+    args: RedelegateIxArgs,
+    seeds: &[&[&[u8]]],
+) -> ProgramResult {
+    redelegate_invoke_signed_with_program_id(
+        MARINADE_FINANCE_PROGRAM_ID,
+        accounts,
+        args,
+        seeds,
+    )
+}
+pub fn redelegate_verify_account_keys(
+    accounts: RedelegateAccounts<'_, '_>,
+    keys: RedelegateKeys,
+) -> Result<(), (Pubkey, Pubkey)> {
+    for (actual, expected) in [
+        (*accounts.state.key, keys.state),
+        (*accounts.validator_list.key, keys.validator_list),
+        (*accounts.stake_list.key, keys.stake_list),
+        (*accounts.stake_account.key, keys.stake_account),
+        (*accounts.stake_deposit_authority.key, keys.stake_deposit_authority),
+        (*accounts.reserve_pda.key, keys.reserve_pda),
+        (*accounts.split_stake_account.key, keys.split_stake_account),
+        (*accounts.split_stake_rent_payer.key, keys.split_stake_rent_payer),
+        (*accounts.dest_validator_account.key, keys.dest_validator_account),
+        (*accounts.redelegate_stake_account.key, keys.redelegate_stake_account),
+        (*accounts.clock.key, keys.clock),
+        (*accounts.stake_history.key, keys.stake_history),
+        (*accounts.stake_config.key, keys.stake_config),
+        (*accounts.system_program.key, keys.system_program),
+        (*accounts.stake_program.key, keys.stake_program),
+    ] {
+        if actual != expected {
+            return Err((actual, expected));
+        }
+    }
+    Ok(())
+}
+pub fn redelegate_verify_writable_privileges<'me, 'info>(
+    accounts: RedelegateAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_writable in [
+        accounts.state,
+        accounts.validator_list,
+        accounts.stake_list,
+        accounts.stake_account,
+        accounts.split_stake_account,
+        accounts.split_stake_rent_payer,
+        accounts.redelegate_stake_account,
+    ] {
+        if !should_be_writable.is_writable {
+            return Err((should_be_writable, ProgramError::InvalidAccountData));
+        }
+    }
+    Ok(())
+}
+pub fn redelegate_verify_signer_privileges<'me, 'info>(
+    accounts: RedelegateAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    for should_be_signer in [
+        accounts.split_stake_account,
+        accounts.split_stake_rent_payer,
+        accounts.redelegate_stake_account,
+    ] {
+        if !should_be_signer.is_signer {
+            return Err((should_be_signer, ProgramError::MissingRequiredSignature));
+        }
+    }
+    Ok(())
+}
+pub fn redelegate_verify_account_privileges<'me, 'info>(
+    accounts: RedelegateAccounts<'me, 'info>,
+) -> Result<(), (&'me AccountInfo<'info>, ProgramError)> {
+    redelegate_verify_writable_privileges(accounts)?;
+    redelegate_verify_signer_privileges(accounts)?;
     Ok(())
 }

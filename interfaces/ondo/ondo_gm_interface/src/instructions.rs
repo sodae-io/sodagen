@@ -91,10 +91,10 @@ impl OndoGmProgramIx {
         }
         if buf.starts_with(&CLOSE_ATTESTATION_ACCOUNT_IX_DISCM) {
             let mut reader = &buf[CLOSE_ATTESTATION_ACCOUNT_IX_DISCM.len()..];
-            let _attestation_id: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+            let attestation_id: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
             return Ok(
                 Self::CloseAttestationAccount(CloseAttestationAccountIxArgs {
-                    _attestation_id,
+                    attestation_id,
                 }),
             );
         }
@@ -427,8 +427,8 @@ impl OndoGmProgramIx {
         }
         if buf.starts_with(&REVOKE_ROLE_IX_DISCM) {
             let mut reader = &buf[REVOKE_ROLE_IX_DISCM.len()..];
-            let _role: RoleType = crate::borsh_de_or_default(&mut reader)?;
-            return Ok(Self::RevokeRole(RevokeRoleIxArgs { _role }));
+            let role: RoleType = crate::borsh_de_or_default(&mut reader)?;
+            return Ok(Self::RevokeRole(RevokeRoleIxArgs { role }));
         }
         if buf.starts_with(&REVOKE_SANITY_CONFIGURER_ROLE_IX_DISCM) {
             return Ok(Self::RevokeSanityConfigurerRole);
@@ -569,7 +569,7 @@ impl OndoGmProgramIx {
             }
             Self::CloseAttestationAccount(args) => {
                 writer.write_all(&CLOSE_ATTESTATION_ACCOUNT_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args._attestation_id, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.attestation_id, &mut writer)?;
                 Ok(())
             }
             Self::EnableOraclePrice(args) => {
@@ -794,7 +794,7 @@ impl OndoGmProgramIx {
             Self::RevokeGmtokenRole => writer.write_all(&REVOKE_GMTOKEN_ROLE_IX_DISCM),
             Self::RevokeRole(args) => {
                 writer.write_all(&REVOKE_ROLE_IX_DISCM)?;
-                borsh::BorshSerialize::serialize(&args._role, &mut writer)?;
+                borsh::BorshSerialize::serialize(&args.role, &mut writer)?;
                 Ok(())
             }
             Self::RevokeSanityConfigurerRole => {
@@ -1673,7 +1673,7 @@ pub const CLOSE_ATTESTATION_ACCOUNT_IX_DISCM: [u8; 8usize] = [
 ];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct CloseAttestationAccountIxArgs {
-    pub _attestation_id: [u8; 16],
+    pub attestation_id: [u8; 16],
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct CloseAttestationAccountIxData(pub CloseAttestationAccountIxArgs);
@@ -1690,16 +1690,16 @@ impl CloseAttestationAccountIxData {
         if maybe_discm != CLOSE_ATTESTATION_ACCOUNT_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let _attestation_id: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
+        let attestation_id: [u8; 16] = crate::borsh_de_or_default(&mut reader)?;
         Ok(
             Self(CloseAttestationAccountIxArgs {
-                _attestation_id,
+                attestation_id,
             }),
         )
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&CLOSE_ATTESTATION_ACCOUNT_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0._attestation_id, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.attestation_id, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {
@@ -12509,7 +12509,7 @@ for RevokeRoleAccounts<'me, 'info> {
 pub const REVOKE_ROLE_IX_DISCM: [u8; 8usize] = [179, 232, 2, 180, 48, 227, 82, 7];
 #[derive(Clone, Debug, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct RevokeRoleIxArgs {
-    pub _role: RoleType,
+    pub role: RoleType,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct RevokeRoleIxData(pub RevokeRoleIxArgs);
@@ -12526,12 +12526,12 @@ impl RevokeRoleIxData {
         if maybe_discm != REVOKE_ROLE_IX_DISCM {
             return Err(std::io::Error::from(std::io::ErrorKind::InvalidData));
         }
-        let _role: RoleType = crate::borsh_de_or_default(&mut reader)?;
-        Ok(Self(RevokeRoleIxArgs { _role }))
+        let role: RoleType = crate::borsh_de_or_default(&mut reader)?;
+        Ok(Self(RevokeRoleIxArgs { role }))
     }
     pub fn serialize<W: std::io::Write>(&self, mut writer: W) -> std::io::Result<()> {
         writer.write_all(&REVOKE_ROLE_IX_DISCM)?;
-        borsh::BorshSerialize::serialize(&self.0._role, &mut writer)?;
+        borsh::BorshSerialize::serialize(&self.0.role, &mut writer)?;
         Ok(())
     }
     pub fn try_to_vec(&self) -> std::io::Result<Vec<u8>> {

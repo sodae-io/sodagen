@@ -121,6 +121,17 @@ mod tests {
 
 
     #[test]
+    fn conditional_pascal_case_preserves_consecutive_capitals() {
+        // Anchor hashes the Rust struct name verbatim. Mangling `SSTradingPair`
+        // into `SsTradingPair` yields an account discriminator that matches
+        // nothing on-chain, so this must be preserved exactly.
+        assert_eq!(conditional_pascal_case("SSTradingPair"), "SSTradingPair");
+        assert_eq!(conditional_pascal_case("TradingPair"), "TradingPair");
+        assert_eq!(conditional_pascal_case("pool_state"), "PoolState");
+        assert_eq!(conditional_pascal_case("poolState"), "PoolState");
+    }
+
+    #[test]
     fn test_bytes_to_vec_u8() {
         let result = primitive_or_pubkey_to_token("bytes");
         assert_eq!(result, "Vec<u8>");
